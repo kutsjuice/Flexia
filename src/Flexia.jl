@@ -4,18 +4,20 @@ using StaticArrays
 export MBSystem
 export Body2D
 
-struct Body2D
+mutable struct Body2D
     mass::Float64
     inertia::Float64
 
     forces::Vector{Function}
+    index::Int64
+    length::Float64
 
-    function Body2D(mass, inertia)
+    function Body2D(mass, inertia; length = 1.0)
         return new(mass, inertia, [
             (x) -> 0,
             (x) -> 0,
             (x) -> 0
-        ])
+        ], -1, length)
     end
 end
 
@@ -25,14 +27,15 @@ mutable struct MBSystem
     bodies::Vector{Body2D}
     bodiesnum::Int64
     bodiesdofs::Vector{Int64}
-    assebmled::Bool
+    lmdofs::Vector{Int64}
+    assembled::Bool
     rhs::Function
     jacobian::Function
 
     function MBSystem()
         default_rhs = (x) -> nothing
-
-        return new([], 0, [], false, default_rhs)
+        default_jacobian = (x) -> nothing
+        return new([], 0, [], [], false, default_rhs, default_jacobian)
     end
 end
 
@@ -42,8 +45,25 @@ function last_body_dof(sys::MBSystem)
     end
     return (sys.bodiesdofs)[end]
 end
+function last_lm_dof(sys::MBSystem)
+    if (isempty(sys.lmdofs))
+        return 0
+    else
+        return sys.lmdofs[end]
+    end
+end
 
-number_of_dofs(sys) = last_body_dof(sys)
+number_of_dofs(sys) = last_body_dof(sys) + last_lm_dof(sys)
+function getdofs(sys::MBSystem, body::Body2D)
+    if (body.index == -1)
+        return 0:0
+    elseif (body.index == 1)
+        return 1:sys.bodiesdofs[1]
+    else
+        return (sys.bodiesdofs[body.index - 1] +1):sys.bodiesdofs[body.index]
+    end
+end
+
 
 function add!(sys::MBSystem, body::Body2D)
     push!(sys.bodies, body)
@@ -51,6 +71,7 @@ function add!(sys::MBSystem, body::Body2D)
     bodydofs = 2 * number_of_dofs(body)
     lbd = last_body_dof(sys)
     push!(sys.bodiesdofs, lbd + bodydofs)
+    body.index = length(sys.bodies)
 end
 
 
