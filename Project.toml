@@ -1,0 +1,9 @@
+name = "Flexia"
+uuid = "828e0364-80a5-49ab-9f35-f2b6269fc4ea"
+authors = ["Kuts Michael <kutsjuice@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
