@@ -1,8 +1,8 @@
 # module Flexia
 using StaticArrays
 # using GLMakie
-export MBSystem
-export Body2D
+# export MBSystem
+# export Body2D
 
 mutable struct Body2D
     mass::Float64
@@ -25,7 +25,7 @@ number_of_dofs(::Body2D) = 3
 
 abstract type Joint end
 mutable struct FixedJoint <: Joint
-    body::Body
+    body::Body2D
     pos::SVector{Float64, 2}
     θ::Float64
     index::Int64
@@ -48,6 +48,7 @@ end
 
 mutable struct MBSystem
     bodies::Vector{Body2D}
+    joints::Vector{Union{FixedJoint}}
     # bodiesnum::Int64
     # jointsnum::Int64
     bodiesdofs::Vector{Int64}
@@ -59,7 +60,7 @@ mutable struct MBSystem
     function MBSystem()
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
-        return new([], 0, [], [], false, default_rhs, default_jacobian)
+        return new([], [], [], [], false, default_rhs, default_jacobian)
     end
 end
 
@@ -125,9 +126,9 @@ function add_body_to_rhs!(rhs, state, sys, body)
     rhs[position_dofs[2]] = state[velocity_dofs[2]]
     rhs[position_dofs[3]] = state[velocity_dofs[3]]
 
-    rhs[velocity_dofs[1]] += body.forces[1](state[position_dofs], state[velocity_dofs]) / body.mass
-    rhs[velocity_dofs[2]] += body.forces[2](state[position_dofs], state[velocity_dofs]) / body.mass
-    rhs[velocity_dofs[3]] += body.forces[3](state[position_dofs], state[velocity_dofs]) / body.inertia
+    rhs[velocity_dofs[1]] += body.forces[1](state[[position_dofs; velocity_dofs]]) / body.mass
+    rhs[velocity_dofs[2]] += body.forces[2](state[[position_dofs; velocity_dofs]]) / body.mass
+    rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]]) / body.inertia
 end
 
 function add_joint_to_rhs!(rhs, state, sys::MBSystem, joint::FixedJoint)
@@ -168,11 +169,14 @@ function assemble!(sys)
 
 
     sys.rhs = (state) -> begin
-        ret = zeros(state_length)
+        ret = similar(state)
+        fill!(ret, zero(state[1]))
         for  body in sys.bodies
             add_body_to_rhs!(ret, state, sys, body)
         end
-        
+        for joint in sys.joints
+            add_joint_to_rhs!(ret, state, sys, joint)
+        end
         return ret
     end
 
@@ -206,7 +210,7 @@ function assemble!(sys)
         return ret
     end
 
-    assembled = true
+    sys.assembled = true
 end
 
 const g = 9.81
@@ -227,10 +231,13 @@ if (!assemble!(sys))
 end
 # end # module Flexia
 func = sys.rhs
+
+
+
 using ForwardDiff
 
-# jacoby = (x) -> ForwardDiff.jacobian(func, x)
+jacoby = (x) -> ForwardDiff.jacobian(func, x)
 
 initial = zeros(12)
 func(initial)
-# jacoby(initial)
+jacoby(initial)
