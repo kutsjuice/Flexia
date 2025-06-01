@@ -24,13 +24,7 @@ function getdofs(sys::MBSystem2D, body::Body2D)
 end
 
 
-function add!(sys::MBSystem2D, joint::FixedJoint)
-    push!(sys.joints, joint)
-    # sys.jointsnum += 1;
-    last_joint_dof = last_lm_dof(sys) + 3
-    push!(sys.lmdofs, last_joint_dof)
-    joint.index = length(sys.joints)
-end
+
 
 # end # module Flexia
 const g = 9.81

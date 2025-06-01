@@ -14,7 +14,7 @@ mutable struct Body2D <: AbstractBody2D
             ], -1, length)
     end
 end
-
+get_index(body::Body2D) = body.index
 number_of_dofs(::Body2D) = 3
 
 function add!(sys::MBSystem2D, body::Body2D)
@@ -25,6 +25,25 @@ function add!(sys::MBSystem2D, body::Body2D)
     push!(sys.bodiesdofs, lbd + bodydofs)
     body.index = length(sys.bodies)
 end
+
+function get_body_position_dofs(sys::MBSystem2D, body::Body2D)
+    bid = get_index(body)
+    return SA[
+        sys.bodiesdofs[bid] - 5, 
+        sys.bodiesdofs[bid] - 4, 
+        sys.bodiesdofs[bid] - 3, 
+        ]
+
+end
+function get_body_velocity_dofs(sys::MBSystem2D, body::Body2D)
+    bid = get_index(body)
+    return SA[
+        sys.bodiesdofs[bid] - 2, 
+        sys.bodiesdofs[bid] - 1, 
+        sys.bodiesdofs[bid] - 0, 
+        ]
+end
+
 
 function add_body_to_rhs!(rhs, state, sys, body)
     last_dof = sys.bodiesdofs[body.index]
@@ -49,3 +68,4 @@ function add_body_to_rhs!(rhs, state, sys, body)
     rhs[velocity_dofs[2]] += body.forces[2](state[[position_dofs; velocity_dofs]]) / body.mass
     rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]]) / body.inertia
 end
+

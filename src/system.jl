@@ -32,7 +32,6 @@ end
 
 number_of_dofs(sys) = last_lm_dof(sys)
 
-
 function assemble!(sys)
     state_length = number_of_dofs(sys)
 
