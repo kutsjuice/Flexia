@@ -22,3 +22,5 @@
    2. Model Reduction
    3. Hyperreduction
 5. ???
+6. Perfomance:
+   1. Add type speciication for `rhs` and `state` parameters of functions `add_joint_to_rhs!` and `add_joint_to_rhs!`
