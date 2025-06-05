@@ -8,8 +8,8 @@ using StaticArrays
 abstract type AbstractBody2D end
 abstract type AbstractJoint2D end
 
+include("solvers.jl")
 include("system.jl")
-
 include("bodies.jl")
 include("joints.jl")
 
