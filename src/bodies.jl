@@ -16,6 +16,7 @@ mutable struct Body2D <: AbstractBody2D
 end
 get_index(body::Body2D) = body.index
 number_of_dofs(::Body2D) = 3
+# get_lenght(body::Body2D)
 
 function add!(sys::MBSystem2D, body::Body2D)
     push!(sys.bodies, body)
@@ -29,19 +30,19 @@ end
 function get_body_position_dofs(sys::MBSystem2D, body::Body2D)
     bid = get_index(body)
     return SA[
-        sys.bodiesdofs[bid] - 5, 
-        sys.bodiesdofs[bid] - 4, 
-        sys.bodiesdofs[bid] - 3, 
-        ]
+        sys.bodiesdofs[bid]-5,
+        sys.bodiesdofs[bid]-4,
+        sys.bodiesdofs[bid]-3,
+    ]
 
 end
 function get_body_velocity_dofs(sys::MBSystem2D, body::Body2D)
     bid = get_index(body)
     return SA[
-        sys.bodiesdofs[bid] - 2, 
-        sys.bodiesdofs[bid] - 1, 
-        sys.bodiesdofs[bid] - 0, 
-        ]
+        sys.bodiesdofs[bid]-2,
+        sys.bodiesdofs[bid]-1,
+        sys.bodiesdofs[bid]-0,
+    ]
 end
 
 
@@ -69,3 +70,14 @@ function add_body_to_rhs!(rhs, state, sys, body)
     rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]]) / body.inertia
 end
 
+function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::Vector{Float64})::Tuple{Point2f, Point2f}
+    pos_inds = get_body_position_dofs(sys, body)
+    x, y, θ = dofs[pos_inds]
+
+    x1 = x - body.length * cos(θ)
+    x2 = x + body.length * cos(θ)
+    y1 = y - body.length * sin(θ)
+    y2 = y + body.length * sin(θ)
+
+    return Point2f(x1, y1), Point2f(x2, y2)
+end
