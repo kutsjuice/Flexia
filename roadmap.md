@@ -1,12 +1,12 @@
 # Nearest plans
 
 1. 2D problems
-   1. Implement hinge joint
-   2. Change autodiff jacobian into analytical
-   3. Implement Slider Joint
-   4. Make Module and split into scripts
-   5. Add tests
-   6. Visualization (GLMakie)
+   1. Implement hinge joint (✔)
+   2. Change autodiff jacobian into analytical (✘)
+   3. Implement Slider Joint (✘)
+   4. Make Module (✘) and split into scripts (✔)
+   5. Add tests (3%)
+   6. Visualization (GLMakie) (10%)
 2. 3D problems
    1. 3D body
    2. Hinge, Sдider, Spherical joints
