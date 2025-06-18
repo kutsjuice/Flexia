@@ -9,7 +9,7 @@
    6. Visualization (GLMakie) (10%)
 2. 3D problems
    1. 3D body
-   2. Hinge, Sдider, Spherical joints
+   2. Hinge, Slider, Spherical joints
    3. Implement Springs and Damphers
    4. Visualization (GLMakie)
 3. HIL - look for the RT hardware to run
@@ -24,3 +24,13 @@
 5. ???
 6. Perfomance:
    1. Add type speciication for `rhs` and `state` parameters of functions `add_joint_to_rhs!` and `add_joint_to_rhs!`
+7. Control:
+   1. ???
+   2. ???
+8. Test cases:
+   1. Double pendulum (2D) 
+   2. 5-bar mechanism with normal joints (2D)
+   3. 5-bar mechanism with stiff joint
+      1. Linear stiffness
+      2. Non-linear stiffness
+
