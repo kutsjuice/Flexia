@@ -1,9 +1,18 @@
 name = "Flexia"
-uuid = "828e0364-80a5-49ab-9f35-f2b6269fc4ea"
-authors = ["Kuts Michael <kutsjuice@gmail.com>"]
-version = "0.1.0"
+uuid = "2666d27d-cdb3-457d-8dda-c8ec34a93f6f"
+authors = ["Kuts Michael <kutsjuice@gmail.com> and contributors"]
+version = "1.0.0-DEV"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
