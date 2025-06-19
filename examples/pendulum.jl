@@ -55,32 +55,39 @@ jacoby(initial)
 
 mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
-    mass[i,i] = 1;
+    mass[i, i] = 1
 end
 time_span = 0:0.01:10
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol, initial, mass, func, jacoby, step(time_span))
 #
 using GLMakie
-#
-points = Observable(Point2f[zeros(2) for i in 1:6])
-points[][1:2] .= get_boundary_points(sys, bd1, initial)
-points[][3:4] .= get_boundary_points(sys, bd2, initial)
-points[][5:6] .= get_boundary_points(sys, bd3, initial)
-fig, ax = lines(points)
-limits!(ax, -4, 4, -4, 4)
-# display(fig)
-#
-fps = 60
-nframes = 120
 
-record(fig, "heatmap_mandelbrot.mp4", 1:10:length(time_span), framerate = fps) do i
-    points[][1:2] .= get_boundary_points(sys, bd1, sol[:,i])
-    points[][3:4] .= get_boundary_points(sys, bd2, sol[:,i])
-    points[][5:6] .= get_boundary_points(sys, bd3, sol[:,i])
+function GLMakie.lift(system, solution, body::Body2D, i::Observable)
+    return lift(i) do value
+        points = Vector{Point2f}(undef, 2)
+        points[1:2] .= get_boundary_points(system, body, solution[:, value])
+        return points
+    end
 end
 
-#
-fig, ax = lines(sol[bd2_x_ind, :], sol[bd2_y_ind, :])
-lines!(ax, sol[bd3_x_ind, :], sol[bd3_y_ind, :])
-fig
+function animate(sys::MBSystem2D, sol, filename; framerate=60)
+    fig = Figure()
+    i = Observable(1)
+    ax = Axis(fig[1, 1])
+    bar1 = lift(sys, sol, bd1, i)
+    bar2 = lift(sys, sol, bd2, i)
+    bar3 = lift(sys, sol, bd3, i)
+
+    lines!(ax, bar1)
+    lines!(ax, bar2)
+    lines!(ax, bar3)
+    limits!(ax, -4, 4, -4, 4)
+
+    record(fig, filename, 1:5:length(time_span);
+        framerate=framerate) do t
+        i[] = t
+    end
+end
+
+animate(sys, sol, "time_animation2.mp4")
