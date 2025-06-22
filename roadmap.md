@@ -6,14 +6,17 @@
    3. Implement Slider Joint (✘)
    4. Make Module (✘) and split into scripts (✔)
    5. Add tests (3%)
-   6. Visualization (GLMakie) (10%)
+   6. Visualization (GLMakie):
+      1. Bodies as rods (✔)
+      2. Hinges as sircles (✔)
+   7. Add dissipation to the joints
 2. 3D problems
    1. 3D body
    2. Hinge, Slider, Spherical joints
    3. Implement Springs and Damphers
    4. Visualization (GLMakie)
 3. HIL - look for the RT hardware to run
-   1. RT - Linux (LinuxCNC) 
+   1. RT - Linux (LinuxCNC)
       1. Xenomai
       2. RTLinux
    2. SoC? 
