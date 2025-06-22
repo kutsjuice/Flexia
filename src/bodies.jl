@@ -70,7 +70,7 @@ function add_body_to_rhs!(rhs, state, sys, body)
     rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]]) / body.inertia
 end
 
-function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::Vector{Float64})::Tuple{Point2f, Point2f}
+function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})::Tuple{Point2f, Point2f}
     pos_inds = get_body_position_dofs(sys, body)
     x, y, θ = dofs[pos_inds]
 

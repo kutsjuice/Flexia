@@ -15,7 +15,9 @@ mutable struct MBSystem2D
         return new([], [], [], [], false, default_rhs, default_jacobian)
     end
 end
-
+number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
+bodies(sys::MBSystem2D) = sys.bodies
+joints(sys::MBSystem2D) = sys.joints
 function last_body_dof(sys::MBSystem2D)
     if (isempty(sys.bodiesdofs))
         return 0
@@ -80,3 +82,14 @@ function assemble!(sys)
 
     sys.assembled = true
 end
+
+
+# function draw!(ax, sys::MBSystem2D, state::Vector)
+#     for body in bodies(sys)
+#         rod = get_boundary_points(sys, bd1, state)
+#         draw!(ax, sys, body, state);
+#     end
+#     for joint in joints(sys)
+#         draw!()
+#     end
+# end

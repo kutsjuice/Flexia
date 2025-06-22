@@ -85,12 +85,12 @@ function setid!(jnt::T, index) where T<:AbstractJoint2D
     jnt.index = index
 end
 function set_position_on_first_body!(joint::HingeJoint, pos::SVector{2,Float64})
-    joint.body1_hinge_point = pos;
+    joint.body1_hinge_point = pos
     return nothing
 end
 
 function set_position_on_second_body!(joint::HingeJoint, pos::SVector{2,Float64})
-    joint.body2_hinge_point = pos;
+    joint.body2_hinge_point = pos
     return nothing
 end
 
@@ -147,9 +147,25 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
                           (-xcj * cos(_θj) + ycj * sin(_θj)) * λ2
 
     rhs[lms[1]] = (_xi + xci * cos(_θi) - yci * sin(_θi)) -
-                 (_xj + xcj * cos(_θj) - ycj * sin(_θj))
+                  (_xj + xcj * cos(_θj) - ycj * sin(_θj))
     rhs[lms[2]] = (_yi + xci * sin(_θi) + yci * cos(_θi)) -
-                 (_yj + xcj * sin(_θj) + ycj * sin(_θj))
+                  (_yj + xcj * sin(_θj) + ycj * cos(_θj))
 
 
+end
+
+function get_hinge_point(system::MBSystem2D, joint::HingeJoint, state::AbstractVector{Float64})
+    bd = joint.body1
+    pos_dofs = get_body_position_dofs(system, bd)
+    _xi = state[pos_dofs[1]]
+    _yi = state[pos_dofs[2]]
+    _θi = state[pos_dofs[3]]
+
+    xci = joint.body1_hinge_point[1]
+    yci = joint.body1_hinge_point[2]
+
+    return Point2f(
+        _xi + cos(_θi) * xci - sin(_θi) * yci,
+        _yi + sin(_θi) * xci + cos(_θi) * yci
+    )
 end

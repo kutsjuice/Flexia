@@ -1,7 +1,7 @@
 module Flexia
 # using Pkg; Pkg.activate(".")
 using StaticArrays
-using GLMakie
+using Makie
 # export MBSystem
 # export Body2D
 
@@ -14,7 +14,10 @@ export set_position_on_first_body!, set_position_on_second_body!
 export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points
 export cros!
 
+export animate
+
 export test_func
+
 
 test_func() = 1
 
@@ -25,7 +28,7 @@ include("solvers.jl")
 include("system.jl")
 include("bodies.jl")
 include("joints.jl")
-
+include("visualize.jl")
 
 function getdofs(sys::MBSystem2D, body::Body2D)
     if (body.index == -1)
