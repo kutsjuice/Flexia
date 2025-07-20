@@ -14,7 +14,6 @@ mm = 1e-3
 
 gmsh.initialize()
 
-gmsh.option.setNumber("General.Terminal", 0);
 ms_max = 1;
 ms_min = 0.1;
 MSFC = 6;
@@ -61,12 +60,16 @@ b_line = factory.addLine(rb_p, lb_p);
 
 outter_bound = factory.addCurveLoop([lb_arc, lt_arc, t_line, rt_arc, rb_arc, b_line]);
 
-factory.addPlaneSurface([outter_bound], 6)
+link_surf = factory.addPlaneSurface([outter_bound])
+factory.synchronize()
+gmsh.model.mesh.embed(0, [lhc_p, rhc_p], 2, link_surf)
 
 
 factory.synchronize()
 
-# factory.addPhysicalGroup(2, [6], -1, "test_sample");
+factory.addPhysicalGroup(2, [link_surf], -1, "test_sample");
+factory.addPhysicalGroup(0, [lhc_p], -1, "left_pin")
+factory.addPhysicalGroup(0, [rhc_p], -1, "right_pin")
 
 # factory.synchronize()
 
@@ -80,3 +83,4 @@ gmsh.write(name)
 gmsh.fltk.run()
 
 gmsh.finalize()
+
