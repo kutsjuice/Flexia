@@ -10,13 +10,12 @@ mutable struct FixedJoint <: AbstractJoint2D
     end
 end
 
-function setposition!(joint::FixedJoint, pos)
-    joint.pos[1] = pos[1]
-    joint.pos[2] = pos[2]
+function set_position!(joint::FixedJoint, pos)
+    joint.pos = SA[pos[1], pos[2]]
     return nothing
 end
 
-function setrotation!(joint::FixedJoint, θ)
+function set_rotation!(joint::FixedJoint, θ)
     joint.θ = θ
     return nothing
 end

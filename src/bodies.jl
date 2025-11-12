@@ -81,3 +81,23 @@ function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector
 
     return Point2f(x1, y1), Point2f(x2, y2)
 end
+
+function get_upperight_point(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})
+    pos_inds = get_body_position_dofs(sys, body)
+    x, y, θ = dofs[pos_inds]
+
+    x2 = x + body.length * cos(θ)
+    y2 = y + body.length * sin(θ)
+
+    return Point2f(x2, y2)
+end
+
+function get_downleft_point(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})
+    pos_inds = get_body_position_dofs(sys, body)
+    x, y, θ = dofs[pos_inds]
+
+    x1 = x - body.length * cos(θ)
+    y1 = y - body.length * sin(θ)
+
+    return Point2f(x1, y1)
+end
