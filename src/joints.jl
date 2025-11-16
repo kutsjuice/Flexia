@@ -177,8 +177,7 @@ mutable struct TorsionalSpring <: AbstractJoint2D
     damping::Float64
     index::Int64
     
-    function TorsionalSpring(body1::Body2D, body2::Body2D, 
-                            stiffness=1.0, rest_angle=0.0, damping=0.0)
+    function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness=1.0, rest_angle=0.0, damping=0.0)
         return new(body1, body2, stiffness, rest_angle, damping, -1)
     end
 end
