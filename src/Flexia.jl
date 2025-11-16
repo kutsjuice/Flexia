@@ -7,7 +7,7 @@ using Makie
 
 
 export Body2D
-export FixedJoint, HingeJoint
+export FixedJoint, HingeJoint, TorsionalSpring
 export MBSystem2D
 
 export set_position_on_first_body!, set_position_on_second_body!
@@ -15,7 +15,7 @@ export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, number_o
 export cros!
 
 export animate
-
+export Marker
 export test_func
 
 
@@ -23,13 +23,14 @@ test_func() = 1
 
 abstract type AbstractBody2D end
 abstract type AbstractJoint2D end
+abstract type AbstractMarker2D end
 
 include("solvers.jl")
 include("system.jl")
 include("bodies.jl")
 include("joints.jl")
 include("visualize.jl")
-
+include("markers.jl")
 function getdofs(sys::MBSystem2D, body::Body2D)
     if (body.index == -1)
         return 0:0

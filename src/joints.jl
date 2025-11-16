@@ -168,3 +168,70 @@ function get_hinge_point(system::MBSystem2D, joint::HingeJoint, state::AbstractV
         _yi + sin(_θi) * xci + cos(_θi) * yci
     )
 end
+
+mutable struct TorsionalSpring <: AbstractJoint2D
+    body1::Body2D
+    body2::Body2D
+    stiffness::Float64  # жесткость пружины k
+    rest_angle::Float64  # начальный угол пружины (радианы)
+    index::Int64
+    
+    function TorsionalSpring(bd1::Body2D, bd2::Body2D, stiffness::Float64, rest_angle::Float64=0.0)
+        return new(bd1, bd2, stiffness, rest_angle, -1)
+    end
+end
+
+number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
+
+function add!(sys::MBSystem2D, spring::TorsionalSpring)
+    push!(sys.joints, spring)
+    # Пружина не добавляет лагранжевых множителей, поэтому не увеличиваем lmdofs
+    setid!(spring, length(sys.joints))
+end
+
+function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
+    bd1 = spring.body1
+    bd2 = spring.body2
+    
+    # Получаем индексы для углов поворота
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+    
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
+    
+    # Углы поворота тел
+    θ1 = state[bd1_p_dofs[3]]  # угол первого тела
+    θ2 = state[bd2_p_dofs[3]]  # угол второго тела
+    
+    # Относительное смещение от начального положения
+    Δθ1 = θ1 - spring.rest_angle
+    Δθ2 = θ2 - spring.rest_angle
+    
+    # Моменты от пружины
+    # Матрица жесткости: [k -k; -k k]
+    moment1 = spring.stiffness * (Δθ1 - Δθ2)  # момент на первое тело
+    moment2 = -spring.stiffness * (Δθ1 - Δθ2)  # момент на второе тело
+    
+    # Добавляем моменты к уравнениям движения
+    # rhs[velocity_dofs[i]] += k*state[pos_dofs[i]] - k*state[pos_dofs[j]]
+    # rhs[velocity_dofs[j]] += -k*state[pos_dofs[i]] + k*state[pos_dofs[j]]
+    
+    rhs[bd1_v_dofs[3]] += moment1 / bd1.inertia
+    rhs[bd2_v_dofs[3]] += moment2 / bd2.inertia
+end
+
+# Вспомогательная функция для расчета момента пружины
+function get_spring_moment(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
+    Δθ1 = θ1 - spring.rest_angle
+    Δθ2 = θ2 - spring.rest_angle
+    return spring.stiffness * (Δθ1 - Δθ2)
+end
+
+# Функция для получения энергии пружины
+function get_spring_energy(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
+    Δθ1 = θ1 - spring.rest_angle
+    Δθ2 = θ2 - spring.rest_angle
+    Δθ_rel = Δθ1 - Δθ2
+    return 0.5 * spring.stiffness * Δθ_rel^2
+end
