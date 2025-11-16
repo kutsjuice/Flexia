@@ -190,7 +190,7 @@ function add!(sys::MBSystem2D, spring::TorsionalSpring)
     setid!(spring, length(sys.joints))
 end
 
-function add_spring_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
+function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     bd1 = spring.body1
     bd2 = spring.body2
     
