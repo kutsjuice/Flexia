@@ -183,7 +183,7 @@ mutable struct TorsionalSpring <: AbstractJoint2D
     end
 end
 
-function add!(sys::MBSystem2D, spring::AbstractSpring2D)
+function add!(sys::MBSystem2D, spring::AbstractJoint2D)
     push!(sys.springs, spring)
     spring.index = length(sys.springs)
 end
