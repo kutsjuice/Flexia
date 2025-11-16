@@ -7,12 +7,12 @@ using StaticArrays
 
 const g = 9.81
 
-bd1 = Body2D(10, 1)
-bd2 = Body2D(10, 1)
-bd3 = Body2D(10, 1)
-bd4 = Body2D(10, 1)
-bd5 = Body2D(10, 1)
-bd6 = Body2D(10, 1)
+bd1 = Body2D(10, 1000)
+bd2 = Body2D(10, 1000)
+bd3 = Body2D(10, 1000)
+bd4 = Body2D(10, 1000)
+bd5 = Body2D(10, 1000)
+bd6 = Body2D(10, 1000)
 # bd2 = Body2D(10, 1)
 
 
@@ -114,8 +114,8 @@ initial[bd5_t_ind] = -110*pi/180
 
 initial[bd6_x_ind] = 1
 
-initial[bd2_Vt_ind] = 0.5
-initial[bd5_Vt_ind] = 0.5
+initial[bd2_Vt_ind] = 10
+initial[bd5_Vt_ind] = 10
 # initial[bd2_x_ind] = 0.5
 # initial[bd3_x_ind] = 1
 # initial[bd3_y_ind] = 0.5
@@ -133,7 +133,7 @@ mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = 0:0.01:10
+time_span = 0:0.0005:0.4
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol, initial, mass, func, jacoby, step(time_span))
 
