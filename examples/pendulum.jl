@@ -33,22 +33,22 @@ jnt6 = HingeJoint(bd5, bd6)
 
 jnt7 = FixedJoint(bd6)
 
-tcp1 = TorsionalSpring(bd2, bd3, 1100)
-tcp2 = TorsionalSpring(bd3, bd4, 1100)
-tcp3 = TorsionalSpring(bd4, bd5, 1100)
+tcp1 = TorsionalSpring(bd2, bd3, 1100.,0.0, 100.)
+tcp2 = TorsionalSpring(bd3, bd4, 1100.,0.0, 100.)
+tcp3 = TorsionalSpring(bd4, bd5, 1100.,0.0, 100.)
 
-set_position_on_second_body!(jnt2, SA[-0.9, 0])
+set_position_on_second_body!(jnt2, SA[-0.5, 0])
 
-set_position_on_first_body!(jnt3, SA[0.9, 0])
-set_position_on_second_body!(jnt3, SA[-0.9, 0])
-set_position_on_first_body!(jnt4, SA[0.9, 0])
-set_position_on_second_body!(jnt4, SA[-0.9, 0])
-set_position_on_first_body!(jnt5, SA[0.9, 0])
-set_position_on_second_body!(jnt5, SA[-0.9, 0])
+set_position_on_first_body!(jnt3, SA[0.5, 0])
+set_position_on_second_body!(jnt3, SA[-0.5, 0])
+set_position_on_first_body!(jnt4, SA[0.5, 0])
+set_position_on_second_body!(jnt4, SA[-0.5, 0])
+set_position_on_first_body!(jnt5, SA[0.5, 0])
+set_position_on_second_body!(jnt5, SA[-0.5, 0])
 
-set_position_on_first_body!(jnt6, SA[0.9, 0])
+set_position_on_first_body!(jnt6, SA[0.5, 0])
 
-jnt7.pos = SA[1.5, 0.0]
+jnt7.pos = SA[1., 0.0]
 
 sys = MBSystem2D()
 
@@ -67,7 +67,9 @@ add!(sys, jnt5)
 add!(sys, jnt6)
 add!(sys, jnt7)
 
-
+add!(sys, tcp1)
+add!(sys, tcp2)
+add!(sys, tcp3)
 #mb1 = first_marker("mb1", bd1)
 
 if (!assemble!(sys))
@@ -112,8 +114,8 @@ initial[bd5_t_ind] = -110*pi/180
 
 initial[bd6_x_ind] = 1
 
-initial[bd2_Vt_ind] = 200
-initial[bd5_Vt_ind] = 200
+initial[bd2_Vt_ind] = 0.5
+initial[bd5_Vt_ind] = 0.5
 # initial[bd2_x_ind] = 0.5
 # initial[bd3_x_ind] = 1
 # initial[bd3_y_ind] = 0.5
@@ -131,7 +133,7 @@ mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = 0:0.01:50
+time_span = 0:0.01:10
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol, initial, mass, func, jacoby, step(time_span))
 

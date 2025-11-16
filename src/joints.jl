@@ -179,9 +179,11 @@ mutable struct TorsionalSpring <: AbstractJoint2D
     
     function TorsionalSpring(body1::Body2D, body2::Body2D; 
                             stiffness=1.0, rest_angle=0.0, damping=0.0)
-        new(body1, body2, stiffness, rest_angle, damping, -1)
+        return new(body1, body2, stiffness, rest_angle, damping, -1)
     end
 end
+
+number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
 
 function add!(sys::MBSystem2D, spring::AbstractJoint2D)
     push!(sys.springs, spring)

@@ -70,34 +70,24 @@ function add_body_to_rhs!(rhs, state, sys, body)
     rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]]) / body.inertia
 end
 
-function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})::Tuple{Point2f, Point2f}
+function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64}, type::Int8)
     pos_inds = get_body_position_dofs(sys, body)
     x, y, θ = dofs[pos_inds]
+    point_type = type
 
-    x1 = x - body.length * cos(θ)
-    x2 = x + body.length * cos(θ)
-    y1 = y - body.length * sin(θ)
-    y2 = y + body.length * sin(θ)
+    if (point_type = 1)
 
-    return Point2f(x1, y1), Point2f(x2, y2)
-end
+     x1 = x - body.length * cos(θ)
 
-function get_upperight_point(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})
-    pos_inds = get_body_position_dofs(sys, body)
-    x, y, θ = dofs[pos_inds]
+     y1 = y - body.length * sin(θ)
 
-    x2 = x + body.length * cos(θ)
-    y2 = y + body.length * sin(θ)
+     return Point2f(x1, y1)
+    else
 
-    return Point2f(x2, y2)
-end
+     x2 = x + body.length * cos(θ)
 
-function get_downleft_point(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})
-    pos_inds = get_body_position_dofs(sys, body)
-    x, y, θ = dofs[pos_inds]
+     y2 = y + body.length * sin(θ)
 
-    x1 = x - body.length * cos(θ)
-    y1 = y - body.length * sin(θ)
-
-    return Point2f(x1, y1)
+     return Point2f(x2, y2)
+    end
 end

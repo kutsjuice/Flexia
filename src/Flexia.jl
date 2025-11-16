@@ -5,7 +5,6 @@ using Makie
 # export MBSystem
 # export Body2D
 
-
 export Body2D
 export FixedJoint, HingeJoint, TorsionalSpring
 export MBSystem2D
