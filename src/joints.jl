@@ -186,8 +186,8 @@ end
 number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
 
 function add!(sys::MBSystem2D, spring::AbstractJoint2D)
-    push!(sys.springs, spring)
-    spring.index = length(sys.springs)
+    push!(sys.joints, spring)
+    setid!(spring, length(sys.joints))
 end
 
 function add_spring_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
