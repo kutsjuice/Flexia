@@ -265,48 +265,26 @@ end
 
 function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
     body = joint.body
-    last_body_dof = sys.bodiesdofs[body.index]
-    
     bd_p_dofs = get_body_position_dofs(sys, body)
     bd_v_dofs = get_body_velocity_dofs(sys, body)
-    # position_dofs = [
-    #     last_body_dof - 5,
-    #     last_body_dof - 4,
-    #     last_body_dof - 3,
-    # ]
-    
-    # velocity_dofs = [
-    #     last_body_dof - 2,
-    #     last_body_dof - 1,
-    #     last_body_dof,
-    # ]
-    
     joint_dofs = get_lms(sys, joint)
     
-    # Определяем текущее время
-    current_time = 0.0
-    if length(state) > last_body_dof
-        # Если в состоянии есть время (последний элемент)
-        current_time = state[end]
-    end
+    # Получаем текущее время (предполагается, что время - последний элемент state)
+    current_time = (length(state) > last_body_dof(sys)) ? state[end] : 0.0
     
     if current_time >= joint.start_time && current_time <= joint.start_time + joint.duration
-        # Вычисляем желаемую позицию
         t = current_time - joint.start_time
-        desired_pos = joint.trajectory(t)
+        desired = joint.trajectory(t)
         
-        # Добавляем управляющие силы для следования траектории
-        rhs[bd_v_dofs[1]] += state[joint_dofs[1]]  # сила в x
-        rhs[bd_v_dofs[2]] += state[joint_dofs[2]]  # сила в y
+        # Ограничения для позиции и ориентации
+        rhs[joint_dofs[1]] = state[bd_p_dofs[1]] - desired[1]  # ошибка x
+        rhs[joint_dofs[2]] = state[bd_p_dofs[2]] - desired[2]  # ошибка y
         
-        # Ограничения для следования траектории
-        rhs[joint_dofs[1]] = state[bd_p_dofs[1]] - desired_pos[1]  # ошибка по x
-        rhs[joint_dofs[2]] = state[bd_p_dofs[2]] - desired_pos[2]  # ошибка по y
-    else
-        # Вне временного интервала - свободное движение
+        # Управляющие силы (лагранжевы множители)
         rhs[bd_v_dofs[1]] += state[joint_dofs[1]]
         rhs[bd_v_dofs[2]] += state[joint_dofs[2]]
-        
+    else
+        # Вне интервала времени - множители равны нулю
         rhs[joint_dofs[1]] = 0.0
         rhs[joint_dofs[2]] = 0.0
     end
