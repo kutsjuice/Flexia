@@ -245,7 +245,7 @@ mutable struct TrajectoryJoint <: AbstractJoint2D
     end
 end
 
-number_of_dofs(::TrajectoryJoint) = 3
+number_of_dofs(::TrajectoryJoint) = 2
 
 function add!(sys::MBSystem2D, joint::TrajectoryJoint)
     push!(sys.joints, joint)
@@ -254,10 +254,10 @@ function add!(sys::MBSystem2D, joint::TrajectoryJoint)
     setid!(joint, length(sys.joints))
 end
 
+
 function get_lms(sys::MBSystem2D, joint::TrajectoryJoint)
     last_lm = sys.lmdofs[joint.index]
     return SA[
-        last_lm-2,
         last_lm-1,
         last_lm-0,
     ]
@@ -281,42 +281,32 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
     
     joint_dofs = get_lms(sys, joint)
     
-    # Получаем текущее время из состояния (предполагаем, что время хранится в последнем элементе)
-    current_time = state[end]  # или использовать глобальное время
+    # Определяем текущее время
+    current_time = 0.0
+    if length(state) > last_body_dof
+        # Если в состоянии есть время (последний элемент)
+        current_time = state[end]
+    end
     
     if current_time >= joint.start_time && current_time <= joint.start_time + joint.duration
-        # Вычисляем желаемую позицию и скорость
+        # Вычисляем желаемую позицию
         t = current_time - joint.start_time
         desired_pos = joint.trajectory(t)
         
-        # Численное дифференцирование для скорости
-        dt = 1e-6
-        if t + dt <= joint.duration
-            pos_plus = joint.trajectory(t + dt)
-            desired_vel = (pos_plus - desired_pos) / dt
-        else
-            pos_minus = joint.trajectory(t - dt)
-            desired_vel = (desired_pos - pos_minus) / dt
-        end
-        
-        # Добавляем управляющие моменты
-        rhs[velocity_dofs[1]] += state[joint_dofs[1]]
-        rhs[velocity_dofs[2]] += state[joint_dofs[2]]
-        rhs[velocity_dofs[3]] += state[joint_dofs[3]]
+        # Добавляем управляющие силы для следования траектории
+        rhs[velocity_dofs[1]] += state[joint_dofs[1]]  # сила в x
+        rhs[velocity_dofs[2]] += state[joint_dofs[2]]  # сила в y
         
         # Ограничения для следования траектории
-        rhs[joint_dofs[1]] = state[position_dofs[1]] - desired_pos[1]
-        rhs[joint_dofs[2]] = state[position_dofs[2]] - desired_pos[2]
-        rhs[joint_dofs[3]] = state[position_dofs[3]] - desired_pos[3]
+        rhs[joint_dofs[1]] = state[position_dofs[1]] - desired_pos[1]  # ошибка по x
+        rhs[joint_dofs[2]] = state[position_dofs[2]] - desired_pos[2]  # ошибка по y
     else
         # Вне временного интервала - свободное движение
         rhs[velocity_dofs[1]] += state[joint_dofs[1]]
         rhs[velocity_dofs[2]] += state[joint_dofs[2]]
-        rhs[velocity_dofs[3]] += state[joint_dofs[3]]
         
         rhs[joint_dofs[1]] = 0.0
         rhs[joint_dofs[2]] = 0.0
-        rhs[joint_dofs[3]] = 0.0
     end
 end
 
