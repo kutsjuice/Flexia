@@ -267,17 +267,19 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
     body = joint.body
     last_body_dof = sys.bodiesdofs[body.index]
     
-    position_dofs = [
-        last_body_dof - 5,
-        last_body_dof - 4,
-        last_body_dof - 3,
-    ]
+    bd_p_dofs = get_body_position_dofs(sys, body)
+    bd_v_dofs = get_body_velocity_dofs(sys, body)
+    # position_dofs = [
+    #     last_body_dof - 5,
+    #     last_body_dof - 4,
+    #     last_body_dof - 3,
+    # ]
     
-    velocity_dofs = [
-        last_body_dof - 2,
-        last_body_dof - 1,
-        last_body_dof,
-    ]
+    # velocity_dofs = [
+    #     last_body_dof - 2,
+    #     last_body_dof - 1,
+    #     last_body_dof,
+    # ]
     
     joint_dofs = get_lms(sys, joint)
     
@@ -294,16 +296,16 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
         desired_pos = joint.trajectory(t)
         
         # Добавляем управляющие силы для следования траектории
-        rhs[velocity_dofs[1]] += state[joint_dofs[1]]  # сила в x
-        rhs[velocity_dofs[2]] += state[joint_dofs[2]]  # сила в y
+        rhs[bd_v_dofs[1]] += state[joint_dofs[1]]  # сила в x
+        rhs[bd_v_dofs[2]] += state[joint_dofs[2]]  # сила в y
         
         # Ограничения для следования траектории
-        rhs[joint_dofs[1]] = state[position_dofs[1]] - desired_pos[1]  # ошибка по x
-        rhs[joint_dofs[2]] = state[position_dofs[2]] - desired_pos[2]  # ошибка по y
+        rhs[joint_dofs[1]] = state[bd_p_dofs[1]] - desired_pos[1]  # ошибка по x
+        rhs[joint_dofs[2]] = state[bd_p_dofs[2]] - desired_pos[2]  # ошибка по y
     else
         # Вне временного интервала - свободное движение
-        rhs[velocity_dofs[1]] += state[joint_dofs[1]]
-        rhs[velocity_dofs[2]] += state[joint_dofs[2]]
+        rhs[bd_v_dofs[1]] += state[joint_dofs[1]]
+        rhs[bd_v_dofs[2]] += state[joint_dofs[2]]
         
         rhs[joint_dofs[1]] = 0.0
         rhs[joint_dofs[2]] = 0.0
@@ -313,8 +315,8 @@ end
 # Вспомогательные функции для создания траекторий
 function circular_trajectory(center, radius, angular_velocity)
     return (t) -> [
-        center[0] + radius * cos(angular_velocity * t),
-        center[1] + radius * sin(angular_velocity * t),
+        center[1] + radius * cos(angular_velocity * t),
+        center[2] + radius * sin(angular_velocity * t),
         angular_velocity * t
     ]
 end
