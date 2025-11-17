@@ -15,8 +15,6 @@ bd5 = Body2D(10, 1000)
 bd6 = Body2D(10, 1000)
 # bd2 = Body2D(10, 1)
 
-circular(t) = circular_trajectory([0.5,1.1], 0.1, 1)
-
 bd1.forces[2] = (x) -> -bd1.mass * g
 bd2.forces[2] = (x) -> -bd2.mass * g
 bd3.forces[2] = (x) -> -bd3.mass * g
@@ -38,7 +36,7 @@ tcp1 = TorsionalSpring(bd2, bd3, 1100.,0.0, 100.)
 tcp2 = TorsionalSpring(bd3, bd4, 1100.,0.0, 100.)
 tcp3 = TorsionalSpring(bd4, bd5, 1100.,0.0, 100.)
 
-traj = TrajectoryJoint(bd3, circular, 0.0, 10.0)
+traj = TrajectoryJoint(bd3, circular_trajectory([0.4, 1.1], 1.1, 1), 0.0, 10.0)
 
 set_position_on_second_body!(jnt2, SA[-0.5, 0])
 

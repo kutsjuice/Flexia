@@ -323,8 +323,8 @@ end
 # Вспомогательные функции для создания траекторий
 function circular_trajectory(center, radius, angular_velocity)
     return (t) -> [
-        center[1] + radius * cos(angular_velocity * t),
-        center[2] + radius * sin(angular_velocity * t),
+        center[0] + radius * cos(angular_velocity * t),
+        center[1] + radius * sin(angular_velocity * t),
         angular_velocity * t
     ]
 end
