@@ -16,14 +16,13 @@ export cros!
 export animate
 export Marker
 export test_func
-export TrajectoryJoint, circular_trajectory
+
 
 test_func() = 1
 
 abstract type AbstractBody2D end
 abstract type AbstractJoint2D end
 abstract type AbstractMarker2D end
-abstract type AbstractTrajectoryJoint <: AbstractJoint2D end
 
 include("solvers.jl")
 include("system.jl")
@@ -31,7 +30,6 @@ include("bodies.jl")
 include("joints.jl")
 include("visualize.jl")
 include("markers.jl")
-include("TrajectoryJoint.jl")
 
 function getdofs(sys::MBSystem2D, body::Body2D)
     if (body.index == -1)
