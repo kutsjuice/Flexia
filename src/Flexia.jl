@@ -16,7 +16,7 @@ export cros!
 export animate
 export Marker
 export test_func
-
+export TrajectoryJoint, circular_trajectory
 
 test_func() = 1
 
