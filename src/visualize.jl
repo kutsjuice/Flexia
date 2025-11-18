@@ -33,9 +33,13 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    spiral_string = "M149,724.53c29.82,0,54-40.53,54-90.53s-24.18-90.53-54-90.53S95,584,95,634,119.17,724.53,149,724.53Z"
+    spiral_string = "M100 50 
+     Q 100 116 12.5 99.5 12.5 50 
+     Q 12.5 0.5 75 9 75 50 
+     Q 75 83 37.5 74 37.5 50
+     Q 37.5 38 50 42 50 50"
     spiral = BezierPath(spiral_string, fit = true, flipy = true) 
-    scatter!(ax, hinge_point, marker = spiral, markersize = 50);
+    scatter!(ax, hinge_point, marker = spiral, markersize = 50, color = :orange);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
