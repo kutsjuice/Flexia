@@ -240,13 +240,7 @@ function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, 
     _yi = state[pos_dofs[2]]
     _θi = state[pos_dofs[3]]
 
-    xci = state[pos_dofs[1]]
-    yci = state[pos_dofs[2]]
-
-    return Point2f(
-        _xi + cos(_θi) * xci - sin(_θi) * yci,
-        _yi + sin(_θi) * xci + cos(_θi) * yci
-    )
+    return Point2f(_xi ,_yi)
 end
 
 mutable struct TrajectoryJoint <: AbstractJoint2D
