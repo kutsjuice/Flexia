@@ -39,7 +39,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
      C 75 83 37.5 74 37.5 50
      C 37.5 38 50 42 50 50"
     spiral = BezierPath(spiral_string, fit = true, flipy = true) 
-    scatter!(ax, hinge_point,marker = spiral..., markersize = 50, color = :orange);
+    scatter!(ax, hinge_point, marker = spiral, markersize = 50, color = 1:3, colormap = [:tomato, :slategray2]);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
