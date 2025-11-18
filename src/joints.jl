@@ -233,6 +233,22 @@ function get_spring_energy(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
     return 0.5 * spring.stiffness * Δθ_rel^2
 end
 
+function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
+    bd = spring.body1
+    pos_dofs = get_body_position_dofs(system, bd)
+    _xi = state[pos_dofs[1]]
+    _yi = state[pos_dofs[2]]
+    _θi = state[pos_dofs[3]]
+
+    xci = state[pos_dofs[1]]
+    yci = state[pos_dofs[2]]
+
+    return Point2f(
+        _xi + cos(_θi) * xci - sin(_θi) * yci,
+        _yi + sin(_θi) * xci + cos(_θi) * yci
+    )
+end
+
 mutable struct TrajectoryJoint <: AbstractJoint2D
     body::Body2D
     trajectory::Function  # функция траектории (t) -> [x, y, θ]
@@ -275,9 +291,6 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
         # Управляющие силы (лагранжевы множители)
         rhs[bd_v_dofs[1]] += state[joint_dofs[1]]
         rhs[bd_v_dofs[2]] += state[joint_dofs[2]]
-        # Вне интервала времени - множители равны нулю
-        rhs[joint_dofs[1]] = 0.0
-        rhs[joint_dofs[2]] = 0.0
 end
 
 # Вспомогательные функции для создания траекторий

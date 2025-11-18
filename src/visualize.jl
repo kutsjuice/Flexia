@@ -15,11 +15,31 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     end
     return p;
 end
+
+function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
+    p =  lift(i) do value
+        point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
+        return point;
+    end
+    return p;
+end
+
 function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
 end
 function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
     scatter!(ax, hinge_point);
+end
+
+function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    spiral_string = "M100 50 
+     C 100 116 12.5 99.5 12.5 50 
+     C 12.5 0.5 75 9 75 50 
+     C 75 83 37.5 74 37.5 50
+     C 37.5 38 50 42 50 50"
+    spiral = BezierPath(spiral_string, fit = true, flipy = true) 
+    scatter!(ax, hinge_point, marker = spiral, markersize = 50, color = :black);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
@@ -31,6 +51,7 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
         bar = lift(sys, sol, body, iter)
         lines!(ax, bar)
     end
+
     for joint in joints(sys)
         draw!(ax, joint, sys, sol, iter)
     end
