@@ -33,11 +33,7 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    spiral_string = "M100 50 
-     C 100 116 12.5 99.5 12.5 50 
-     C 12.5 0.5 75 9 75 50 
-     C 75 83 37.5 74 37.5 50
-     C 37.5 38 50 42 50 50"
+    spiral_string = "M149,724.53c29.82,0,54-40.53,54-90.53s-24.18-90.53-54-90.53S95,584,95,634,119.17,724.53,149,724.53Z"
     spiral = BezierPath(spiral_string, fit = true, flipy = true) 
     scatter!(ax, hinge_point, marker = spiral, markersize = 50);
 end
