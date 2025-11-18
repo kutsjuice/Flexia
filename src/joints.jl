@@ -268,14 +268,6 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
     bd_p_dofs = get_body_position_dofs(sys, body)
     bd_v_dofs = get_body_velocity_dofs(sys, body)
     joint_dofs = get_lms(sys, joint)
-    
-    # Получаем текущее время (предполагается, что время - последний элемент state)
-    current_time = (length(state) > last_body_dof(sys)) ? state[end] : 0.0
-    
-    if current_time >= joint.start_time && current_time <= joint.start_time + joint.duration
-        t = current_time - joint.start_time
-        desired = joint.trajectory(t)
-        
         # Ограничения для позиции и ориентации
         rhs[joint_dofs[1]] = state[bd_p_dofs[1]] - desired[1]  # ошибка x
         rhs[joint_dofs[2]] = state[bd_p_dofs[2]] - desired[2]  # ошибка y
@@ -283,11 +275,9 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
         # Управляющие силы (лагранжевы множители)
         rhs[bd_v_dofs[1]] += state[joint_dofs[1]]
         rhs[bd_v_dofs[2]] += state[joint_dofs[2]]
-    else
         # Вне интервала времени - множители равны нулю
         rhs[joint_dofs[1]] = 0.0
         rhs[joint_dofs[2]] = 0.0
-    end
 end
 
 # Вспомогательные функции для создания траекторий
