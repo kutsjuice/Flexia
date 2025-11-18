@@ -234,11 +234,20 @@ function get_spring_energy(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
 end
 
 function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
-    bd = spring.body1
-    pos_dofs = get_body_position_dofs(system, bd)
-    _xi = state[pos_dofs[1]]
-    _yi = state[pos_dofs[2]]
-    _θi = state[pos_dofs[3]]
+    bd1 = spring.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi1 = state[pos_dofs1[1]]
+    _yi1 = state[pos_dofs1[2]]
+    _θi1 = state[pos_dofs1[3]]
+
+    bd2 = spring.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _xi2 = state[pos_dofs2[1]]
+    _yi2 = state[pos_dofs2[2]]
+    _θi2 = state[pos_dofs2[3]]
+
+    _xi = _xi1 + bd1.length*cos(_θi1)
+    _yi = _yi1 + bd1.length*sin(_θi1)
 
     return Point2f(_xi ,_yi)
 end
