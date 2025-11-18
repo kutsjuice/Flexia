@@ -1,7 +1,7 @@
 module Flexia
 # using Pkg; Pkg.activate(".")
 using StaticArrays
-using CairoMakie
+using Makie
 # export MBSystem
 # export Body2D
 
