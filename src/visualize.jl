@@ -37,7 +37,6 @@ end
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
     lines!(ax, hinge_point, color=:blue);
-    scatter!(ax, hinge_point, color=:red, markersize=8);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
