@@ -33,9 +33,23 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    spiral_string = "M100 50 C 100 116 12.5 99.5 12.5 50 C 12.5 0.5 75 9 75 50 C 75 83 37.5 74 37.5 50 C 37.5 38 50 42 50 50"
-    spiral = BezierPath(spiral_string, fit = true, flipy = true) 
-    scatter!(ax, hinge_point, marker = spiral, markersize = 50, color = 1:3, colormap = [:tomato, :slategray2]);
+    # Параметры спирали
+    n_turns = 5
+    points_per_turn = 100
+    max_radius = 4
+    
+    # Генерируем точки спирали
+    θ = range(0, 2π * n_turns, length=n_turns * points_per_turn)
+    a = max_radius / (2π * n_turns)
+    r = a * θ
+    
+    # Преобразуем координаты
+    x = hinge_point[1] .+ r .* cos.(θ)
+    y = hinge_point[2] .+ r .* sin.(θ)
+    
+    # Рисуем
+    lines!(ax, x, y, color=:blue, linewidth=2)
+    scatter!(ax, [hinge_point[1]], [hinge_point[2]], color=:red, markersize=8)
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
