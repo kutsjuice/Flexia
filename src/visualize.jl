@@ -33,7 +33,7 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    tors_point = get_torsionalSpring_point(system, joint, view(solution, :, iter))
+    tors_point = get_torsionalSpring_point(system, joint, iter)
     # Генерируем точки спирали
     θ = 0.:0.05:2*pi
     a = 0.1273
