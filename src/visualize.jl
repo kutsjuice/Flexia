@@ -33,16 +33,11 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    # Параметры спирали
-    n_turns = 5.
-    points_per_turn = 100.
-    max_radius = 4.
-    
     # Генерируем точки спирали
     θ = 0.:0.05:2*pi
     a = 0.1273
     r = a * θ
-    spirla_points = Point2f(hinge_point[1] .+ r .* cos.(θ), hinge_point[2] .+ r .* sin.(θ))  
+    spirla_points = Point2f(hinge_point._xi .+ r .* cos.(θ), hinge_point._yi .+ r .* sin.(θ))  
     # Рисуем
     lines!(ax, spirla_points, color=:blue, linewidth=2)
     scatter!(ax, hinge_point, color=:red, markersize=8)
