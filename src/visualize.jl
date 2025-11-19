@@ -33,7 +33,7 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    p =  lift(i) do value
+    p =  lift(iter) do value
         tors_point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
         return tors_point;
     end
