@@ -18,11 +18,10 @@ end
 
 function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
     p =  lift(i) do value
-        θ = 0.:0.05:2*pi
         a = 0.1273
-        r = a * θ
+        r = a * value
         point = get_torsionalSpring_point(system, joint, view(solution, :, value))
-        point2 = Point2f(point[1] .+ r .* cos.(θ), point[2] + .+ r .* sin.(θ) )
+        point2 = Point2f(point[1] .+ r .* cos.(value), point[2] + .+ r .* sin.(value) )
         return point2;
     end
     return p;
