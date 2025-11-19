@@ -48,8 +48,8 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     y = hinge_point[2] .+ r .* sin.(θ)
     
     # Рисуем
-    lines!(ax, x, y, color=:blue, linewidth=2)
-    scatter!(ax, hinge_point[1], hinge_point[2], color=:red, markersize=8)
+    lines!(ax, [x, y], color=:blue, linewidth=2)
+    scatter!(ax, hinge_point, color=:red, markersize=8)
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
