@@ -39,7 +39,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     max_radius = 4.
     
     # Генерируем точки спирали
-    θ = range(0., 2π * n_turns, length=n_turns * points_per_turn)
+    θ = 0:0.05:2*pi
     a = max_radius / (2π * n_turns)
     r = a * θ
     
