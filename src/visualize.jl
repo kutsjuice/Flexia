@@ -39,16 +39,12 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     max_radius = 4.
     
     # Генерируем точки спирали
-    θ = 0:0.05:2*pi
+    θ = 0.:0.05:2*pi
     a = 0.1273
     r = a * θ
-    
-    # Преобразуем координаты
-    x = hinge_point[1] .+ r .* cos.(θ)
-    y = hinge_point[2] .+ r .* sin.(θ)
-    
+    spirla_points = Point2f(hinge_point[1] .+ r .* cos.(θ), hinge_point[2] .+ r .* sin.(θ))  
     # Рисуем
-    lines!(ax, [x, y], color=:blue, linewidth=2)
+    lines!(ax, spirla_points, color=:blue, linewidth=2)
     scatter!(ax, hinge_point, color=:red, markersize=8)
 end
 
