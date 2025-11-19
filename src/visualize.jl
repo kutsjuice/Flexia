@@ -22,7 +22,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         a = 0.1273
         r = a * θ
         point = get_torsionalSpring_point(system, joint, view(solution, :, value))
-        point2 = Point2f(point._xi .+ r .* cos.(θ), point._yi + .+ r .* sin.(θ) )
+        point2 = Point2f(point[1] .+ r .* cos.(θ), point[2] + .+ r .* sin.(θ) )
         return point2;
     end
     return p;
