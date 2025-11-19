@@ -18,8 +18,12 @@ end
 
 function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
     p =  lift(i) do value
-        point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
-        return point;
+        θ = 0.:0.05:2*pi
+        a = 0.1273
+        r = a * θ
+        point = get_torsionalSpring_point(system, joint, view(solution, :, value))
+        point2 = Point2f(point._xi .+ r .* cos.(θ), point._yi + .+ r .* sin.(θ) )
+        return point2;
     end
     return p;
 end
@@ -33,15 +37,7 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    tors_point = get_torsionalSpring_point(system, joint, iter)
-    # Генерируем точки спирали
-    θ = 0.:0.05:2*pi
-    a = 0.1273
-    r = a * θ
-    spirla_points = Point2f(tors_point._xi .+ r .* cos.(θ), tors_point._yi .+ r .* sin.(θ))  
-    # Рисуем
-    lines!(ax, spirla_points, color=:blue, linewidth=2)
-    scatter!(ax, hinge_point, color=:red, markersize=8)
+    scatter!(ax, hinge_point, color=:red, markersize=8);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
