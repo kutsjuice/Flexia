@@ -34,9 +34,9 @@ end
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
     # Параметры спирали
-    n_turns = 5
-    points_per_turn = 100
-    max_radius = 4
+    n_turns = 5.
+    points_per_turn = 100.
+    max_radius = 4.
     
     # Генерируем точки спирали
     θ = range(0, 2π * n_turns, length=n_turns * points_per_turn)
@@ -49,7 +49,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     
     # Рисуем
     lines!(ax, x, y, color=:blue, linewidth=2)
-    scatter!(ax, [hinge_point[1]], [hinge_point[2]], color=:red, markersize=8)
+    scatter!(ax, hinge_point[1], hinge_point[2], color=:red, markersize=8)
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
