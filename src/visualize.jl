@@ -31,6 +31,7 @@ function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::O
 end
 function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
     scatter!(ax, hinge_point);
 end
 
