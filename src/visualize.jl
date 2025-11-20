@@ -16,13 +16,20 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     return p;
 end
 
-function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
+# function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
+#     p =  lift(i) do value
+#         a = 0.1273
+#         r = a * value
+#         point = get_torsionalSpring_point(system, joint, view(solution, :, value))
+#         point2 = Point2f(point[1] .+ r .* cos.(value), point[2] + .+ r .* sin.(value) )
+#         return point2;
+#     end
+#     return p;
+# end
+function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     p =  lift(i) do value
-        a = 0.1273
-        r = a * value
-        point = get_torsionalSpring_point(system, joint, view(solution, :, value))
-        point2 = Point2f(point[1] .+ r .* cos.(value), point[2] + .+ r .* sin.(value) )
-        return point2;
+        point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
+        return point;
     end
     return p;
 end
@@ -36,8 +43,16 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    lines!(ax, hinge_point, color=:blue, linewidth=2);
-    scatter!(ax, hinge_point, color=:red, markersize=8);
+    circle_with_hole = BezierPath([
+    MoveTo(Point(1, 0)),
+    EllipticalArc(Point(0, 0), 1, 1, 0, 0, 2pi),
+    MoveTo(Point(0.5, 0.5)),
+    LineTo(Point(0.5, -0.5)),
+    LineTo(Point(-0.5, -0.5)),
+    LineTo(Point(-0.5, 0.5)),
+    ClosePath(),
+])
+    scatter!(ax, hinge_point, marker = circle_with_hole, color=:red, markersize=8);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
