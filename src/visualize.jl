@@ -26,7 +26,7 @@ end
 #     end
 #     return p;
 # end
-function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
+function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
     p =  lift(i) do value
         point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
         return point;
@@ -52,6 +52,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     LineTo(Point(-0.5, 0.5)),
     ClosePath(),
 ])
+
     scatter!(ax, hinge_point, marker = circle_with_hole, color=:red, markersize=8);
 end
 
