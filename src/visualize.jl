@@ -53,7 +53,28 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     ClosePath(),
 ])
 
-    scatter!(ax, hinge_point, marker = circle_with_hole, color=:red, markersize=8);
+    spiral = BezierPath([
+    LineTo(Point(5.07, 3.197)),
+    LineTo(Point(2.54, 7.05)),
+    LineTo(Point(-9.51, 5.12)),
+    LineTo(Point(-12.11, -5.567)),
+    LineTo(Point(0., -8.841)),
+    LineTo(Point(13.32, 0.)),
+    LineTo(Point(5.077, 13.438)),
+    LineTo(Point(-9.509, 13.438)),
+    LineTo(Point(-9.509, 15.438)),
+    LineTo(Point(5.489, 15.273)),
+    LineTo(Point(14.991, 0.)),
+    LineTo(Point(0., -10.645)),
+    LineTo(Point(-13.33, -6.376)),
+    LineTo(Point(-10.811, 6.08)),
+    LineTo(Point(2.538, 8.558)),
+    LineTo(Point(6.658, 3.197)),
+    LineTo(Point(0.593, -2.019)),
+    ClosePath(),
+])
+
+    scatter!(ax, hinge_point, marker = spiral, color=:red, markersize=8);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
