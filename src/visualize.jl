@@ -75,7 +75,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     ClosePath(),
 ])
 
-    scatter!(ax, hinge_point, marker = spiral, color=:red, markersize=5);
+    scatter!(ax, hinge_point, marker = spiral, color=:red, markersize=1);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
