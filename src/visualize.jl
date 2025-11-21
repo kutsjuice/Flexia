@@ -43,16 +43,23 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    circle_with_hole = BezierPath([
-    MoveTo(Point(1, 0)),
-    EllipticalArc(Point(0, 0), 1, 1, 0, 0, 2pi),
-    MoveTo(Point(0.5, 0.5)),
-    LineTo(Point(0.5, -0.5)),
-    LineTo(Point(-0.5, -0.5)),
-    LineTo(Point(-0.5, 0.5)),
-    ClosePath(),
-])
+    bd1 = spring.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _θi1 = state[pos_dofs1[3]]
 
+    bd2 = spring.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _θi2 = state[pos_dofs2[3]]
+
+#     circle_with_hole = BezierPath([
+#     MoveTo(Point(1, 0)),
+#     EllipticalArc(Point(0, 0), 1, 1, 0, 0, 2pi),
+#     MoveTo(Point(0.5, 0.5)),
+#     LineTo(Point(0.5, -0.5)),
+#     LineTo(Point(-0.5, -0.5)),
+#     LineTo(Point(-0.5, 0.5)),
+#     ClosePath(),
+# ])
     spiral = BezierPath([
     MoveTo(Point(0, 0)),
     LineTo(Point(5.07, 3.197)),
@@ -75,7 +82,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     ClosePath(),
 ])
 
-    scatter!(ax, hinge_point, marker = spiral, color=:red, markersize=1);
+    scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
