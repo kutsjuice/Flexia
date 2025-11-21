@@ -51,7 +51,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     pos_dofs2 = get_body_position_dofs(system, bd2)
     _xi2, _yi2, _θi2 = SA[pos_dofs2]
 
-    _delta_θ = _θi1:1:_θi2
+    # _delta_θ = _θi1:1:_θi2
 
 #     circle_with_hole = BezierPath([
 #     MoveTo(Point(1, 0)),
@@ -84,7 +84,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     ClosePath(),
 ])
 
-    scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = LinRange(_θi1, _θi2, length(_delta_θ)), markersize=1);
+    scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
