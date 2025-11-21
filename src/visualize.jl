@@ -45,11 +45,11 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     hinge_point = lift(system, solution, joint, iter);
     bd1 = joint.body1
     pos_dofs1 = get_body_position_dofs(system, bd1)
-    _θi1 = state[pos_dofs1[3]]
+    _θi1 = view(solution, :, iter)[pos_dofs1[3]]
 
     bd2 = joint.body2
     pos_dofs2 = get_body_position_dofs(system, bd2)
-    _θi2 = state[pos_dofs2[3]]
+    _θi2 = view(solution, :, iter)[pos_dofs2[3]]
 
     _delta_θ = _θi1:1:_θi2
 
