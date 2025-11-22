@@ -46,11 +46,11 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     stati = Vector{Any}[undef,3]
     bd1 = joint.body1
     pos_dofs1 = get_body_position_dofs(system, bd1)
-    _xi1, _yi1, _θi1 = stati[pos_dofs1]
+    _xi1, _yi1, _θi1 = stati.[pos_dofs1]
 
     bd2 = joint.body2
     pos_dofs2 = get_body_position_dofs(system, bd2)
-    _xi2, _yi2, _θi2 = stati[pos_dofs2]
+    _xi2, _yi2, _θi2 = stati.[pos_dofs2]
 
     # _delta_θ = _θi1:1:_θi2
 
