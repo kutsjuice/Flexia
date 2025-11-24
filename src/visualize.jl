@@ -29,7 +29,31 @@ end
 function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
     p =  lift(i) do value
         point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
-        return point;
+        bd1 = joint.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = joint.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        start_angel = _θi1
+        end_angel = _θi2
+
+        r0 = 1.2
+        r1 = 1.8
+        N = 100
+
+        t = LinRange(start_angel, end_angel, N)
+        R = LinRange(r0, r1, N)
+        x0 = point[1]
+        y0 = point[2]
+
+        x = [R[i] * cos[i] + x0 for i in 1:N]
+        y = [R[i] * sin[i] + y0 for i in 1:N]
+
+        return [x,y]
+
     end
     return p;
 end
