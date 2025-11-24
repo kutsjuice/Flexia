@@ -110,7 +110,7 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
 
     # scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
 
-    spiral = lift(system, solution, joint.body1, iter)
+    spiral = lift(system, solution, joint, iter)
     lines!(ax, spiral)
 end
 
