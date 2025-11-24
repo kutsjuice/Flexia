@@ -27,7 +27,7 @@ end
 #     return p;
 # end
 function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
-    p = lift(i) do value
+    return lift(i) do value
         point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
         bd1 = joint.body1
         pos_dofs1 = get_body_position_dofs(system, bd1)
@@ -49,13 +49,13 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         x0 = point[1]
         y0 = point[2]
 
-        x = [R[j] * cos(t[j]) + x0 for j in 1:N] 
-        y = [R[j] * sin(t[j]) + y0 for j in 1:N]
+        points = Vector{Point2f}(undef, 2)
 
-        f = Vector(x,y)
-        return f;
+        points[1] .= [R[j] * cos(t[j]) + x0 for j in 1:N] 
+        points[2] .= [R[j] * sin(t[j]) + y0 for j in 1:N]
+
+        return points;
     end
-    return p;
 end
 
 function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
