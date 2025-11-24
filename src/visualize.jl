@@ -51,8 +51,9 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
 
         x = [R[j] * cos(t[j]) + x0 for j in 1:N] 
         y = [R[j] * sin(t[j]) + y0 for j in 1:N]
-        
-        return (x,y);
+
+        f = lines(x,y)
+        return f
     end
     return p;
 end
@@ -65,8 +66,8 @@ function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observ
 end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
-    # hinge_point = lift(system, solution, joint, iter);
-    # scatter!(ax, hinge_point);
+    hinge_point = lift(system, solution, joint, iter);
+    scatter!(ax, hinge_point);
     # stati = UndefInitializer{Float64}[undef,3]
     # bd1 = joint.body1
     # pos_dofs1 = get_body_position_dofs(system, bd1)
@@ -111,8 +112,8 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
 
     # scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
 
-    spiral = lift(system, solution, joint, iter)
-    lines!(ax, spiral)
+    # spiral = lift(system, solution, joint, iter)
+    # lines!(ax, spiral)
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
