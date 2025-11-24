@@ -53,7 +53,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         y = [R[j] * sin(t[j]) + y0 for j in 1:N]
 
         f = Vector{Point2f}(x,y)
-        return f
+        return f;
     end
     return p;
 end
