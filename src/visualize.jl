@@ -27,7 +27,7 @@ end
 #     return p;
 # end
 function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
-    p =  lift(i) do value
+    return lift(i) do value
         point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
         bd1 = joint.body1
         pos_dofs1 = get_body_position_dofs(system, bd1)
@@ -52,10 +52,8 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         x = [R[i] * cos(t[i]) + x0 for i in 1:N]
         y = [R[i] * sin(t[i]) + y0 for i in 1:N]
 
-        return [x[i],y[i]]
-
+        return [x,y]
     end
-    return p;
 end
 
 function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
@@ -66,8 +64,8 @@ function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observ
 end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
-    hinge_point = lift(system, solution, joint, iter);
-    scatter!(ax, hinge_point);
+    # hinge_point = lift(system, solution, joint, iter);
+    # scatter!(ax, hinge_point);
     # stati = UndefInitializer{Float64}[undef,3]
     # bd1 = joint.body1
     # pos_dofs1 = get_body_position_dofs(system, bd1)
@@ -111,6 +109,9 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
 # ])
 
     # scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
+
+    spiral = lift(system, solution, joint.body1, iter)
+    lines!(ax, spiral)
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
