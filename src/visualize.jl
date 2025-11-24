@@ -27,7 +27,7 @@ end
 #     return p;
 # end
 function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
-    return lift(i) do value
+    p = lift(i) do value
         point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
         bd1 = joint.body1
         pos_dofs1 = get_body_position_dofs(system, bd1)
@@ -56,6 +56,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
 
         return points;
     end
+    return p
 end
 
 function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
