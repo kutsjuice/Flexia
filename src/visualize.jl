@@ -44,8 +44,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         r1 = 5.2
         N = 100
 
-        x = AbstractVector
-        y = AbstractVector
+        x, y = Vector{Point2f}(undef, 2)
 
         t = LinRange(start_angel, end_angel, N)
         R = LinRange(r0, r1, N)
@@ -53,14 +52,10 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         y0 = point[2]
 
         for j in 1:N
-            x[0] = x0
-            y[0] = y0
-            x[j] = R[j] * cos(t[j]) + x0 
-            y[j] = R[j] * sin(t[j]) + y0
-        
+            return x[j] = R[j] * cos(t[j]) + x0 , y[j] = R[j] * sin(t[j]) + y0
         end
 
-        return [x,y]
+        return x,y
     end
 end
 
