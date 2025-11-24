@@ -67,14 +67,15 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    stati = UndefInitializer{Float64}[undef,3]
-    bd1 = joint.body1
-    pos_dofs1 = get_body_position_dofs(system, bd1)
-    _xi1, _yi1, _θi1 = stati[pos_dofs1]
+    scatter!(ax, hinge_point);
+    # stati = UndefInitializer{Float64}[undef,3]
+    # bd1 = joint.body1
+    # pos_dofs1 = get_body_position_dofs(system, bd1)
+    # _xi1, _yi1, _θi1 = stati[pos_dofs1]
 
-    bd2 = joint.body2
-    pos_dofs2 = get_body_position_dofs(system, bd2)
-    _xi2, _yi2, _θi2 = stati[pos_dofs2]
+    # bd2 = joint.body2
+    # pos_dofs2 = get_body_position_dofs(system, bd2)
+    # _xi2, _yi2, _θi2 = stati[pos_dofs2]
 
     # _delta_θ = _θi1:1:_θi2
 
@@ -87,29 +88,29 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
 #     LineTo(Point(-0.5, 0.5)),
 #     ClosePath(),
 # ])
-    spiral = BezierPath([
-    MoveTo(Point(0, 0)),
-    LineTo(Point(5.07, 3.197)),
-    LineTo(Point(2.54, 7.05)),
-    LineTo(Point(-9.51, 5.12)),
-    LineTo(Point(-12.11, -5.567)),
-    LineTo(Point(0., -8.841)),
-    LineTo(Point(13.32, 0.)),
-    LineTo(Point(5.077, 13.438)),
-    LineTo(Point(-9.509, 13.438)),
-    LineTo(Point(-9.509, 15.438)),
-    LineTo(Point(5.489, 15.273)),
-    LineTo(Point(14.991, 0.)),
-    LineTo(Point(0., -10.645)),
-    LineTo(Point(-13.33, -6.376)),
-    LineTo(Point(-10.811, 6.08)),
-    LineTo(Point(2.538, 8.558)),
-    LineTo(Point(6.658, 3.197)),
-    LineTo(Point(0.593, -2.019)),
-    ClosePath(),
-])
+#     spiral = BezierPath([
+#     MoveTo(Point(0, 0)),
+#     LineTo(Point(5.07, 3.197)),
+#     LineTo(Point(2.54, 7.05)),
+#     LineTo(Point(-9.51, 5.12)),
+#     LineTo(Point(-12.11, -5.567)),
+#     LineTo(Point(0., -8.841)),
+#     LineTo(Point(13.32, 0.)),
+#     LineTo(Point(5.077, 13.438)),
+#     LineTo(Point(-9.509, 13.438)),
+#     LineTo(Point(-9.509, 15.438)),
+#     LineTo(Point(5.489, 15.273)),
+#     LineTo(Point(14.991, 0.)),
+#     LineTo(Point(0., -10.645)),
+#     LineTo(Point(-13.33, -6.376)),
+#     LineTo(Point(-10.811, 6.08)),
+#     LineTo(Point(2.538, 8.558)),
+#     LineTo(Point(6.658, 3.197)),
+#     LineTo(Point(0.593, -2.019)),
+#     ClosePath(),
+# ])
 
-    scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
+    # scatter!(ax, hinge_point, marker = spiral, color=:red,rotation = range(_θi1, _θi2, length = 6)[1:end-1], markersize=1);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
