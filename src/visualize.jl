@@ -44,7 +44,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         r1 = 5.2
         N = 100
 
-        x, y = Vector{Any}(undef, 2)
+        x, y = Vector{Number}(undef, 2)
 
         t = LinRange(start_angel, end_angel, N)
         R = LinRange(r0, r1, N)
