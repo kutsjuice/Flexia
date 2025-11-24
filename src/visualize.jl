@@ -51,8 +51,8 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
 
         points = Vector{Point2f}(undef, 2)
 
-        points[1] .= [R[j] * cos(t[j]) + x0 for j in 1:N] 
-        points[2] .= [R[j] * sin(t[j]) + y0 for j in 1:N]
+        points[1] = [R[j] * cos(t[j]) + x0 for j in 1:N] 
+        points[2] = [R[j] * sin(t[j]) + y0 for j in 1:N]
 
         return points;
     end
