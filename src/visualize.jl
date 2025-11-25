@@ -40,8 +40,8 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         start_angel = _θi1
         end_angel = _θi2 + 4*π
 
-        r0 = 1.2
-        r1 = 1.8
+        r0 = 0.4
+        r1 = 0.6
         N = 100
 
         t = LinRange(start_angel, end_angel, N)
