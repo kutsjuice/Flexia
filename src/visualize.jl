@@ -40,7 +40,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         start_angel = _θi1
         end_angel = _θi2
 
-        r0 = 1.2
+        r0 = 0
         r1 = 5.2
         N = 100
 
