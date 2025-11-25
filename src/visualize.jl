@@ -69,7 +69,7 @@ end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
-    scatter!(ax, hinge_point);
+    lines!(ax, hinge_point);
     # stati = UndefInitializer{Float64}[undef,3]
     # bd1 = joint.body1
     # pos_dofs1 = get_body_position_dofs(system, bd1)
