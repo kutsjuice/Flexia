@@ -42,7 +42,7 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
 
         n1 = 2
 
-        r0 = 0.4 / n1
+        r0 = 0.3 / n1
         r1 = 0.6 / n1
         N = 100
 
