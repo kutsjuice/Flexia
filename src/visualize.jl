@@ -37,8 +37,8 @@ function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
         pos_dofs2 = get_body_position_dofs(system, bd2)
         _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
 
-        start_angel = _θi1
-        end_angel = _θi2 + 3*π
+        start_angel = _θi1 + π
+        end_angel = _θi2 + 4*π
 
         r0 = 0.4
         r1 = 0.6
