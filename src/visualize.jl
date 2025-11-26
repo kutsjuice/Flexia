@@ -123,7 +123,7 @@ end
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
     fig = Figure()
     iter = Observable(1)
-    ax = Axis(fig[1, 1], aspect = :equal)
+    ax = Axis(fig[1, 1], aspect = DataAspect())
 
     for body in bodies(sys)
         bar = lift(sys, sol, body, iter)
