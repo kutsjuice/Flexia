@@ -214,8 +214,8 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     τ = spring.stiffness * Δθ - spring.damping * Δω
     
     # Добавляем в угловые ускорения (делим на инерцию)
-    rhs[bd1_vel_dofs[3]] += τ / bd1.inertia
-    rhs[bd2_vel_dofs[3]] += -τ / bd2.inertia  # Отрицательный момент на второе тело
+    rhs[bd1_vel_dofs[3]] += -τ / bd1.inertia
+    rhs[bd2_vel_dofs[3]] += τ / bd2.inertia  # Отрицательный момент на второе тело
 end
 
 # Вспомогательная функция для расчета момента пружины
