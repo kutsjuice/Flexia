@@ -211,7 +211,7 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     Δω = ω1 - ω2
     
     # Полный момент (пружина + демпфер)
-    τ = spring.stiffness * Δθ + spring.damping * Δω
+    τ = spring.stiffness * Δθ - spring.damping * Δω
     
     # Добавляем в угловые ускорения (делим на инерцию)
     rhs[bd1_vel_dofs[3]] += τ / bd1.inertia
