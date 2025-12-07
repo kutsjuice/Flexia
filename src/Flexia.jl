@@ -10,7 +10,7 @@ export FixedJoint, HingeJoint, TorsionalSpring, TrajectoryJoint
 export MBSystem2D
 
 export set_position_on_first_body!, set_position_on_second_body!
-export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, circular_trajectory
+export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment 
 export cros!, static_solver!
 
 export animate
