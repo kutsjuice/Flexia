@@ -13,7 +13,7 @@ function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, func::Function, j
     end
 end
 
-function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-5)
+function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-5) where T<: Real
 
     u = u_cur
     history = [u]
@@ -42,13 +42,13 @@ function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter =
     return u, max_iter, history
 end
 
-function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-5)
+function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Function) where T<: Real
     @assert size(sol, 1) == size(u0, 1)
     @assert size(sol, 1) == size(func(u0),1)
     sol[:, 1] = u0
     
     for i in 2:size(sol, 2)
-        sol[:, i] = newton_step(func, jac, sol[:, i-1], )
+        sol[:, i] = newton_step(func, jac, sol[:, i-1])
     end
 
 end
