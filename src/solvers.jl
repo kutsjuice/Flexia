@@ -76,7 +76,7 @@ function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter =
         
         # Проверка сходимости
         if current_residual < tol_e
-            return u, iter-1, history, residuals
+            return u
         end
         
         try
@@ -100,7 +100,7 @@ function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter =
     end
     @warn "Метод не сошёлся"
 
-    return u, max_iter, history
+    return u
 end
 
 function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Function) where T<: Real
@@ -109,7 +109,7 @@ function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Func
     sol[:, 1] = u0
     
     for i in 2:size(sol, 2)
-        sol[:, i] .= newton_step(func, jac, sol[:, i-1])
+        sol[:, i] = newton_step(func, jac, sol[:, i-1])
     end
 
 end
