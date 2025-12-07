@@ -61,7 +61,7 @@ function norm(A::AbstractMatrix, norm_type::Symbol=:frobenius)
     return matrix_norm(A, norm_type)
 end
 
-function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-5) where T<: Real
+function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-2) where T<: Real
 
     u = copy(u_cur)
     n = length(u)
