@@ -109,7 +109,7 @@ function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Func
     sol[:, 1] = u0
     
     for i in 2:size(sol, 2)
-        sol[:, i] = newton_step(func, jac, sol[:, i-1])
+        sol[:, i] .= newton_step(func, jac, sol[:, i-1])
     end
 
 end
