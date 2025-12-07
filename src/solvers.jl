@@ -32,7 +32,7 @@ function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter =
         end
         
         try
-            Ju = jac
+            Ju = jac(u)
             
             # Решаем систему J*dx = -F
             dx = Ju \ (-Fx)
