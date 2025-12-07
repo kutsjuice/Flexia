@@ -76,8 +76,8 @@ function draw_mechanism_on_traj(f, ax, x_traj, y_traj)
     for x in x_traj
         for y in y_traj
             τ1 , τ2 = inverse_kinematics(x, y)
-            p_x_mech = [0. , a1 * cosd(τ1), x, a2 * cosd(τ2) + w, w]
-            p_y_mech = [0. , a1 * sind(τ1), y, a2 * sind(τ2) , 0.]
+            p_x_mech = [0. , a1 * cosd(τ1), x, a2 * cosd(180 - τ2) + w, w]
+            p_y_mech = [0. , a1 * sind(τ1), y, a2 * sind(180 - τ2) , 0.]
 
             append!(x_mech, p_x_mech)
             append!(y_mech, p_y_mech)
@@ -86,7 +86,7 @@ function draw_mechanism_on_traj(f, ax, x_traj, y_traj)
     lines!(ax, x_mech, y_mech, color = cs)    
 end
 draw_mechanism_on_traj(f, ax, x_traj, y_traj)
-
+save("mechanism_on_traj.png", f)
 
 n_points = 500  # Количество точек по каждому углу
 θ_min = 0    # Минимальное значение угла
@@ -116,6 +116,6 @@ function draw_workspace!(f,ax)
     lines!(ax, all_points_x, all_points_y, color=:orange)
 end
 
-fig = Figure()
-ax = Axis(fig[1, 2], title="Рабочая область механизма",xlabel="X координата",ylabel="Y координата",aspect=DataAspect())
-draw_workspace!(fig,ax)
+ax = Axis(f[1, 2], title="Рабочая область механизма",xlabel="X координата",ylabel="Y координата",aspect=DataAspect())
+draw_workspace!(f,ax)
+save("mechamism's_workspace.png", f)
