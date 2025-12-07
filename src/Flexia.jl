@@ -2,7 +2,6 @@ module Flexia
 # using Pkg; Pkg.activate(".")
 using StaticArrays
 using Makie
-using LinearAlgebra
 # export MBSystem
 # export Body2D
 
@@ -44,6 +43,9 @@ end
 
 
 end
+
+
+
 """
 # end # module Flexia
 
