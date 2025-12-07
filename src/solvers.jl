@@ -15,28 +15,47 @@ end
 
 function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-5) where T<: Real
 
-    u = u_cur
-    history = [u]
-
-    for i in max_iter
-         f = func(u)
-         f_diff = jac(u)
-
-         if abs(f_diff) < tol_e
-            @warn "Метод может не сойтись"
-            break
-         end
-        u_new = u - f / f_diff
-
-        push!(history, u_new)
-
-        if abs(u_new - u) < tol_e || abs(func(u_new)) < tol_e
-            return u_new, i, history 
-        end
-
-        u = u_new
-    end
+    u = copy(u_cur)
+    n = length(u)
     
+    history = [copy(u)]
+    residuals = [norm(func(u))]
+
+    for iter in max_iter
+     Fx = func(u)
+        current_residual = norm(Fx)
+        push!(residuals, current_residual)
+        
+        # Проверка сходимости
+        if current_residual < tol_e
+            return u, iter-1, history, residuals
+        end
+        
+        try
+            Ju = jac
+            
+            # Решаем систему J*dx = -F
+            dx = Ju \ (-Fx)
+            
+            # Обновляем решение
+            u .+= dx
+            
+            push!(history, copy(x))
+            
+            # Проверка сходимости по изменению решения
+            if norm(dx) < tol_e * max(1.0, norm(u))
+                return x, iter, history, residuals
+            end
+            
+        catch e
+            if isa(e, LinearAlgebra.SingularException)
+                @warn "Матрица Якоби вырождена на итерации $iter при x = $x"
+                break
+            else
+                rethrow(e)
+            end
+        end
+    end
     @warn "Метод не сошёлся"
 
     return u, max_iter, history
