@@ -50,7 +50,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         push!(points, p21)
 
         start_angel = _θi
-        end_angel = π + π/4
+        end_angel = π/2 + π/4
 
         n1 = 2
 
