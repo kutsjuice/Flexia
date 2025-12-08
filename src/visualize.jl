@@ -21,8 +21,8 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
 
         R1 = get_lms(system, joint)
 
-        lms11 = 0.05 * solution[R1[1], view(solution, :, value)]
-        lms12 = 0.05 * solution[R1[2], view(solution, :, value)]
+        lms11 = 0.05 * solution[R1[1], value]
+        lms12 = 0.05 * solution[R1[2], value]
 
         points = Vector{Point2f}(undef, N)
 
