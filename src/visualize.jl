@@ -19,7 +19,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         x0 = point[1]
         y0 = point[2]
 
-        R1 = get_lms(sys, joint)
+        R1 = get_lms(system, joint)
 
         lms11 = 0.1 * sol[R1[1], i]
         lms12 = 0.1 * sol[R1[2], i]
