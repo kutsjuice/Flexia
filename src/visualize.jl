@@ -24,7 +24,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         lms11 = 0.01 * solution[R1[1], value]
         lms12 = 0.01 * solution[R1[2], value]
         N1 = 100
-        N = N1 + 4
+        N = N1 + 5
 
         points = Vector{Point2f}(undef, N)
 
@@ -67,6 +67,9 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
 
             push!(points, p3)
         end
+        p_end = Point2f(x0, y0)
+        push!(points, p_end)
+
         return points;
     end
     return p;
