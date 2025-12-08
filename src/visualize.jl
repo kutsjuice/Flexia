@@ -31,13 +31,13 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         x1 = lms11 - x0
         y1 = 0
         p1 = Point2f(x1,y1)
-        append!(points, p1)
+        push!(points, p1)
         
 
         x2 = 0
         y2 = lms12 - y0
         p2 = Point2f(x2, y2)
-        append!(points, p2)
+        push!(points, p2)
 
         start_angel = _θi
         end_angel = π
@@ -55,7 +55,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
             y3 = R[j] * sin(t[j]) + y0
             p3 = Point2f(x3,y3)
 
-            append!(points, p3)
+            push!(points, p3)
         end
         return points;
     end
