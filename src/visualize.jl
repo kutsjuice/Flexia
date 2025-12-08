@@ -29,23 +29,23 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         points = Vector{Point2f}(undef, N)
 
         x10 = lms11 - x0
-        y10 = 0.
+        y10 = y0
         p10 = Point2f(x10,y10)
         push!(points, p10)
 
-        x11 = -(lms11 - x0)
-        y11 = 0.
+        x11 = x0
+        y11 = y0
         p11 = Point2f(x11,y11)
         push!(points, p11)
         
 
-        x20 = 0.
+        x20 = x0
         y20 = lms12 - y0
         p20 = Point2f(x20, y20)
         push!(points, p20)
 
-        x21 = 0.
-        y21 = -(lms12 - y0)
+        x21 = x0
+        y21 = y0
         p21 = Point2f(x21, y21)
         push!(points, p21)
 
