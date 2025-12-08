@@ -8,6 +8,56 @@ end
 function Makie.lift(system, solution, joint::AbstractJoint2D, i::Observable)
 end
 
+function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
+    p =  lift(i) do value
+        point = get_fixed_point(system, joint, view(solution, :, value))
+
+        x0 = point[1]
+        y0 = point[2]
+        θ0 = point[3]
+
+        R1 = get_lms(sys, joint)
+
+        lms11 = 0.1 * sol[R1[1], i]
+        lms12 = 0.1 * sol[R1[2], i]
+
+        points = Vector{Point2f}(undef, N)
+
+        x1 = lms11 - x0
+        y1 = 0
+        p1 = Point2f(x1,y1)
+        append!(points, p1)
+        
+
+        x2 = 0
+        y2 = lms12 - y0
+        p2 = Point2f(x2, y2)
+        append!(points, p2)
+
+        start_angel = θ0
+        end_angel = π
+
+        n1 = 2
+
+        r0 = 0.3 / n1
+        r1 = 0.6 / n1
+        N = 100
+
+        t = LinRange(start_angel, end_angel, N)
+        R = LinRange(r0, r1, N)
+
+        for j in 1:N
+            x3 = R[j] * cos(t[j]) + x0  
+            y3 = R[j] * sin(t[j]) + y0
+            p3 = Point2f(x3,y3)
+
+            append!(points, p3)
+        end
+        return points;
+    end
+    return p;
+end
+
 function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     p =  lift(i) do value
         point = get_hinge_point(system, joint, view(solution, :, value)) 
@@ -118,6 +168,11 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
 
     # spiral = lift(system, solution, joint, iter)
     # lines!(ax, spiral)
+end
+
+function draw!(ax, joint::FixedJoint, system::MBSystem2D, solution, iter::Observable)
+    fixed_point = lift(system, solution, joint, iter);
+    lines!(ax, fixed_point);
 end
 
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
