@@ -12,9 +12,12 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
     p =  lift(i) do value
         point = get_fixed_point(system, joint, view(solution, :, value))
 
+        bd = joint.body
+        pos_dofs1 = get_body_position_dofs(system, bd)
+        _xi1, _yi1, _θi = view(solution, :, value)[pos_dofs1]
+
         x0 = point[1]
         y0 = point[2]
-        θ0 = point[3]
 
         R1 = get_lms(sys, joint)
 
@@ -34,7 +37,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         p2 = Point2f(x2, y2)
         append!(points, p2)
 
-        start_angel = θ0
+        start_angel = _θi
         end_angel = π
 
         n1 = 2
