@@ -60,11 +60,11 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
             y3 = R[j] * sin(t[j]) + y0
             p3 = Point2f(x3,y3)
             push!(points, p3)
+
+            p_end = Point2f(x0, y0)
+            push!(points, p_end)
         end
         
-        p_end = Point2f(x0, y0)
-        push!(points, p_end)
-
         return points;
     end
     return p;
