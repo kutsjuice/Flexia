@@ -4,49 +4,51 @@ using GLMakie
 using ForwardDiff
 
 using StaticArrays
+using LinearAlgebra
+
 const g = 9.81
 
-bd1 = Body2D(10, 1)
-bd2 = Body2D(10, 1)
-bd3 = Body2D(10, 1)
-bd4 = Body2D(10, 1)
-bd5 = Body2D(10, 1)
+const m1 = 10
+const m2 = 20
+const m3 = 30
+
+bd1 = Body2D(m1, 10)
+bd2 = Body2D(m2, 10)
+bd3 = Body2D(m3, 10)
+
 # bd2 = Body2D(10, 1)
 
-bd1.forces[2] = (x) -> -bd1.mass * g
-bd2.forces[2] = (x) -> -bd2.mass * g
-bd3.forces[2] = (x) -> -bd3.mass * g
-bd4.forces[2] = (x) -> -bd4.mass * g
-bd5.forces[2] = (x) -> -bd5.mass * g
-
+bd1.forces[2] = (x) -> -m1 * bd1.mass * g
+bd2.forces[2] = (x) -> -m2 * bd2.mass * g
+bd3.forces[2] = (x) -> -m3 * bd3.mass * g
 
 jnt1 = FixedJoint(bd1)
 jnt2 = HingeJoint(bd1, bd2)
 jnt3 = HingeJoint(bd2, bd3)
-jnt4 = HingeJoint(bd3, bd4)
-jnt5 = HingeJoint(bd4, bd5)
-set_position_on_second_body!(jnt2, SA[-0.5, 0])
 
-set_position_on_first_body!(jnt3, SA[0.5, 0])
-set_position_on_second_body!(jnt3, SA[-0.5, 0])
-set_position_on_first_body!(jnt4, SA[0.5, 0])
-set_position_on_second_body!(jnt4, SA[-0.5, 0])
-set_position_on_first_body!(jnt5, SA[0.5, 0])
-set_position_on_second_body!(jnt5, SA[-0.5, 0])
+tcp1 = TorsionalSpring(bd1, bd2, 100000.,0.0, 0.)
+tcp2 = TorsionalSpring(bd2, bd3, 100000.,0.0, 0.)
+
+set_position_on_first_body!(jnt2, SA[1.,0])
+set_position_on_second_body!(jnt2, SA[-1., 0])
+
+set_position_on_first_body!(jnt3, SA[1., 0])
+set_position_on_second_body!(jnt3, SA[-1., 0])
+
 
 sys = MBSystem2D()
 
 add!(sys, bd1)
 add!(sys, bd2)
 add!(sys, bd3)
-add!(sys, bd4)
-add!(sys, bd5)
+
 
 add!(sys, jnt1)
 add!(sys, jnt2)
 add!(sys, jnt3)
-add!(sys, jnt4)
-add!(sys, jnt5)
+
+add!(sys, tcp1)
+add!(sys, tcp2)
 
 if (!assemble!(sys))
     println("Assembling failed!")
@@ -56,13 +58,21 @@ func = sys.rhs
 
 jacoby = (x) -> ForwardDiff.jacobian(func, x)
 
-
 bd1_x_ind, bd1_y_ind, _ = get_body_position_dofs(sys, bd1)
-bd2_x_ind, bd2_y_ind, _ = get_body_position_dofs(sys, bd2)
-bd3_x_ind, bd3_y_ind, _ = get_body_position_dofs(sys, bd3)
+bd2_x_ind, bd2_y_ind, bd2_t_ind = get_body_position_dofs(sys, bd2)
+bd3_x_ind, bd3_y_ind, bd3_t_ind = get_body_position_dofs(sys, bd3)
+
+bd3_Vx_ind, bd3_Vy_ind, bd3_Vt_ind = get_body_velocity_dofs(sys, bd3)
 
 initial = zeros(number_of_dofs(sys))
-initial[bd2_x_ind] = 0.5
+
+initial[bd2_x_ind] = 2.
+initial[bd2_y_ind] = 0.
+initial[bd3_x_ind] = 3.75
+initial[bd3_y_ind] = 0.1
+initial[bd3_t_ind] = asin(0.1 / 1)
+
+# initial[bd3_Vt_ind] = 1
 func(initial)
 jacoby(initial)
 
@@ -70,8 +80,138 @@ mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = 0:0.01:10
-sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-cros!(sol, initial, mass, func, jacoby, step(time_span))
 
-animate(sys, sol, time_span, "stat_bar1.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+time_start = 0
+time_end = 1
+time_step = 100
+time_span = range(time_start, time_end, time_step)
+sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+# cros!(sol, initial, mass, func, jacoby, step(time_span))
+static_solver!( sol , initial, func, jacoby)
+animate(sys, sol, time_span, "stat_bar13.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+
+R1 = get_lms(sys, jnt1)
+R2 = get_lms(sys, jnt2)
+R3 = get_lms(sys, jnt3)
+
+M1 = get_spring_moment(tcp1, 0., sol[bd2_t_ind, time_step])
+M2 = get_spring_moment(tcp2, sol[bd2_t_ind, time_step], sol[bd3_t_ind, time_step])
+
+lms11 = sol[R1[1], time_step]
+lms12 = sol[R1[2], time_step]
+lms13 = sol[R1[3], time_step]
+
+lms21 = sol[R2[1], time_step]
+lms22 = sol[R2[2], time_step]
+
+lms31 = sol[R3[1], time_step]
+lms32 = sol[R3[2], time_step]
+
+# углы
+θ2 = rad2deg(sol[bd2_t_ind, time_step])
+θ3 = rad2deg(sol[bd3_t_ind, time_step])
+
+println("углы пружин в градусах $θ2, $θ3")
+
+println("Статический расчёт.")
+println("Реакция шарнира 1 по оси Х,Y и момент заделки = [ $lms11 , $lms12, $lms13]")
+println("Реакция шарнира 2 по оси Х,Y =  [$lms21, $lms22]")
+println("Реакция шарнира 3 по оси Х,Y = [$lms31, $lms32]")
+
+println("Реакция пружины 1 момент = $M1")
+println("Реакция пружины 2 момент = $M2")
+
+function write_matrix_formatted(filename::String, matrix::AbstractMatrix)
+    open(filename, "w") do file
+        # Записываем открывающую скобку
+        write(file, "[")
+        
+        nrows, ncols = size(matrix)
+        
+        for i in 1:nrows
+            # Переходим на новую строку для всех строк кроме первой
+            if i > 1
+                write(file, " ")
+            end
+            
+            # Записываем элементы строки
+            for j in 1:ncols
+                write(file, string(matrix[i, j]))
+                if j < ncols
+                    write(file, " ")
+                end
+            end
+            
+            # Записываем разделитель строк или закрывающую скобку
+            if i < nrows
+                write(file, "\n")
+            else
+                write(file, "]")
+            end
+        end
+    end
+end
+
+sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+
+cros!(sol2, initial, mass, func, jacoby, step(time_span))
+
+animate(sys, sol2, time_span, "dyn_bar13.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+
+lms111 = sol2[R1[1], time_step]
+lms122 = sol2[R1[2], time_step]
+lms133 = sol2[R1[3], time_step]
+
+lms211 = sol2[R2[1], time_step]
+lms222 = sol2[R2[2], time_step]
+
+lms311 = sol2[R3[1], time_step]
+lms322 = sol2[R3[2], time_step]
+
+M11 = get_spring_moment(tcp1, 0., sol2[bd2_t_ind, time_step])
+M22 = get_spring_moment(tcp2, sol2[bd2_t_ind, time_step], sol2[bd3_t_ind, time_step])
+
+println("\n")
+
+println("Динамический расчёт. Данные в конечный момент времени заданного интервала")
+println("Реакция шарнира 1 по оси Х,Y и момент заделки = [ $lms111 , $lms122, $lms133]")
+println("Реакция шарнира 2 по оси Х,Y =  [$lms211, $lms222]")
+println("Реакция шарнира 3 по оси Х,Y = [$lms311, $lms322]")
+
+println("Реакция пружины 1 момент = $M11")
+println("Реакция пружины 2 момент = $M22")
+
+write_matrix_formatted("solution.txt", sol)
+
+write_matrix_formatted("sol_dynamic.txt", sol2)
+
+
+f = Figure()
+
+ax1 = Axis(f[1,1], title="График реакций по оси У",xlabel="Time",ylabel="Reaction",aspect=DataAspect())
+
+react_x1 = Float64[]
+react_y1 = Float64[]
+react_M1 = Float64[]
+
+for i in 1:time_step
+    push!(react_x1, sol2[R1[1], i])
+    push!(react_y1, sol2[R1[2], i])
+    push!(react_M1, sol2[R1[3], i])
+end
+react_x1
+react_y1
+react_M1
+
+time_span = range(time_start, time_end, time_step)
+lines!(ax1, time_span, react_y1)
+
+ax2 = Axis(f[1,2], title="График реакций по оси X",xlabel="Time",ylabel="Reaction",aspect=DataAspect())
+
+lines!(ax2, time_span, react_x1)
+
+ax3 = Axis(f[2,1], title="График момента заделки",xlabel="Time",ylabel="Reaction",aspect=DataAspect())
+
+lines!(ax2, time_span, react_M1, color = :red)
+
+save("Reactions.png", f)
