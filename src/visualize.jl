@@ -38,7 +38,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         t = LinRange(start_angel, end_angel, N1)
         R = LinRange(r0, r1, N1)
 
-        points = Vector{Point2f}(undef, N)
+        points = Vector{Point2f}(undef, N + 1)
 
             x10 = x0
             y10 = y0
