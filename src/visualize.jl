@@ -24,7 +24,8 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         lms11 = 0.001 * solution[R1[1], value]
         lms12 = 0.001 * solution[R1[2], value]
         N1 = 100
-        N = N1 + 4
+        N0 = 4
+        N = N1 + N0
 
         start_angel = _θi
         end_angel = π/2 + π/4
@@ -38,8 +39,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         R = LinRange(r0, r1, N1)
 
         points = Vector{Point2f}(undef, N)
-        
-        for j in 1:N
+
             x10 = x0
             y10 = y0
             p10 = Point2f(x10,y10)
@@ -55,6 +55,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
             p20 = Point2f(x20, y20)
             push!(points, p20)
 
+        for j in N0:N
             x3 = R[j] * cos(t[j]) + x0  
             y3 = R[j] * sin(t[j]) + y0
             p3 = Point2f(x3,y3)
