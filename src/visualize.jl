@@ -26,7 +26,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         N1 = 100
         N = N1 + 4
 
-        points = Vector{Point2f}(0., N)
+        points = zero(Vector{Point2f}(N))
 
         x10 = x0
         y10 = y0
