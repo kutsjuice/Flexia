@@ -55,7 +55,7 @@ function Makie.lift(system, solution, joint::FixedJoint, i::Observable)
         p20 = Point2f(x20, y20)
         push!(points, p20)
 
-        for j in N0:N - 1
+        for j in 1:N1
             x3 = R[j] * cos(t[j]) + x0  
             y3 = R[j] * sin(t[j]) + y0
             p3 = Point2f(x3,y3)
