@@ -12,9 +12,9 @@ const m1 = 10
 const m2 = 20
 const m3 = 30
 
-bd1 = Body2D(m1, 10)
-bd2 = Body2D(m2, 10)
-bd3 = Body2D(m3, 10)
+bd1 = Body2D(m1, 100)
+bd2 = Body2D(m2, 100)
+bd3 = Body2D(m3, 100)
 
 # bd2 = Body2D(10, 1)
 
@@ -108,10 +108,14 @@ lms31 = sol[R3[1], time_step]
 lms32 = sol[R3[2], time_step]
 
 # углы
+θ21 = sol[bd2_t_ind, time_step]
+θ31 = sol[bd3_t_ind, time_step]
+
 θ2 = rad2deg(sol[bd2_t_ind, time_step])
 θ3 = rad2deg(sol[bd3_t_ind, time_step])
 
 println("углы пружин в градусах $θ2, $θ3")
+println("углы пружин в радианах $θ21, $θ31")
 
 println("Статический расчёт.")
 println("Реакция шарнира 1 по оси Х,Y и момент заделки = [ $lms11 , $lms12, $lms13]")
@@ -152,9 +156,13 @@ function write_matrix_formatted(filename::String, matrix::AbstractMatrix)
     end
 end
 
+initial2 = copy(sol[:,time_step])
+
+initial2[bd3_Vt_ind] = 1
+
 sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 
-cros!(sol2, initial, mass, func, jacoby, step(time_span))
+cros!(sol2, initial2, mass, func, jacoby, step(time_span))
 
 animate(sys, sol2, time_span, "dyn_bar13.mp4"; framerate = 30, limits = (-5,5, -5, 5))
 
@@ -188,30 +196,64 @@ write_matrix_formatted("sol_dynamic.txt", sol2)
 
 f = Figure()
 
-ax1 = Axis(f[1,1], title="График реакций по оси У",xlabel="Time",ylabel="Reaction",aspect=DataAspect())
-
 react_x1 = Float64[]
+react_x2 = Float64[]
+react_x3 = Float64[]
+
 react_y1 = Float64[]
+react_y2 = Float64[]
+react_y3 = Float64[]
+
 react_M1 = Float64[]
+
+react_TCP1 = Float64[]
+react_TCP2 = Float64[]
 
 for i in 1:time_step
     push!(react_x1, sol2[R1[1], i])
+    push!(react_x2, sol2[R2[1], i])
+    push!(react_x3, sol2[R3[1], i])
+
     push!(react_y1, sol2[R1[2], i])
+    push!(react_y2, sol2[R2[2], i])
+    push!(react_y3, sol2[R3[2], i])
+
     push!(react_M1, sol2[R1[3], i])
+
+    push!(react_TCP1, get_spring_moment(tcp1, 0., sol2[bd2_t_ind, i]))
+    push!(react_TCP2, get_spring_moment(tcp2, sol2[bd2_t_ind, i], sol2[bd3_t_ind, i]))
 end
 react_x1
+react_x2
+react_x3
+
 react_y1
+react_y2
+
 react_M1
+time = 1:1:time_step
+ax2 = Axis(f[1,3], title="График реакций по оси X",xlabel="Время, с.",ylabel="Реакции, Н.")
 
-time_span = range(time_start, time_end, time_step)
-lines!(ax1, time_span, react_y1)
+l1 = lines!(ax2, time, react_x1, linestyle = :dot)
+l2 = lines!(ax2, time, react_x2, linestyle = :dash)
+l3 = lines!(ax2, time, react_x3, linestyle = :dashdot)
 
-ax2 = Axis(f[1,2], title="График реакций по оси X",xlabel="Time",ylabel="Reaction",aspect=DataAspect())
+Legend(f[1 , 4], [l1,l2,l3], ["R1(Fix)", "R2(Jnt1)", "R3(Jnt2)"], framevisible = false, halign = :right, valign = :top)
 
-lines!(ax2, time_span, react_x1)
+ax1 = Axis(f[1 , 1], title="График реакций по оси Y",xlabel="Время, с.",ylabel="Реакции, Н.")
 
-ax3 = Axis(f[2,1], title="График момента заделки",xlabel="Time",ylabel="Reaction",aspect=DataAspect())
+l4 = lines!(ax1, time, react_y1, linestyle = :dot)
+l5 = lines!(ax1, time, react_y2, linestyle = :dash)
+l6 = lines!(ax1, time, react_y3)
 
-lines!(ax2, time_span, react_M1, color = :red)
+Legend(f[1 , 2], [l4,l5,l6], ["R1(Fix)", "R2(Jnt1)", "R3(Jnt2)"], framevisible = false, halign = :left, valign = :top)
+
+ax3 = Axis(f[2,1], title="График моментов пружин и заделки",xlabel="Время, с.",ylabel="Момент, Нxм.")
+
+l7 = lines!(ax3, time, react_M1)
+l8 = lines!(ax3, time, react_TCP1, linestyle = :dot)
+l9 = lines!(ax3, time, react_TCP2, linestyle = :dash)
+
+Legend(f[2 , 2], [l7,l8,l9], ["M1(Fix)", "TCP1", "TCP2"], framevisible = false, halign = :left, valign = :top)
 
 save("Reactions.png", f)

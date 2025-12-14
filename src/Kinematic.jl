@@ -63,13 +63,13 @@ end
 x_traj = Float64[]
 y_traj = Float64[]
 
-x_traj = [ 0.3, 0.4 , 0.5, 0.6, 0.7]
+x_traj = [ 0.3, 0.4 , 0.5, 0.6]
 
-y_traj = [1.866, 1.866, 1.866, 1.866, 1.866]
+y_traj = [1.866, 1.866, 1.866, 1.866]
 f = Figure()
 ax = Axis(f[1,1], xlabel="X координата", ylabel="Y координата", aspect = DataAspect())
 lines!(ax, x_traj, y_traj, color = :black)
-cs = rand(10)
+cs = rand(100)
 function draw_mechanism_on_traj(f, ax, x_traj, y_traj)
     x_mech = Float64[]
     y_mech = Float64[]
@@ -115,7 +115,6 @@ function draw_workspace!(f,ax)
     end
     lines!(ax, all_points_x, all_points_y, color=:orange)
 end
-
 ax = Axis(f[1, 2], title="Рабочая область механизма",xlabel="X координата",ylabel="Y координата",aspect=DataAspect())
-draw_workspace!(f,ax)
+draw_workspace!(fig,ax)
 save("mechamism's_workspace.png", f)
