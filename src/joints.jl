@@ -11,8 +11,7 @@ mutable struct FixedJoint <: AbstractJoint2D
 end
 
 function setposition!(joint::FixedJoint, pos)
-    joint.pos[1] = pos[1]
-    joint.pos[2] = pos[2]
+    joint.pos = SA[pos[1], pos[2]]
     return nothing
 end
 
@@ -178,14 +177,14 @@ mutable struct SliderJoint <: AbstractJoint2D
     body2_position::SVector{2,Float64}
     body2_direction::SVector{2,Float64}
     alpha1::Float64
-    alpha1::Float64
+    alpha2::Float64
     index::Int64
 
 
     function SliderJoint(bd1::Body2D, bd2::Body2D)
-        alpha1 = 0;
-        alpha2 = 0;
-        return new(bd1, SA[0.0, 0.0], SA[1.0, 0.0], bd2, SA[0.0, 0.0], SA[1.0, 0.0], alpha1, alpha2, -1)
+        α1 = 0;
+        α2 = 0;
+        return new(bd1, SA[0.0, 0.0], SA[1.0, 0.0], bd2, SA[0.0, 0.0], SA[1.0, 0.0], α1, α2, -1)
     end
 end
 
@@ -210,11 +209,13 @@ function set_position_on_second_body!(joint::SliderJoint, pos::SVector{2,Float64
 end
 
 function set_direction_on_first_body!(joint::SliderJoint, dir::SVector{2,Float64})
+    joint.alpha1 = atan(dir[2], dir[1])
     joint.body1_direction = dir
     return nothing
 end
 
 function set_direction_on_second_body!(joint::SliderJoint, dir::SVector{2,Float64})
+    joint.alpha2 = atan(dir[2], dir[1])
     joint.body2_direction = dir
     return nothing
 end
