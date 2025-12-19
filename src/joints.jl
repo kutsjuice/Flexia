@@ -291,7 +291,7 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     rhs[bd1_v_dofs[3]] += λ1 * ((_yi - ypj) * G_xni + (xpj - _xi) * G_yni)
 
     rhs[bd2_v_dofs[1]] += -λ1 * G_xni
-    rhs[bd2_v_dofs[2]] += -λ1 * perp_y
+    rhs[bd2_v_dofs[2]] += -λ1 * G_yni
     rhs[bd2_v_dofs[3]] += -λ1 * ((ypj - _yj ) * G_xni + (_xj - xpj) * G_yni)
 
     # For constraint 2: d/dt of direction alignment
