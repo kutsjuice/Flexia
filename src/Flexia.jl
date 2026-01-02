@@ -20,10 +20,10 @@ export test_func
 
 
 test_func() = 1
-
-abstract type AbstractBody2D end
+abstract type AbstractBody end
+abstract type AbstractBody2D <: AbstractBody end
 abstract type AbstractJoint2D end
-
+abstract type AbstractBody3D <: AbstractBody end
 include("solvers.jl")
 include("system.jl")
 include("bodies.jl")
