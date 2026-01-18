@@ -25,7 +25,7 @@ end
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
     fig = Figure()
     iter = Observable(1)
-    ax = Axis(fig[1, 1])
+    ax = Axis(fig[1, 1], aspect = DataAspect())
 
     for body in bodies(sys)
         bar = lift(sys, sol, body, iter)
@@ -42,3 +42,19 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
         iter[] = t
     end
 end
+
+# ##
+# using GLMakie
+
+# fig = Figure()
+# ax = Axis(fig[1, 1], aspect = DataAspect())
+# t = 0:0.01:2π
+# x = sin.(t)
+# y = 2cos.(t)
+# lines!(ax, x, y)
+# valmin = min(minimum(x), minimum(y))
+# valmax = max(maximum(x), maximum(y))
+# range = valmax - valmin
+# xlims!(ax, [valmin - 0.01*range, valmax + 0.01*range])
+# ylims!(ax, [valmin - 0.01*range, valmax + 0.01*range])
+# fig
