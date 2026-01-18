@@ -20,15 +20,7 @@ function setrotation!(joint::FixedJoint, θ)
     return nothing
 end
 
-number_of_dofs(::FixedJoint) = 3
-
-function add!(sys::MBSystem2D, joint::AbstractJoint2D)
-    push!(sys.joints, joint)
-    # sys.jointsnum += 1;
-    last_joint_dof = last_lm_dof(sys) + number_of_dofs(joint)
-    push!(sys.lmdofs, last_joint_dof)
-    setid!(joint, length(sys.joints))
-end
+numberofdofs(::FixedJoint) = 3
 
 function get_lms(sys::MBSystem2D, joint::FixedJoint)
     last_lm = sys.lmdofs[joint.index]
@@ -39,7 +31,7 @@ function get_lms(sys::MBSystem2D, joint::FixedJoint)
     ]
 end
 
-function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::FixedJoint)
+function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::FixedJoint)
     body = joint.body
     last_body_dof = sys.bodiesdofs[body.index]
 
@@ -79,10 +71,7 @@ mutable struct HingeJoint <: AbstractJoint2D
     end
 end
 
-number_of_dofs(::HingeJoint) = 2
-function setid!(jnt::T, index) where T<:AbstractJoint2D
-    jnt.index = index
-end
+numberofdofs(::HingeJoint) = 2
 function set_position_on_first_body!(joint::HingeJoint, pos::SVector{2,Float64})
     joint.body1_hinge_point = pos
     return nothing
@@ -101,7 +90,7 @@ function get_lms(sys::MBSystem2D, joint::HingeJoint)
     ]
 end
 
-function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
+function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
     bd1 = joint.body1
     bd2 = joint.body2
 
@@ -188,7 +177,7 @@ mutable struct SliderJoint <: AbstractJoint2D
     end
 end
 
-number_of_dofs(::SliderJoint) = 2
+numberofdofs(::SliderJoint) = 2
 
 function get_lms(sys::MBSystem2D, joint::SliderJoint)
     last_lm = sys.lmdofs[joint.index]
@@ -220,7 +209,7 @@ function set_direction_on_second_body!(joint::SliderJoint, dir::SVector{2,Float6
     return nothing
 end
 
-function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
+function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     bd1 = joint.body1
     bd2 = joint.body2
 

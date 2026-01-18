@@ -1,6 +1,6 @@
 mutable struct MBSystem2D
     bodies::Vector{AbstractBody2D}
-    joints::Vector{AbstractJoint2D}
+    connectors::Vector{AbstractConnector2D}
     # bodiesnum::Int64
     # jointsnum::Int64
     bodiesdofs::Vector{Int64}
@@ -8,16 +8,26 @@ mutable struct MBSystem2D
     assembled::Bool
     rhs::Function
     jacobian::Function
+    prestep::Function
 
     function MBSystem2D()
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
-        return new([], [], [], [], false, default_rhs, default_jacobian)
+        default_prestep = (x) -> nothing
+        return new([], [], [], [], false, default_rhs, default_jacobian, default_prestep)
     end
 end
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
-joints(sys::MBSystem2D) = sys.joints
+connectors(sys::MBSystem2D) = sys.connectors
+
+number_of_connectors(sys::MBSystem2D) = length(sys.connectors)
+
+function set_prestep_function!(sys::MBSystem2D, prestep::Function)
+    sys.prestep = prestep
+    return nothing
+end
+
 function last_body_dof(sys::MBSystem2D)
     if (isempty(sys.bodiesdofs))
         return 0
@@ -44,8 +54,8 @@ function assemble!(sys)
         for body in sys.bodies
             add_body_to_rhs!(ret, state, sys, body)
         end
-        for joint in sys.joints
-            add_joint_to_rhs!(ret, state, sys, joint)
+        for connector in sys.connectors
+            add_to_rhs!(ret, state, sys, connector)
         end
         return ret
     end

@@ -15,7 +15,7 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     end
     return p;
 end
-function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
+function draw!(ax, joint::AbstractConnector2D, system::MBSystem2D, solution, iter::Observable)
 end
 function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
@@ -31,8 +31,8 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
         bar = lift(sys, sol, body, iter)
         lines!(ax, bar)
     end
-    for joint in joints(sys)
-        draw!(ax, joint, sys, sol, iter)
+    for conn in connectors(sys)
+        draw!(ax, conn, sys, sol, iter)
     end
 
     limits!(ax, limits...)
