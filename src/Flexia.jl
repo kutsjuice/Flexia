@@ -2,6 +2,7 @@ module Flexia
 # using Pkg; Pkg.activate(".")
 using StaticArrays
 using Makie
+using LinearAlgebra
 # export MBSystem
 # export Body2D
 
@@ -11,9 +12,9 @@ export FixedJoint, HingeJoint, SliderJoint
 export MBSystem2D
 
 export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!
-export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points
-export cros!
-
+export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, numberofdofs, last_body_dof, last_lm_dof, get_boundary_points
+export simulate, cros!
+export number_of_dofs
 export animate
 
 export test_func
@@ -24,8 +25,8 @@ test_func() = 1
 abstract type AbstractBody2D end
 abstract type AbstractJoint2D end
 
-include("solvers.jl")
 include("system.jl")
+include("solvers.jl")
 include("bodies.jl")
 include("joints.jl")
 include("visualize.jl")
