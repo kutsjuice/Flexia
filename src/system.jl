@@ -9,17 +9,26 @@ mutable struct MBSystem2D
     rhs::Function
     jacobian::Function
     prestep::Function
+    targets::Vector{Float64}
 
     function MBSystem2D()
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
         default_prestep = (x) -> nothing
-        return new([], [], [], [], false, default_rhs, default_jacobian, default_prestep)
+        return new([], [], [], [], false, default_rhs, default_jacobian, default_prestep, zeros(0))
     end
 end
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
 connectors(sys::MBSystem2D) = sys.connectors
+
+get_targets(sys::MBSystem2D) = sys.targets
+function update_targets!(sys::MBSystem2D)
+    
+    for connector in sys.connectors
+        propagate_targets!(sys, connector)
+    end
+end
 
 number_of_connectors(sys::MBSystem2D) = length(sys.connectors)
 
@@ -89,7 +98,8 @@ function assemble!(sys)
         end
         return ret
     end
-
+    sys.targets = zeros(number_of_dofs(sys))
+    update_targets!(sys)
     sys.assembled = true
 end
 

@@ -9,3 +9,7 @@ function add!(sys::MBSystem2D, connector::AbstractConnector2D)
     push!(sys.lmdofs, last_connector_dof)
     setid!(connector, length(sys.connectors))
 end
+
+function propagate_targets!(sys::MBSystem2D, connector::T) where T <: AbstractConnector2D
+    return nothing
+end
