@@ -34,7 +34,7 @@ add!(sys, ac1)
 
 
 sys.prestep = (t) -> begin
-    
+    ac1.target_angle += 0.01
 end
 
 if (!assemble!(sys))
