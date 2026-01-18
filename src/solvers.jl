@@ -11,8 +11,6 @@ function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, func::Function, j
     @assert size(sol, 1) == size(func(u0), 1)
     sol[:, 1] = u0
     for i in 2:size(sol, 2)
-        prestep_function()
-
         sol[:, i] = cros_step(func, jac, mass, time_step, sol[:, i-1])
     end
 end
