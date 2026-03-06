@@ -88,9 +88,9 @@ end
 #     end
 #     return p;
 # end
-function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
+function Makie.lift(system, solution, force::TorsionalSpring, i::Observable)
     p = lift(i) do value
-        point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
+        point = get_torsionalSpring_point(system, force, view(solution, :, value)) 
         bd1 = joint.body1
         pos_dofs1 = get_body_position_dofs(system, bd1)
         _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
@@ -131,9 +131,9 @@ function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observ
     scatter!(ax, hinge_point);
 end
 
-function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
-    hinge_point = lift(system, solution, joint, iter);
-    lines!(ax, hinge_point);
+function draw!(ax, force::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
+    force_point = lift(system, solution, force, iter);
+    lines!(ax, force_point);
 end
 
 # function draw!(ax, joint::FixedJoint, system::MBSystem2D, solution, iter::Observable)
@@ -153,6 +153,10 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
 
     for joint in joints(sys)
         draw!(ax, joint, sys, sol, iter)
+    end
+
+    for force in forces(sys)
+        draw!(ax, force, sys, sol, iter)
     end
 
     limits!(ax, limits...)
