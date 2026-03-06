@@ -85,7 +85,7 @@ mutable struct HingeJoint <: AbstractJoint2D
     body2_hinge_point::SVector{2,Float64}
     index::Int64
 
-    function HingeJoint(bd1::Body2D, bd2::Body2D)
+    function HingeJoint(bd1::Body2D, bd2::Body2D, -1)
         return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0])
     end
 end
@@ -267,9 +267,9 @@ end
 
 mutable struct SpringY <: AbstractJoint2D
     body1::Body2D
-    body1_spingy_point::SVector{2,Float64}
+    body1_spring_y_point::SVector{2,Float64}
     body2::Body2D
-    body2_spingy_point::SVector{2,Float64}
+    body2_spring_y_point::SVector{2,Float64}
     stiffness::Float64
     damping::Float64
     rest_length::Float64
@@ -282,13 +282,17 @@ end
 
 number_of_dofs(::SpringY) = 1
 
+function setid!(jnt::T, index) where T<:AbstractJoint2D
+    jnt.index = index
+end
+
 function set_position_on_first_body!(joint::SpringY, pos::SVector{2,Float64})
-    joint.body1_springy_point = pos
+    joint.body1_spring_y_point = pos
     return nothing
 end
 
 function set_position_on_second_body!(joint::SpringY, pos::SVector{2,Float64})
-    joint.body2_springy_point = pos
+    joint.body2_spring_y_point = pos
     return nothing
 end
 
@@ -324,10 +328,10 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::SpringY)
     vyj = state[bd2_v_dofs[2]]
     _ωj = state[bd2_v_dofs[3]]
 
-    xci = joint.body1_spingy_point[1]
-    yci = joint.body1_spingy_point[2]
-    xcj = joint.body2_spingy_point[1]
-    ycj = joint.body2_spingy_point[2]
+    xci = joint.body1_spring_y_point[1]
+    yci = joint.body1_spring_y_point[2]
+    xcj = joint.body2_spring_y_point[1]
+    ycj = joint.body2_spring_y_point[2]
 
     Pi_y = _yi + sin(_θi) * xci + cos(_θi) * yci
     Pj_y = _yj + sin(_θj) * xcj + cos(_θj) * ycj
