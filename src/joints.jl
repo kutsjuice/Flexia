@@ -222,11 +222,13 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     Δω = ω1 - ω2
     
     # Полный момент (пружина + демпфер)
-    τ = spring.stiffness * Δθ + spring.stiffness * Δθ^3 - spring.damping * Δω
+    τ = spring.stiffness * Δθ
+    + spring.stiffness * Δθ^3 
+    - spring.damping * Δω
     
-    # Добавляем в угловые ускорения (делим на инерцию)
-    rhs[bd1_vel_dofs[3]] += -τ / bd1.inertia
-    rhs[bd2_vel_dofs[3]] += τ / bd2.inertia  # Отрицательный момент на второе тело
+    # Добавляем в угловые лагранжевые множители 
+    rhs[bd1_vel_dofs[3]] += -τ 
+    rhs[bd2_vel_dofs[3]] += τ  
 end
 
 # Вспомогательная функция для расчета момента пружины
@@ -263,79 +265,88 @@ function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, 
     return Point2f(_xi ,_yi)
 end
 
-mutable struct TrajectoryJoint <: AbstractJoint2D
-    body::Body2D
-    trajectory::Function  # функция траектории (t) -> [x, y, θ]
-    start_time::Float64   # время начала движения
-    duration::Float64     # продолжительность движения
+mutable struct SpringY <: AbstractJoint2D
+    body1::Body2D
+    body1_spingy_point::SVector{2,Float64}
+    body2::Body2D
+    body2_spingy_point::SVector{2,Float64}
+    stiffness::Float64
+    damping::Float64
+    rest_length::Float64
     index::Int64
-    
-    function TrajectoryJoint(body::Body2D, trajectory::Function, start_time::Float64=0.0, duration::Float64=1.0)
-        return new(body, trajectory, start_time, duration, -1)
+
+    function SpringY(bd1::Body2D, bd2::Body2D, stiffness::Float64 = 1.0, damping::Float64 = 0.0, rest_length::Float64 = 0.0)
+        return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0], stiffness, damping, rest_length, -1)
     end
 end
 
-number_of_dofs(::TrajectoryJoint) = 2
+number_of_dofs(::SpringY) = 1
 
-function add!(sys::MBSystem2D, joint::TrajectoryJoint)
-    push!(sys.joints, joint)
-    last_joint_dof = last_lm_dof(sys) + number_of_dofs(joint)
-    push!(sys.lmdofs, last_joint_dof)
-    setid!(joint, length(sys.joints))
+function set_position_on_first_body!(joint::SpringY, pos::SVector{2,Float64})
+    joint.body1_springy_point = pos
+    return nothing
 end
 
+function set_position_on_second_body!(joint::SpringY, pos::SVector{2,Float64})
+    joint.body2_springy_point = pos
+    return nothing
+end
 
-function get_lms(sys::MBSystem2D, joint::TrajectoryJoint)
+function get_lms(sys::MBSystem2D, joint::SpringY)
     last_lm = sys.lmdofs[joint.index]
-    return SA[
-        last_lm-1,
-        last_lm-0,
-    ]
+    return SA[last_lm]
 end
 
-function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::TrajectoryJoint)
-    body = joint.body
-    bd_p_dofs = get_body_position_dofs(sys, body)
-    bd_v_dofs = get_body_velocity_dofs(sys, body)
-    joint_dofs = get_lms(sys, joint)
-        # Ограничения для позиции и ориентации
-        rhs[joint_dofs[1]] = state[bd_p_dofs[1]] - desired[1]  # ошибка x
-        rhs[joint_dofs[2]] = state[bd_p_dofs[2]] - desired[2]  # ошибка y
-        
-        # Управляющие силы (лагранжевы множители)
-        rhs[bd_v_dofs[1]] += state[joint_dofs[1]]
-        rhs[bd_v_dofs[2]] += state[joint_dofs[2]]
-end
+function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, joint::SpringY)
+    bd1 = joint.body1
+    bd2 = joint.body2
+    K = joint.stiffness
+    D = joint.damping
 
-# Вспомогательные функции для создания траекторий
-function circular_trajectory(center, radius, angular_velocity)
-    return (t) -> [
-        center[1] + radius * cos(angular_velocity * t),
-        center[2] + radius * sin(angular_velocity * t),
-        angular_velocity * t
-    ]
-end
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
 
-function linear_trajectory(start_pos, end_pos, duration)
-    return (t) -> [
-        start_pos[1] + (end_pos[1] - start_pos[1]) * t / duration,
-        start_pos[2] + (end_pos[2] - start_pos[2]) * t / duration,
-        start_pos[3] + (end_pos[3] - start_pos[3]) * t / duration
-    ]
-end
+    _xi = state[bd1_p_dofs[1]]
+    _yi = state[bd1_p_dofs[2]]
+    _θi = state[bd1_p_dofs[3]]
 
-function sinusoidal_trajectory(base_pos, amplitude, frequency, axis=1)
-    return (t) -> [
-        base_pos[1] + (axis == 1 ? amplitude * sin(frequency * t) : 0.0),
-        base_pos[2] + (axis == 2 ? amplitude * sin(frequency * t) : 0.0),
-        base_pos[3] + (axis == 3 ? amplitude * sin(frequency * t) : 0.0)
-    ]
-end
+    vxi = state[bd1_v_dofs[1]]
+    vyi = state[bd1_v_dofs[2]]
+    _ωi = state[bd1_v_dofs[3]]
 
-function polynomial_trajectory(coefficients)
-    return (t) -> [
-        sum(coefficients[1][i] * t^(i-1) for i in 1:length(coefficients[1])),
-        sum(coefficients[2][i] * t^(i-1) for i in 1:length(coefficients[2])),
-        sum(coefficients[3][i] * t^(i-1) for i in 1:length(coefficients[3]))
-    ]
+    _xj = state[bd2_p_dofs[1]]
+    _yj = state[bd2_p_dofs[2]]
+    _θj = state[bd2_p_dofs[3]]
+
+    vxj = state[bd2_v_dofs[1]]
+    vyj = state[bd2_v_dofs[2]]
+    _ωj = state[bd2_v_dofs[3]]
+
+    xci = joint.body1_spingy_point[1]
+    yci = joint.body1_spingy_point[2]
+    xcj = joint.body2_spingy_point[1]
+    ycj = joint.body2_spingy_point[2]
+
+    Pi_y = _yi + sin(_θi) * xci + cos(_θi) * yci
+    Pj_y = _yj + sin(_θj) * xcj + cos(_θj) * ycj
+    
+    Vi_y = vyi + _ωi * (cos(_θi) * xci - sin(_θi) * yci)
+    Vj_y = vyj + _ωj * (cos(_θj) * xcj - sin(_θj) * ycj)
+
+    lms = get_lms(sys, joint)
+    λ1 = state[lms[1]]
+
+    spring_force = K * λ1
+    damp_force = D * (Vj_y - Vi_y)
+    total_force = spring_force + damp_force
+
+    ri_x = cos(_θi) * xci - sin(_θi) * _yi
+    rj_x = cos(_θj) * xcj - sin(_θj) * _yj
+
+    rhs[bd1_v_dofs[2]] += total_force 
+    rhs[bd2_v_dofs[2]] += -total_force
+
+    rhs[lms[1]] = (Pj_y - Pi_y - joint.rest_length) - λ1 / K
 end

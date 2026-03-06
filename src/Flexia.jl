@@ -6,7 +6,7 @@ using Makie
 # export Body2D
 
 export Body2D
-export FixedJoint, HingeJoint, TorsionalSpring, TrajectoryJoint
+export FixedJoint, HingeJoint, TorsionalSpring, SpringY
 export MBSystem2D
 
 export set_position_on_first_body!, set_position_on_second_body!

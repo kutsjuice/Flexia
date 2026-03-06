@@ -104,8 +104,7 @@ all_points_y = Float64[]
 function draw_workspace!(f,ax)
     for θ1 in θ1_values
         for θ2 in θ2_values
-            result2 = forward_kinematics(θ1, θ2)
-
+            result2 = forward_kinematics(θ1, θ2)            
             all_x = [0, result2[5], result2[1], result2[7], result2[3], result2[5], result2[3], result2[7], w]
             all_y = [0, result2[6], result2[2], result2[8], result2[4], result2[6], result2[4], result2[8], 0]
 

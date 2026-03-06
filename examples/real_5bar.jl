@@ -69,7 +69,7 @@ set_position_on_first_body!(jnt31, SA[0., 0])
 set_position_on_second_body!(jnt31, SA[0.5, 0])
 
 jnt01.pos = SA[-0.5, 0.0]
-jnt02.pos = SA[1.3531+1+1+0.5+1, 0.0]
+jnt02.pos = SA[1.3531+1+1+0.5+1+0.5, 0.0]
 jnt03.pos = SA[1.3531+1, 1.56+1.56+0.78+1.]
 
 sys = MBSystem2D()
@@ -99,7 +99,7 @@ add!(sys, tcp11)
 add!(sys, tcp2)
 add!(sys, tcp21)
 add!(sys, tcp3)
-add!(sys, tcp31)
+# add!(sys, tcp31)
 add!(sys, tcp4)
 add!(sys, tcp5)
 
@@ -158,11 +158,53 @@ mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = 0:0.005:10
+time_start = 0
+time_end = 10
+time_step = 200
+time_span = range(time_start, time_end, time_step)
+
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
 
 animate(sys, sol1, time_span, "real_5bar_dyn.mp4"; framerate = 60, limits = (-7,7, -7, 7))
+
+R10 = get_lms(sys, jnt11)
+R20 = get_lms(sys, jnt21)
+R30 = get_lms(sys, jnt31)
+
+R2 = get_lms(sys, jnt2)
+R3 = get_lms(sys, jnt3)
+R4 = get_lms(sys, jnt4)
+R5 = get_lms(sys, jnt5)
+
+M1 = get_spring_moment(tcp11, 0., sol[bd2_t_ind, time_step])
+M2 = get_spring_moment(tcp2, sol[bd2_t_ind, time_step], sol[bd3_t_ind, time_step])
+M31 = get_spring_moment(tcp31, 0. , sol[bd3_t_ind, time_step])
+M21 = get_spring_moment(tcp21, 0. ,sol[bd2_t_ind, time_step])
+M3 = get_spring_moment(tcp3, sol[bd2_t_ind, time_step], sol[bd3_t_ind, time_step])
+M4 = get_spring_moment(tcp3, sol[bd3_t_ind, time_step], sol[bd4_t_ind, time_step])
+M5 = get_spring_moment(tcp3, sol[bd4_t_ind, time_step], sol[bd5_t_ind, time_step])
+
+R10X = sol[R10[1], time_step]
+R10Y = sol[R10[2], time_step]
+
+R20X = sol[R20[1], time_step]
+R20Y = sol[R20[2], time_step]
+
+R30X = sol[R30[1], time_step]
+R30Y = sol[R30[2], time_step]
+
+R21X = sol[R2[1], time_step]
+R21Y = sol[R2[2], time_step]
+
+R32X = sol[R3[1], time_step]
+R32Y = sol[R3[2], time_step]
+
+R43X = sol[R4[1], time_step]
+R43Y = sol[R4[2], time_step]
+
+R54X = sol[R5[1], time_step]
+R54Y = sol[R5[2], time_step]
 
 sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 
