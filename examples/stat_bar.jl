@@ -9,25 +9,30 @@ using LinearAlgebra
 const g = 9.81
 
 const m1 = 10
-const m2 = 20
-const m3 = 30
+const m2 = 10
+const m3 = 10
+const m4 = 10
 
 bd1 = Body2D(m1, 100)
 bd2 = Body2D(m2, 100)
 bd3 = Body2D(m3, 100)
+bd4 = Body2D(m4, 100)
 
 # bd2 = Body2D(10, 1)
 
 bd1.forces[2] = (x) -> -m1 * bd1.mass * g
 bd2.forces[2] = (x) -> -m2 * bd2.mass * g
 bd3.forces[2] = (x) -> -m3 * bd3.mass * g
+bd4.forces[2] = (x) -> -m4 * bd4.mass * g
 
 jnt1 = FixedJoint(bd1)
 jnt2 = HingeJoint(bd1, bd2)
 jnt3 = HingeJoint(bd2, bd3)
+jnt4 = HingeJoint(bd3, bd4)
 
 tcp1 = TorsionalSpring(bd1, bd2, 100000.,0.0, 0.)
 tcp2 = TorsionalSpring(bd2, bd3, 100000.,0.0, 0.)
+tcp3 = TorsionalSpring(bd3, bd4, 100000.,0.0, 0.)
 
 set_position_on_first_body!(jnt2, SA[1.,0])
 set_position_on_second_body!(jnt2, SA[-1., 0])
@@ -35,20 +40,24 @@ set_position_on_second_body!(jnt2, SA[-1., 0])
 set_position_on_first_body!(jnt3, SA[1., 0])
 set_position_on_second_body!(jnt3, SA[-1., 0])
 
+set_position_on_first_body!(jnt4, SA[1., 0])
+set_position_on_second_body!(jnt4, SA[-1., 0])
 
 sys = MBSystem2D()
 
 add!(sys, bd1)
 add!(sys, bd2)
 add!(sys, bd3)
-
+add!(sys, bd4)
 
 add!(sys, jnt1)
 add!(sys, jnt2)
 add!(sys, jnt3)
+add!(sys, jnt4)
 
 add!(sys, tcp1)
 add!(sys, tcp2)
+add!(sys, tcp3)
 
 if (!assemble!(sys))
     println("Assembling failed!")
@@ -61,18 +70,20 @@ jacoby = (x) -> ForwardDiff.jacobian(func, x)
 bd1_x_ind, bd1_y_ind, _ = get_body_position_dofs(sys, bd1)
 bd2_x_ind, bd2_y_ind, bd2_t_ind = get_body_position_dofs(sys, bd2)
 bd3_x_ind, bd3_y_ind, bd3_t_ind = get_body_position_dofs(sys, bd3)
-
-bd3_Vx_ind, bd3_Vy_ind, bd3_Vt_ind = get_body_velocity_dofs(sys, bd3)
+bd4_x_ind, bd4_y_ind, bd4_t_ind = get_body_position_dofs(sys, bd4)
 
 initial = zeros(number_of_dofs(sys))
 
 initial[bd2_x_ind] = 2.
 initial[bd2_y_ind] = 0.
-initial[bd3_x_ind] = 3.75
-initial[bd3_y_ind] = 0.1
-initial[bd3_t_ind] = asin(0.1 / 1)
 
-# initial[bd3_Vt_ind] = 1
+initial[bd3_x_ind] = 3.
+initial[bd3_y_ind] = 0.
+
+initial[bd4_x_ind] = 4.75
+initial[bd4_y_ind] = 0.1
+initial[bd4_t_ind] = asin(0.1 / 1)
+
 func(initial)
 jacoby(initial)
 
@@ -88,7 +99,7 @@ time_span = range(time_start, time_end, time_step)
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 # cros!(sol, initial, mass, func, jacoby, step(time_span))
 static_solver!( sol , initial, func, jacoby)
-animate(sys, sol, time_span, "stat_bar13.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+animate(sys, sol, time_span, "stat_bar14.mp4"; framerate = 30, limits = (-1,10, -5, 5))
 
 R1 = get_lms(sys, jnt1)
 R2 = get_lms(sys, jnt2)
@@ -158,13 +169,11 @@ end
 
 initial2 = copy(sol[:,time_step])
 
-initial2[bd3_Vt_ind] = 1
-
 sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 
 cros!(sol2, initial2, mass, func, jacoby, step(time_span))
 
-animate(sys, sol2, time_span, "dyn_bar13.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+animate(sys, sol2, time_span, "dyn_bar14.mp4"; framerate = 30, limits = (-1,10, -5, 5))
 
 lms111 = sol2[R1[1], time_step]
 lms122 = sol2[R1[2], time_step]

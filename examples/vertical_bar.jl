@@ -20,15 +20,15 @@ bd4 = Body2D(m4, 100)
 
 # bd2 = Body2D(10, 1)
 
-bd1.forces[2] = (x) -> -m1 * bd1.mass * g
-bd2.forces[2] = (x) -> -m2 * bd2.mass * g
-bd3.forces[2] = (x) -> -m3 * bd3.mass * g
-bd4.forces[2] = (x) -> -m4 * bd3.mass * g
+bd1.forces[2] = (x) -> -bd1.mass * g
+bd2.forces[2] = (x) -> -bd2.mass * g
+bd3.forces[2] = (x) -> -bd3.mass * g
+bd4.forces[2] = (x) -> -bd3.mass * g
 
 jnt1 = FixedJoint(bd1)
-jnt2 = SpringY(bd1, bd2)
-jnt3 = SpringY(bd2, bd3)
-jnt4 = SpringY(bd3, bd4)
+jnt2 = SpringY(bd1, bd2, 12., 0.0, 0.0)
+jnt3 = SpringY(bd2, bd3, 12., 0.0, 0.0)
+jnt4 = SpringY(bd3, bd4, 12., 0.0, 0.0)
 
 set_position_on_second_body!(jnt2, SA[-1., 0])
 
@@ -57,20 +57,31 @@ func = sys.rhs
 
 jacoby = (x) -> ForwardDiff.jacobian(func, x)
 
-bd1_x_ind, bd1_y_ind, _ = get_body_position_dofs(sys, bd1)
+bd1_x_ind, bd1_y_ind, bd1_t_ind = get_body_position_dofs(sys, bd1)
 bd2_x_ind, bd2_y_ind, bd2_t_ind = get_body_position_dofs(sys, bd2)
 bd3_x_ind, bd3_y_ind, bd3_t_ind = get_body_position_dofs(sys, bd3)
 bd4_x_ind, bd4_y_ind, bd4_t_ind = get_body_position_dofs(sys, bd4)
 
 initial = zeros(number_of_dofs(sys))
+initial[bd1_t_ind] = -pi/2
+
+initial[bd2_y_ind] = -2.
+initial[bd2_t_ind] = -pi/2
+
+initial[bd3_y_ind] = -3.
+initial[bd3_t_ind] = -pi/2
+
+initial[bd4_y_ind] = -4.
+initial[bd4_t_ind] = -pi/2
+
 func(initial)
 jacoby(initial)
 mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = 0:0.005:1
+time_span = 0:0.005:2
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
 
-animate(sys, sol1, time_span, "vertical_bar.mp4"; framerate = 60, limits = (-5,5, -5, 5))
+animate(sys, sol1, time_span, "vertical_bar.mp4"; framerate = 60, limits = (-1,1, -9, 1))
