@@ -85,7 +85,7 @@ mutable struct HingeJoint <: AbstractJoint2D
     body2_hinge_point::SVector{2,Float64}
     index::Int64
 
-    function HingeJoint(bd1::Body2D, bd2::Body2D, -1)
+    function HingeJoint(bd1::Body2D, bd2::Body2D)
         return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0])
     end
 end
