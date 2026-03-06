@@ -6,7 +6,8 @@ using Makie
 # export Body2D
 
 export Body2D
-export FixedJoint, HingeJoint, TorsionalSpring, SpringY
+export FixedJoint, HingeJoint, SpringY
+export TorsionalSpring
 export MBSystem2D
 
 export set_position_on_first_body!, set_position_on_second_body!, set_rotation!
@@ -23,11 +24,13 @@ test_func() = 1
 abstract type AbstractBody2D end
 abstract type AbstractJoint2D end
 abstract type AbstractMarker2D end
+abstract type AbstractForce2D end
 
 include("solvers.jl")
 include("system.jl")
 include("bodies.jl")
 include("joints.jl")
+include("forces.jl")
 include("visualize.jl")
 include("markers.jl")
 

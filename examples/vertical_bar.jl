@@ -30,6 +30,8 @@ jnt2 = SpringY(bd1, bd2, 12., 0.0, 0.0)
 jnt3 = SpringY(bd2, bd3, 12., 0.0, 0.0)
 jnt4 = SpringY(bd3, bd4, 12., 0.0, 0.0)
 
+set_rotation!(jnt1, -pi/2)
+
 set_position_on_second_body!(jnt2, SA[-1., 0])
 
 set_position_on_first_body!(jnt3, SA[1., 0])
@@ -80,8 +82,9 @@ mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = 0:0.005:2
+time_span = 0:0.005:20
+
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
 
-animate(sys, sol1, time_span, "vertical_bar.mp4"; framerate = 60, limits = (-1,1, -9, 1))
+animate(sys, sol1, time_span, "vertical_bar.mp4"; framerate = 60, limits = (-5,5, -9, 1))
