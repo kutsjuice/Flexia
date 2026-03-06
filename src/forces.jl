@@ -14,6 +14,10 @@ end
 
 # number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
 
+function setid!(force::T, index) where T<:AbstractForce2D
+    force.index = index
+end
+
 function add!(sys::MBSystem2D, force::AbstractForce2D)
     push!(sys.forces, force)
     setid!(force, length(sys.forces))
