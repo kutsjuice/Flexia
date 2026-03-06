@@ -47,13 +47,12 @@ jnt8 = HingeJoint(bd7,bd8)
 
 jnt9 = FixedJoint(bd8)
 
-tcp1 = TorsionalSpring(bd1, bd2, 100000.,0.0, 0.)
 tcp2 = TorsionalSpring(bd2, bd3, 100000.,0.0, 0.)
 tcp3 = TorsionalSpring(bd3, bd4, 100000.,0.0, 0.)
 tcp4 = TorsionalSpring(bd4, bd5, 100000.,0.0, 0.)
 tcp5 = TorsionalSpring(bd5, bd6, 100000.,0.0, 0.)
 tcp6 = TorsionalSpring(bd6, bd7, 100000.,0.0, 0.)
-tcp7 = TorsionalSpring(bd7, bd8, 100000.,0.0, 0.)
+
 
 set_position_on_second_body!(jnt2, SA[-1., 0])
 
@@ -74,9 +73,8 @@ set_position_on_second_body!(jnt7, SA[-1., 0])
 
 set_position_on_first_body!(jnt8, SA[1., 0])
 
-set_rotation!(jnt9, -pi/2)
-
-jnt9.pos = SA[4.0, 4.0]
+set_position!(jnt9, SA[7.,7.])
+set_rotation!(jnt9, pi/2)
 
 sys = MBSystem2D()
 
@@ -99,13 +97,16 @@ add!(sys, jnt7)
 add!(sys, jnt8)
 add!(sys, jnt9)
 
-add!(sys, tcp1)
 add!(sys, tcp2)
 add!(sys, tcp3)
 add!(sys, tcp4)
 add!(sys, tcp5)
 add!(sys, tcp6)
-add!(sys, tcp7)
+
+
+if (!assemble!(sys))
+    println("Assembling failed!")
+end
 
 func = sys.rhs
 
@@ -117,35 +118,36 @@ bd3_x_ind, bd3_y_ind,  = get_body_position_dofs(sys, bd3)
 bd4_x_ind, bd4_y_ind, bd4_t_ind = get_body_position_dofs(sys, bd4)
 bd5_x_ind, bd5_y_ind, _ = get_body_position_dofs(sys, bd5)
 bd6_x_ind, bd6_y_ind, bd6_t_ind = get_body_position_dofs(sys, bd6)
-bd7_x_ind, bd7_y_ind, _ = get_body_position_dofs(sys, bd7)
-bd8_x_ind, bd8_y_ind, bd8_t_ind = get_body_position_dofs(sys, bd8)
+bd7_x_ind, bd7_y_ind, _ = get_body_position_dofs(sys, bd5)
+bd8_x_ind, bd8_y_ind, bd6_t_ind = get_body_position_dofs(sys, bd6)
 
 initial = zeros(number_of_dofs(sys))
 
-# initial[bd2_x_ind] = 1.
-# initial[bd2_y_ind] = 1.
-# initial[bd2_t_ind] = pi/2
+initial[bd2_x_ind] = 1.
+initial[bd2_y_ind] = 1.
+initial[bd2_t_ind] = pi/2
 
-# initial[bd3_x_ind] = 2.
-# initial[bd3_y_ind] = 1.
+initial[bd3_x_ind] = 2.
+initial[bd3_y_ind] = 2.
 
-# initial[bd4_x_ind] = 2.
-# initial[bd4_y_ind] = 2.
-# initial[bd4_t_ind] = pi/2
+initial[bd4_x_ind] = 3.
+initial[bd4_y_ind] = 3.
+initial[bd4_t_ind] = pi/2
 
-# initial[bd5_x_ind] = 3.
-# initial[bd5_y_ind] = 2.
+initial[bd5_x_ind] = 4.
+initial[bd5_y_ind] = 4.
 
-# initial[bd6_x_ind] = 3.
-# initial[bd6_y_ind] = 3.
-# initial[bd6_t_ind] = pi/2
+initial[bd6_x_ind] = 5.
+initial[bd6_y_ind] = 5.
+initial[bd6_t_ind] = pi/2
 
-# initial[bd7_x_ind] = 4.
-# initial[bd7_y_ind] = 3.
+initial[bd7_x_ind] = 6.
+initial[bd7_y_ind] = 6.
 
-# initial[bd8_x_ind] = 4.
-# initial[bd8_y_ind] = 4.
-# initial[bd8_t_ind] = pi/2
+initial[bd8_x_ind] = 7.
+initial[bd8_y_ind] = 7.
+initial[bd8_t_ind] = pi/2
+
 
 func(initial)
 jacoby(initial)
@@ -157,5 +159,8 @@ time_span = 0:0.005:20
 
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
+animate(sys, sol1, time_span, "diag_bar.mp4"; framerate = 60, limits = (-2,13, -2, 13))
 
-animate(sys, sol1, time_span, "diag_bar.mp4"; framerate = 60, limits = (-5,5, -5, 5))
+sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+static_solver!( sol2 , initial, func, jacoby)
+animate(sys, sol2, time_span, "diag_bar_stat.mp4"; framerate = 60, limits = (-2, 13, -2, 13))
