@@ -180,3 +180,40 @@ function save_vector(vector::Vector, filename::String)
 end
 
 save_vector(sol2[:, end], "sol22.json")
+
+function eigenvector_matrix(A::AbstractMatrix)
+    # Validate input is square
+    m, n = size(A)
+    if m != n
+        error("Input matrix must be square, got $(m)×$(n)")
+    end
+    
+    # Compute eigen decomposition
+    F = eigen(A)
+    
+    # Return eigenvector matrix (each column is an eigenvector)
+    return F.vectors
+end
+
+function get_imaginary_part(matrix::AbstractMatrix)
+    return imag.(matrix)
+end
+
+eigen_matrix = get_imaginary_part(eigenvector_matrix(jacoby(initial)))
+
+function save_matrix_to_json(matrix::AbstractMatrix, filename::String)
+    data = Dict{String, Any}(
+        "eltype" => string(eltype(matrix)),
+        "size" => collect(size(matrix)),
+        "data" => matrix
+    )
+    
+    open(filename, "w") do io
+        JSON.print(io, data, 2)
+    end
+    
+    println("✓ Matrix saved to $filename")
+    return true
+end
+
+save_matrix_to_json(eigen_matrix, "eigen_matrix.json")
