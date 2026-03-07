@@ -2,6 +2,7 @@ using Pkg; Pkg.activate("./examples")
 using Flexia
 using GLMakie
 using ForwardDiff
+using JSON
 
 using StaticArrays
 
@@ -119,7 +120,7 @@ bd4_x_ind, bd4_y_ind, bd4_t_ind = get_body_position_dofs(sys, bd4)
 bd5_x_ind, bd5_y_ind, _ = get_body_position_dofs(sys, bd5)
 bd6_x_ind, bd6_y_ind, bd6_t_ind = get_body_position_dofs(sys, bd6)
 bd7_x_ind, bd7_y_ind, _ = get_body_position_dofs(sys, bd5)
-bd8_x_ind, bd8_y_ind, bd6_t_ind = get_body_position_dofs(sys, bd6)
+bd8_x_ind, bd8_y_ind, bd8_t_ind = get_body_position_dofs(sys, bd6)
 
 initial = zeros(number_of_dofs(sys))
 
@@ -167,93 +168,15 @@ animate(sys, sol2, time_span, "diag_bar_stat.mp4"; framerate = 60, limits = (-2,
 
 # # после отрыва заделки
 
-# set_position_on_second_body!(jnt2, SA[-1., 0])
+function save_vector(vector::Vector, filename::String)
+    try
+        open(filename, "w") do io
+            JSON.print(io, vector)
+        end
+        println("✓ Vector saved to $filename")
+    catch e
+        println("✗ Error saving: $e")
+    end
+end
 
-# set_position_on_first_body!(jnt3, SA[1., 0])
-# set_position_on_second_body!(jnt3, SA[-1., 0])
-
-# set_position_on_first_body!(jnt4, SA[1., 0])
-# set_position_on_second_body!(jnt4, SA[-1., 0])
-
-# set_position_on_first_body!(jnt5, SA[1., 0])
-# set_position_on_second_body!(jnt5, SA[-1., 0])
-
-# set_position_on_first_body!(jnt6, SA[1., 0])
-# set_position_on_second_body!(jnt6, SA[-1., 0])
-
-# set_position_on_first_body!(jnt7, SA[1., 0])
-# set_position_on_second_body!(jnt7, SA[-1., 0])
-
-# set_position_on_first_body!(jnt8, SA[1., 0])
-
-# sys2 = MBSystem2D()
-
-# add!(sys2, bd1)
-# add!(sys2, bd2)
-# add!(sys2, bd3)
-# add!(sys2, bd4)
-# add!(sys2, bd5)
-# add!(sys2, bd6)
-# add!(sys2, bd7)
-# add!(sys2, bd8)
-
-# add!(sys2, jnt1)
-# add!(sys2, jnt2)
-# add!(sys2, jnt3)
-# add!(sys2, jnt4)
-# add!(sys2, jnt5)
-# add!(sys2, jnt6)
-# add!(sys2, jnt7)
-# add!(sys2, jnt8)
-
-# add!(sys2, tcp2)
-# add!(sys2, tcp3)
-# add!(sys2, tcp4)
-# add!(sys2, tcp5)
-# add!(sys2, tcp6)
-
-# if (!assemble!(sys2))
-#     println("Assembling failed!")
-# end
-
-# func2 = sys2.rhs
-
-# jacoby2 = (x) -> ForwardDiff.jacobian(func2, x)
-
-# initial3 = zeros(number_of_dofs(sys))
-
-# sol22 = sol2[:, 20]
-
-# initial3[bd2_x_ind] = sol22[bd2_x_ind]
-# initial3[bd2_y_ind] = sol22[bd2_y_ind]
-# initial3[bd2_t_ind] = sol22[bd2_t_ind]
-
-# initial3[bd3_x_ind] = sol22[bd3_x_ind]
-# initial3[bd3_y_ind] = sol22[bd3_x_ind]
-
-# initial3[bd4_x_ind] = sol22[bd4_x_ind]
-# initial3[bd4_y_ind] = sol22[bd4_y_ind]
-# initial3[bd4_t_ind] = sol22[bd4_t_ind]
-
-# initial3[bd5_x_ind] = sol22[bd5_x_ind]
-# initial3[bd5_y_ind] = sol22[bd5_y_ind]
-
-# initial3[bd6_x_ind] = sol22[bd6_x_ind]
-# initial3[bd6_y_ind] = sol22[bd6_y_ind]
-# initial3[bd6_t_ind] = sol22[bd6_t_ind]
-
-# initial3[bd7_x_ind] = sol22[bd7_x_ind]
-# initial3[bd7_y_ind] = sol22[bd7_y_ind]
-
-# initial3[bd8_x_ind] = sol22[bd8_x_ind]
-# initial3[bd8_y_ind] = sol22[bd8_y_ind]
-# initial3[bd8_t_ind] = sol22[bd8_t_ind]
-
-# func2(initial3)
-# jacoby(initial3)
-
-# time_span = 0:0.05:2
-
-# sol3 = Matrix{Float64}(undef, number_of_dofs(sys2), length(time_span))
-# cros!(sol3, initial3, mass, func2, jacoby2, step(time_span))
-# animate(sys, sol3, time_span, "atlet_diag_bar.mp4"; framerate = 60, limits = (-2,13, -2, 13))
+save_vector(sol2[:, end], "sol22.json")
