@@ -216,4 +216,36 @@ function save_matrix_to_json(matrix::AbstractMatrix, filename::String)
     return true
 end
 
+function write_matrix_formatted(filename::String, matrix::AbstractMatrix)
+    open(filename, "w") do file
+        # Записываем открывающую скобку
+        write(file, "[")
+        
+        nrows, ncols = size(matrix)
+        
+        for i in 1:nrows
+            # Переходим на новую строку для всех строк кроме первой
+            if i > 1
+                write(file, " ")
+            end
+            
+            # Записываем элементы строки
+            for j in 1:ncols
+                write(file, string(matrix[i, j]))
+                if j < ncols
+                    write(file, " ")
+                end
+            end
+            
+            # Записываем разделитель строк или закрывающую скобку
+            if i < nrows
+                write(file, "\n")
+            else
+                write(file, "]")
+            end
+        end
+    end
+end
+
 save_matrix_to_json(eigen_matrix, "eigen_matrix.json")
+write_matrix_formatted("eigen_matrix.txt", eigen_matrix)
