@@ -32,8 +32,8 @@ m5 = 52e-3
 I2 = 104726.798394e-9
 # 28187.202983 г·мм² = 28187.202983e-9 кг·м²
 I4 = 28187.202983e-9
-F_container = 20000.
-omega = 2. * π
+F_container = 20.
+omega = 2. 
 # Длины в метрах: было 1.5 дм = 0.15 м, 0.75 дм = 0.075 м, 0.5 дм = 0.05 м
 bd1 = Body2D(m5, 0.1e-30, length = 0.15)
 bd2 = Body2D(m2+m1, I2, length = 0.075)
@@ -41,7 +41,7 @@ bd3 = Body2D(m2+m1, I2, length = 0.075)
 
 bd4 = Body2D(m4+m1, I4, length = 0.05)
 # bd4.forces[1] = (x) -> -(m4+m1) * F_container
-bd4.forces[1] = (x) -> F_container * sin(omega * CURRENT_TIME)
+bd4.forces[1] = (x) -> 0.05 * sin(2.0 * x[7])
 bd5 = Body2D(m2+m1, I2, length = 0.075)
 bd6 = Body2D(m2+m1, I2, length = 0.075)
 bd7 = Body2D(m5, 0.1e-30, length = 0.15)
@@ -118,6 +118,8 @@ add!(sys, tcp4)
 add!(sys, tcp5)
 add!(sys, tcp6)
 
+add_time!(sys)
+
 if (!assemble!(sys))
     println("Assembling failed!")
 end
@@ -169,6 +171,33 @@ initial[bd6_x_ind] = 0.462
 initial[bd6_y_ind] = 0.15/2
 initial[bd6_t_ind] = deg2rad(-90)
 
+# Начальное время (последний элемент)
+initial[end] = 0.0
+
+# # === ЯВНЫЙ ИНТЕГРАТОР RK4 ===
+# dt = 0.0005
+# time_span = 0:dt:10.0
+# n_steps = length(time_span)
+
+# sol = Matrix{Float64}(undef, number_of_dofs(sys), n_steps)
+# sol[:, 1] = initial
+
+# # Классический RK4
+# for i in 2:n_steps
+#     u = sol[:, i-1]
+    
+#     k1 = func(u)
+#     k2 = func(u + 0.5*dt*k1)
+#     k3 = func(u + 0.5*dt*k2)
+#     k4 = func(u + dt*k3)
+    
+#     sol[:, i] = u + (dt/6.0) * (k1 + 2*k2 + 2*k3 + k4)
+# end
+
+# animate(sys, sol, time_span, "bd4_harmonic_force.mp4"; 
+#     framerate = 30, limits = (-5, 5, -5, 5))
+
+# println("Симуляция завершена! Файл: bd4_harmonic_force.mp4")
 initial[bd7_x_ind] = 0.612
 
 func(initial)
@@ -178,48 +207,60 @@ mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
 for i in 1:last_body_dof(sys)
     mass[i, i] = 1
 end
-time_span = range(0., 1.6, 201)
+mass[end, end] = 1.0
+time_span = range(0., 20., 200)
 length(time_span)
 sol_euler = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 sol_euler[:,1] = initial
 n_steps = length(time_span)
 length(time_span)
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-cros!(sol1, CURRENT_TIME, initial, mass, func, jacoby, step(time_span))
+cros!(sol1, initial, mass, func, jacoby, step(time_span))
 
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "triv_dyn.mp4"; framerate = 30, limits = (-0.1, 0.5, -0.1, 0.5))
+animate(sys, sol1, time_span, "triv_dyn.mp4"; framerate = 30, limits = (0., 0.7, 0., 0.7))
 
-# sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-for i in 2:n_steps
-    global  CURRENT_TIME = time_span[i-1]
-    rhs_val = func(sol_euler[:, i-1])
-    sol_euler[:, i] = sol_euler[:, i-1] + dt * rhs_val
-end
+# # sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+# for i in 2:n_steps
+#     global  CURRENT_TIME = time_span[i-1]
+#     rhs_val = func(sol_euler[:, i-1])
+#     sol_euler[:, i] = sol_euler[:, i-1] + dt * rhs_val
+# end
 
-# static_solver!(sol2, initial, func, jacoby)
-display(sol1[bd4_x_ind,:])
-display(sol1[bd4_y_ind,:])
-# animate(sys, sol2, time_span, "triv_stat.mp4"; framerate = 60, limits = (-0.1, 0.5, -0.1, 0.5))
+# # static_solver!(sol2, initial, func, jacoby)
+display(sol1[bd4_Vx_ind,:])
+# display(sol1[bd4_y_ind,:])
+# # animate(sys, sol2, time_span, "triv_stat.mp4"; framerate = 60, limits = (-0.1, 0.5, -0.1, 0.5))
 
 f1 = Figure()
 ax1 = Axis(f1[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
-ylims!(minimum(sol1[bd4_x_ind,1:75]), maximum(sol1[bd4_x_ind,1:75]))
-xlims!(minimum(sol1[bd4_Vx_ind,1:75]), maximum(sol1[bd4_Vx_ind,1:75]))
-l1 = lines!(ax1, sol1[bd4_Vx_ind,1:75], sol1[bd4_x_ind,1:75], linestyle = :dot)
+ylims!(minimum(sol1[bd4_x_ind,:]), maximum(sol1[bd4_x_ind,:]))
+xlims!(minimum(sol1[bd4_Vx_ind,:]), maximum(sol1[bd4_Vx_ind,:]))
+l1 = lines!(ax1, sol1[bd4_Vx_ind,:], sol1[bd4_x_ind,:], linestyle = :dot)
 save("рисунок траектории динамика флексия.png",f1)
-# # 
-recurdyn_data = CSV.File("sila_peremeshenie2.csv") |> DataFrame
+# # # 
+recurdyn_data = CSV.File("volna.csv") |> DataFrame
 
-f2 = Figure()
-ax2 = Axis(f2[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
-ylims!(minimum(recurdyn_data[1:48,2]), maximum(recurdyn_data[1:48,2]))
-xlims!(minimum(recurdyn_data[1:48,3]), maximum(recurdyn_data[1:48,3]))
-l2 = lines!(ax2, recurdyn_data[1:48,3], recurdyn_data[1:48,2], linestyle = :dot)
-save("рисунок траектории динамика рекурдин.png",f2)
-
+# f2 = Figure()
+# ax2 = Axis(f2[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
+# ylims!(minimum(recurdyn_data[1:48,2]), maximum(recurdyn_data[1:48,2]))
+# xlims!(minimum(recurdyn_data[1:48,3]), maximum(recurdyn_data[1:48,3]))
+# l2 = lines!(ax2, recurdyn_data[1:48,3], recurdyn_data[1:48,2], linestyle = :dot)
+# save("рисунок траектории динамика рекурдин.png",f2)
+perem = [0.]
+rec_perem = [0.]
+for i in 2:200
+    push!(perem, (sol1[bd4_x_ind, i] - sol1[bd4_x_ind,1])*571.4378712)
+    push!(rec_perem, (recurdyn_data[i,2] - recurdyn_data[1,2]))
+end
+perem
+rec_perem
+ maximum(rec_perem)
+  maximum(perem)
 f3 = Figure()
-ax3 = Axis(f3[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
-ylims!(minimum(sol1[bd4_x_ind,1:200]), maximum(sol1[bd4_x_ind,1:200]))
-xlims!(minimum(sol1[bd4_Vx_ind,1:200]), maximum(sol1[bd4_Vx_ind,1:200]))
-l3 = lines!(ax3, 1:200, sol1[bd4_x_ind,1:200])
+ax3 = Axis(f3[1,1], xscale = identity, aspect = AxisAspect(2),title="Перемещение от времени",xlabel="Время, С",ylabel="Перемещение, мм")
+ylims!(minimum(perem), maximum(perem))
+xlims!(minimum(time_span), maximum(time_span))
+l3 = lines!(ax3, time_span, perem)
+l4 = lines!(ax3, time_span, rec_perem)
+save("перемещение от времени.png", f3)
