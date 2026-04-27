@@ -60,14 +60,23 @@ function add_body_to_rhs!(rhs, state, sys, body)
         last_dof - 1,
         last_dof,
     ]
+    
+    # Формируем подвектор состояния тела (6 элементов)
+    body_state = state[vcat(position_dofs, velocity_dofs)]
+    
+    # Если система имеет время, добавляем его как 7-й элемент
+    if sys.has_time
+        body_state = vcat(body_state, state[sys.time_index])
+    end
+
     # assemble velocities
     rhs[position_dofs[1]] = state[velocity_dofs[1]]
     rhs[position_dofs[2]] = state[velocity_dofs[2]]
     rhs[position_dofs[3]] = state[velocity_dofs[3]]
 
-    rhs[velocity_dofs[1]] += body.forces[1](state[[position_dofs; velocity_dofs]]) / body.mass
-    rhs[velocity_dofs[2]] += body.forces[2](state[[position_dofs; velocity_dofs]]) / body.mass
-    rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]]) / body.inertia
+    rhs[velocity_dofs[1]] += body.forces[1](body_state) / body.mass
+    rhs[velocity_dofs[2]] += body.forces[2](body_state) / body.mass
+    rhs[velocity_dofs[3]] += body.forces[3](body_state) / body.inertia
 end
 
 function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})::Tuple{Point2f, Point2f}
