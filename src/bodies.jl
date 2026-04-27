@@ -60,6 +60,15 @@ function add_body_to_rhs!(rhs, state, sys, body)
         last_dof - 1,
         last_dof,
     ]
+    
+    # Формируем подвектор состояния тела (6 элементов)
+    body_state = state[vcat(position_dofs, velocity_dofs)]
+    
+    # Если система имеет время, добавляем его как 7-й элемент
+    if sys.has_time
+        body_state = vcat(body_state, state[sys.time_index])
+    end
+
     # assemble velocities
     rhs[position_dofs[1]] = state[velocity_dofs[1]]
     rhs[position_dofs[2]] = state[velocity_dofs[2]]

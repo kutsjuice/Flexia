@@ -118,6 +118,8 @@ add!(sys, tcp4)
 add!(sys, tcp5)
 add!(sys, tcp6)
 
+add_time!(sys)
+
 if (!assemble!(sys))
     println("Assembling failed!")
 end
@@ -170,6 +172,33 @@ initial[bd6_x_ind] = 0.462
 initial[bd6_y_ind] = 0.15/2
 initial[bd6_t_ind] = deg2rad(-90)
 
+# Начальное время (последний элемент)
+initial[end] = 0.0
+
+# # === ЯВНЫЙ ИНТЕГРАТОР RK4 ===
+# dt = 0.0005
+# time_span = 0:dt:10.0
+# n_steps = length(time_span)
+
+# sol = Matrix{Float64}(undef, number_of_dofs(sys), n_steps)
+# sol[:, 1] = initial
+
+# # Классический RK4
+# for i in 2:n_steps
+#     u = sol[:, i-1]
+    
+#     k1 = func(u)
+#     k2 = func(u + 0.5*dt*k1)
+#     k3 = func(u + 0.5*dt*k2)
+#     k4 = func(u + dt*k3)
+    
+#     sol[:, i] = u + (dt/6.0) * (k1 + 2*k2 + 2*k3 + k4)
+# end
+
+# animate(sys, sol, time_span, "bd4_harmonic_force.mp4"; 
+#     framerate = 30, limits = (-5, 5, -5, 5))
+
+# println("Симуляция завершена! Файл: bd4_harmonic_force.mp4")
 initial[bd7_x_ind] = 0.612
 
 
@@ -214,7 +243,9 @@ display(f2)
 save("рисунок траектории динамика рекурдин.png",f2)
 
 f3 = Figure()
-ax3 = Axis(f3[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
-ylims!(minimum(sol1[bd4_x_ind,1:200]), maximum(sol1[bd4_x_ind,1:200]))
-xlims!(minimum(sol1[bd4_Vx_ind,1:200]), maximum(sol1[bd4_Vx_ind,1:200]))
-l3 = lines!(ax3, 1:200, sol1[bd4_x_ind,1:200])
+ax3 = Axis(f3[1,1], xscale = identity, aspect = AxisAspect(2),title="Перемещение от времени",xlabel="Время, С",ylabel="Перемещение, мм")
+ylims!(minimum(perem), maximum(perem))
+xlims!(minimum(time_span), maximum(time_span))
+l3 = lines!(ax3, time_span, perem)
+l4 = lines!(ax3, time_span, rec_perem)
+save("перемещение от времени.png", f3)

@@ -1,11 +1,11 @@
 mutable struct MBSystem2D
     bodies::Vector{AbstractBody2D}
     joints::Vector{AbstractJoint2D}
-    # bodiesnum::Int64
-    # jointsnum::Int64
     bodiesdofs::Vector{Int64}
     lmdofs::Vector{Int64}
     assembled::Bool
+    has_time::Bool
+    time_index::Int64
     rhs::Function
     jacobian::Function
     mass::Matrix{Float64}
@@ -13,9 +13,15 @@ mutable struct MBSystem2D
     function MBSystem2D()
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
-        return new([], [], [], [], false, default_rhs, default_jacobian)
+        return new([], [], [], [], false, false, 0, default_rhs, default_jacobian)
     end
 end
+
+function add_time!(sys::MBSystem2D)
+    sys.has_time = true
+    return nothing
+end
+
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
 joints(sys::MBSystem2D) = sys.joints
@@ -34,7 +40,10 @@ function last_lm_dof(sys::MBSystem2D)
     end
 end
 
-number_of_dofs(sys) = last_lm_dof(sys)
+function number_of_dofs(sys) 
+    base = last_lm_dof(sys)
+    return sys.has_time ? base + 1 : base
+end
 
 function assemble!(sys)
     state_length = number_of_dofs(sys)+1
@@ -80,28 +89,24 @@ function assemble!(sys)
         ret = zeros(state_length, state_length)
         for (i, body) in enumerate(sys.bodies)
             last_dof = sys.bodiesdofs[i]
-
-            position_dofs = [
-                last_dof - 5,
-                last_dof - 4,
-                last_dof - 3,
-            ]
+            position_dofs = [last_dof - 5, last_dof - 4, last_dof - 3]
+            velocity_dofs = [last_dof - 2, last_dof - 1, last_dof]
             for p in position_dofs
                 ret[p, p] = 1
             end
-            velocity_dofs = [
-                last_dof - 2,
-                last_dof - 1,
-                last_dof,
-            ]
             for (j, v) in enumerate(velocity_dofs)
-                ret[v, last_dof-5:last_dof] = ForwardDiff().gradient(
-                    body.forces[j],
+                # При наличии времени передаём вектор длины 7
+                local_state = sys.has_time ? vcat(state[last_dof-5:last_dof], state[sys.time_index]) : state[last_dof-5:last_dof]
+                ret[v, last_dof-5:last_dof] = ForwardDiff.gradient(
+                    (x) -> body.forces[j](sys.has_time ? vcat(x, state[sys.time_index]) : x),
                     state[last_dof-5:last_dof])
-                ret[v, velocity_dofs] = ForwardDiff().gradient(
-                    (x) -> body.forces[j](state[position_dofs], x),
+                ret[v, velocity_dofs] = ForwardDiff.gradient(
+                    (x) -> body.forces[j](sys.has_time ? vcat(state[position_dofs], x, state[sys.time_index]) : vcat(state[position_dofs], x)),
                     state[velocity_dofs])
             end
+        end
+        if sys.has_time
+            ret[sys.time_index, :] .= 0.0
         end
         return ret
     end
