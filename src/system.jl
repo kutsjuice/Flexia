@@ -8,6 +8,7 @@ mutable struct MBSystem2D
     assembled::Bool
     rhs::Function
     jacobian::Function
+    mass::Matrix{Float64}
 
     function MBSystem2D()
         default_rhs = (x) -> nothing
@@ -18,6 +19,7 @@ end
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
 joints(sys::MBSystem2D) = sys.joints
+get_mass_matrix(sys::MBSystem2D) = sys.mass
 function last_body_dof(sys::MBSystem2D)
     if (isempty(sys.bodiesdofs))
         return 0
@@ -35,18 +37,42 @@ end
 number_of_dofs(sys) = last_lm_dof(sys)
 
 function assemble!(sys)
-    state_length = number_of_dofs(sys)
+    state_length = number_of_dofs(sys)+1
 
+    sys.mass = zeros(state_length, state_length)
+
+    for body in sys.bodies
+
+        last_dof = sys.bodiesdofs[body.index]
+
+        position_dofs = [
+            last_dof - 5,
+            last_dof - 4,
+            last_dof - 3,
+        ]
+
+        velocity_dofs = [
+            last_dof - 2,
+            last_dof - 1,
+            last_dof,
+        ]
+
+        sys.mass[position_dofs, position_dofs] = I(3)
+        sys.mass[velocity_dofs, velocity_dofs] = Diagonal([body.mass, body.mass, body.inertia])
+    end 
+    sys.mass[end, end] = 1.0
 
     sys.rhs = (state) -> begin
         ret = similar(state)
         fill!(ret, zero(state[1]))
         for body in sys.bodies
             add_body_to_rhs!(ret, state, sys, body)
+            # add_body_to_mass!
         end
         for joint in sys.joints
             add_joint_to_rhs!(ret, state, sys, joint)
         end
+        ret[end] = 1.0
         return ret
     end
 

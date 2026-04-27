@@ -11,8 +11,8 @@ CURRENT_TIME = 0.
 
 # K₁ = 0.03
 # K₂ = 0.0115
-K₁ = 0.02
-K₂ = 0.02
+K₁ = 0.2
+K₂ = 0.2
 K₃ = K₂
 K₄ = K₂
 K₅ = K₂
@@ -32,8 +32,8 @@ m5 = 52e-3
 I2 = 104726.798394e-9
 # 28187.202983 г·мм² = 28187.202983e-9 кг·м²
 I4 = 28187.202983e-9
-F_container = 20000.
-omega = 2. * π
+F_container = 1
+omega = 0.5
 # Длины в метрах: было 1.5 дм = 0.15 м, 0.75 дм = 0.075 м, 0.5 дм = 0.05 м
 bd1 = Body2D(m5, 0.1e-30, length = 0.15)
 bd2 = Body2D(m2+m1, I2, length = 0.075)
@@ -41,7 +41,7 @@ bd3 = Body2D(m2+m1, I2, length = 0.075)
 
 bd4 = Body2D(m4+m1, I4, length = 0.05)
 # bd4.forces[1] = (x) -> -(m4+m1) * F_container
-bd4.forces[1] = (x) -> F_container * sin(omega * CURRENT_TIME)
+bd4.forces[1] = (x, t) -> F_container * sin(omega * t) +rand()*0.01
 bd5 = Body2D(m2+m1, I2, length = 0.075)
 bd6 = Body2D(m2+m1, I2, length = 0.075)
 bd7 = Body2D(m5, 0.1e-30, length = 0.15)
@@ -58,14 +58,14 @@ jnt5 = HingeJoint(bd4, bd5)
 jnt6 = HingeJoint(bd5, bd6)
 jnt7 = HingeJoint(bd6, bd7)
 
-tcp1 = TorsionalSpring(bd1, bd2, K₁, deg2rad(-90), 0.)
-tcp2 = TorsionalSpring(bd2, bd3, K₂, deg2rad(45), 0.)
+tcp1 = TorsionalSpring(bd1, bd2, K₁, deg2rad(-90), 0.1, 0.03)
+tcp2 = TorsionalSpring(bd2, bd3, K₂, deg2rad(45), 0.1, 0.03)
 
-tcp3 = TorsionalSpring(bd3, bd4, K₃, deg2rad(45), 0.)
-tcp4 = TorsionalSpring(bd4, bd5, K₄, deg2rad(45), 0.)
+tcp3 = TorsionalSpring(bd3, bd4, K₃, deg2rad(45), 0.1, 0.03)
+tcp4 = TorsionalSpring(bd4, bd5, K₄, deg2rad(45), 0.1, 0.03)
 
-tcp5 = TorsionalSpring(bd5, bd6, K₅, deg2rad(45), 0.)
-tcp6 = TorsionalSpring(bd6, bd7, K₆, angle_5, 0.)
+tcp5 = TorsionalSpring(bd5, bd6, K₅, deg2rad(45), 0.1, 0.03)
+tcp6 = TorsionalSpring(bd6, bd7, K₆, deg2rad(-90), 0.1, 0.03)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
 set_position_on_first_body!(jnt2, SA[0.15, 0.])
@@ -133,6 +133,7 @@ bd2_x_ind, bd2_y_ind, bd2_t_ind = get_body_position_dofs(sys, bd2)
 bd3_x_ind, bd3_y_ind, bd3_t_ind = get_body_position_dofs(sys, bd3)
 
 bd4_x_ind, bd4_y_ind, bd4_t_ind = get_body_position_dofs(sys, bd4)
+bd4_vx_ind, bd4_vy_ind, bd4_vt_ind = get_body_velocity_dofs(sys, bd4)
 
 bd5_x_ind, bd5_y_ind, bd5_t_ind = get_body_position_dofs(sys, bd5)
 
@@ -143,7 +144,7 @@ bd7_x_ind, bd7_y_ind, bd7_t_ind = get_body_position_dofs(sys, bd7)
 bd4_Vx_ind, bd4_Vy_ind, bd4_Vt_ind = get_body_velocity_dofs(sys, bd4)
 
 
-initial = zeros(number_of_dofs(sys))
+initial = zeros(number_of_dofs(sys)+1)
 
 
 # Все начальные координаты переведены из дм в м (делением на 10)
@@ -171,51 +172,45 @@ initial[bd6_t_ind] = deg2rad(-90)
 
 initial[bd7_x_ind] = 0.612
 
-func(initial)
+
+f = (t)-> func([initial[1:end-1]; t])[bd4_vx_ind]
+# lines(time_span, f.(time_span))
+
+
 jacoby(initial)
 
-mass = zeros(number_of_dofs(sys), number_of_dofs(sys));
-for i in 1:last_body_dof(sys)
-    mass[i, i] = 1
-end
-time_span = range(0., 1.6, 201)
-length(time_span)
-sol_euler = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-sol_euler[:,1] = initial
+
+mass = sys.mass
+t_end = π / omega
+time_span = LinRange(0,t_end, 201)
+
 n_steps = length(time_span)
-length(time_span)
-sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-cros!(sol1, CURRENT_TIME, initial, mass, func, jacoby, step(time_span))
 
+sol1 = Matrix{Float64}(undef, number_of_dofs(sys)+1, length(time_span))
+cros!(sol1, initial, mass, func, jacoby, step(time_span))
+lines(sol1[end, :])
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "triv_dyn.mp4"; framerate = 30, limits = (-0.1, 0.5, -0.1, 0.5))
+animate(sys, sol1, time_span, "triv_dyn3.mp4"; framerate = 30, limits = (0.0, 0.6, -0.1, 0.5))
+##
 
-# sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-for i in 2:n_steps
-    global  CURRENT_TIME = time_span[i-1]
-    rhs_val = func(sol_euler[:, i-1])
-    sol_euler[:, i] = sol_euler[:, i-1] + dt * rhs_val
-end
-
-# static_solver!(sol2, initial, func, jacoby)
-display(sol1[bd4_x_ind,:])
-display(sol1[bd4_y_ind,:])
-# animate(sys, sol2, time_span, "triv_stat.mp4"; framerate = 60, limits = (-0.1, 0.5, -0.1, 0.5))
 
 f1 = Figure()
 ax1 = Axis(f1[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
-ylims!(minimum(sol1[bd4_x_ind,1:75]), maximum(sol1[bd4_x_ind,1:75]))
-xlims!(minimum(sol1[bd4_Vx_ind,1:75]), maximum(sol1[bd4_Vx_ind,1:75]))
-l1 = lines!(ax1, sol1[bd4_Vx_ind,1:75], sol1[bd4_x_ind,1:75], linestyle = :dot)
-save("рисунок траектории динамика флексия.png",f1)
-# # 
-recurdyn_data = CSV.File("sila_peremeshenie2.csv") |> DataFrame
+# ylims!(minimum(sol1[bd4_x_ind,:]), maximum(sol1[bd4_x_ind,:]))
+# xlims!(minimum(sol1[bd4_Vx_ind,:]), maximum(sol1[bd4_Vx_ind,:]))
+l1 = lines!(ax1, sol1[end, :], sol1[bd4_y_ind,:]*1000)#, sol1[bd4_x_ind,:], linestyle = :dot)
+display(f1)
+# save("рисунок траектории динамика флексия.png",f1)
+## 
+recurdyn_data = CSV.File("sila_peremeshenie.csv") |> DataFrame
 
 f2 = Figure()
 ax2 = Axis(f2[1,1], xscale = identity, aspect = AxisAspect(2),title="Траектория X",xlabel="Сила, Н",ylabel="Перемещение, мм")
-ylims!(minimum(recurdyn_data[1:48,2]), maximum(recurdyn_data[1:48,2]))
-xlims!(minimum(recurdyn_data[1:48,3]), maximum(recurdyn_data[1:48,3]))
-l2 = lines!(ax2, recurdyn_data[1:48,3], recurdyn_data[1:48,2], linestyle = :dot)
+# ylims!(minimum(recurdyn_data[1:48,2]), maximum(recurdyn_data[1:48,2]))
+# xlims!(minimum(recurdyn_data[1:48,3]), maximum(recurdyn_data[1:48,3]))
+l2 = lines!(ax2, recurdyn_data[1:48,1], recurdyn_data[1:48,3])#, recurdyn_data[1:48,2], linestyle = :dot)
+display(f2)
+##
 save("рисунок траектории динамика рекурдин.png",f2)
 
 f3 = Figure()

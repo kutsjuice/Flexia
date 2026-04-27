@@ -186,10 +186,10 @@ mutable struct TorsionalSpring <: AbstractJoint2D
     stiffness::Float64
     rest_angle::Float64
     damping::Float64
+    vis_radius::Float64
     index::Int64
-    
-    function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, rest_angle::Float64=0.0, damping::Float64=0.0)
-        return new(body1, body2, stiffness, rest_angle, damping, -1)
+    function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_radius::Float64=0.3)
+        return new(body1, body2, stiffness, rest_angle, damping, vis_radius, -1)
     end
 end
 
@@ -222,11 +222,11 @@ function add_joint_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     Δω = ω1 - ω2
     
     # Полный момент (пружина + демпфер)
-    τ = spring.stiffness * Δθ + spring.stiffness * Δθ^3 - spring.damping * Δω
+    τ = spring.stiffness * Δθ + spring.damping * Δω# + spring.stiffness * Δθ^3
     
     # Добавляем в угловые ускорения (делим на инерцию)
-    rhs[bd1_vel_dofs[3]] += -τ / bd1.inertia
-    rhs[bd2_vel_dofs[3]] += τ / bd2.inertia  # Отрицательный момент на второе тело
+    rhs[bd1_vel_dofs[3]] += -τ 
+    rhs[bd2_vel_dofs[3]] += τ   # Отрицательный момент на второе тело
 end
 
 # Вспомогательная функция для расчета момента пружины
