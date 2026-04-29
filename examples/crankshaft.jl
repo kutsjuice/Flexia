@@ -28,9 +28,10 @@ slider = Body2D(5.0, 0.1; length=0.25)
 connector = Body2D(5.0, 0.5; length=2.0)
 
 # Apply gravity
-crank.forces[2] = (x) -> -crank.mass * g
-slider.forces[2] = (x) -> -slider.mass * g
-connector.forces[2] = (x) -> -connector.mass * g
+crank.forces[2] = (x, t) -> -crank.mass * g
+slider.forces[2] = (x, t) -> -slider.mass * g
+slider.forces[1] = (x, t) -> 2050*sin(4*t)
+connector.forces[2] = (x, t) -> -connector.mass * g
 
 # Create system
 sys = MBSystem2D()
@@ -91,7 +92,7 @@ func = sys.rhs
 jacoby = (x) -> ForwardDiff.jacobian(func, x)
 sys.jacobian = jacoby
 # Initial conditions - need to satisfy constraints
-initial_state = zeros(number_of_dofs(sys))
+initial_state = zeros(number_of_dofs(sys)+1)
 
 # Set initial positions
 # Ground: already fixed at (0,0,0)
@@ -114,13 +115,14 @@ initial_state[slider_y] = 0.0
 initial_state[slider_θ] = 0.0
 
 # Mass matrix
-mass_matrix = zeros(number_of_dofs(sys), number_of_dofs(sys))
-for i in 1:last_body_dof(sys)
-    mass_matrix[i, i] = 1.0
-end
-
+# mass_matrix = zeros(number_of_dofs(sys), number_of_dofs(sys))
+# for i in 1:last_body_dof(sys)
+    # mass_matrix[i, i] = 1.0
+# end
+mass_matrix = sys.mass
 # Simulation parameters
 time_span = 0:0.01:10.0
+sol = Matrix{Float64}(undef, number_of_dofs(sys)+1, length(time_span))
 
 # Solve
 sol = simulate(sys, initial_state, time_span)
