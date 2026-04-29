@@ -69,7 +69,7 @@ function assemble!(sys)
         for joint in sys.joints
             add_joint_to_rhs!(ret, state, sys, joint)
         end
-        state[end] = 1.0
+        ret[end] = 1.0
         return ret
     end
 
