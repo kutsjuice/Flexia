@@ -30,7 +30,7 @@ connector = Body2D(5.0, 0.5; length=2.0)
 # Apply gravity
 crank.forces[2] = (x, t) -> -crank.mass * g
 slider.forces[2] = (x, t) -> -slider.mass * g
-slider.forces[1] = (x, t) -> 2050*sin(4*t)
+slider.forces[1] = (x, t) -> 0#100*sin(6.9*t)
 connector.forces[2] = (x, t) -> -connector.mass * g
 
 # Create system
@@ -92,7 +92,7 @@ func = sys.rhs
 jacoby = (x) -> ForwardDiff.jacobian(func, x)
 sys.jacobian = jacoby
 # Initial conditions - need to satisfy constraints
-initial_state = zeros(number_of_dofs(sys)+1)
+initial_state = zeros(number_of_dofs(sys))
 
 # Set initial positions
 # Ground: already fixed at (0,0,0)
@@ -119,10 +119,10 @@ initial_state[slider_θ] = 0.0
 # for i in 1:last_body_dof(sys)
     # mass_matrix[i, i] = 1.0
 # end
-mass_matrix = sys.mass
+mass_matrix = get_mass_matrix(sys)
 # Simulation parameters
 time_span = 0:0.01:10.0
-sol = Matrix{Float64}(undef, number_of_dofs(sys)+1, length(time_span))
+sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 
 # Solve
 sol = simulate(sys, initial_state, time_span)

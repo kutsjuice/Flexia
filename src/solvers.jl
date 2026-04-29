@@ -34,8 +34,7 @@ end
 function simulate(sys::MBSystem2D, initial::Vector{Float64}, time_span)
 
     sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-    mass = zeros(number_of_dofs(sys), number_of_dofs(sys))
-    mass[1:last_body_dof(sys), 1:last_body_dof(sys)] = I(last_body_dof(sys))
+    mass = sys.mass
     cros!(sol, initial, mass, sys, step(time_span))
     return sol;
 end

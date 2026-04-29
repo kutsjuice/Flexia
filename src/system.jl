@@ -22,8 +22,9 @@ end
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
 connectors(sys::MBSystem2D) = sys.connectors
-
+get_mass_matrix(sys::MBSystem2D) = sys.mass
 get_targets(sys::MBSystem2D) = sys.targets
+
 function update_targets!(sys::MBSystem2D)
     
     for connector in sys.connectors
@@ -52,10 +53,10 @@ function last_lm_dof(sys::MBSystem2D)
     end
 end
 
-number_of_dofs(sys) = last_lm_dof(sys)
+number_of_dofs(sys) = last_lm_dof(sys)+1
 
 function assemble!(sys)
-    state_length = number_of_dofs(sys)+1
+    state_length = number_of_dofs(sys)
     sys.mass = zeros(state_length, state_length)
 
     for body in sys.bodies

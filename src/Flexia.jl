@@ -19,6 +19,7 @@ export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, numberof
 export simulate, cros!
 export number_of_dofs
 export animate
+export get_mass_matrix
 
 export test_func
 
