@@ -17,10 +17,12 @@ mutable struct MBSystem2D
         return new([], [], [], [], [], false, default_rhs, default_jacobian)
     end
 end
+
 get_mass_matrix(sys::MBSystem2D) = sys.mass
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
 joints(sys::MBSystem2D) = sys.joints
+
 function last_body_dof(sys::MBSystem2D)
     if (isempty(sys.bodiesdofs))
         return 0
@@ -60,7 +62,7 @@ function assemble!(sys)
         sys.mass[position_dofs, position_dofs] = I(3)
         sys.mass[velocity_dofs, velocity_dofs] = Diagonal([body.mass, body.mass, body.inertia])
     end  
-    sys.mass[end, end] = 1
+    sys.mass[end, end] = 1.0
 
     sys.rhs = (state) -> begin
         ret = similar(state)

@@ -4,6 +4,7 @@ using GLMakie
 using ForwardDiff
 using StaticArrays
 
+
 # Parameters
 const g = 9.81
 
@@ -84,7 +85,7 @@ func = sys.rhs
 jacoby = (x) -> ForwardDiff.jacobian(func, x)
 
 # Initial conditions - need to satisfy constraints
-initial_state = zeros(number_of_dofs(sys)+1)
+initial_state = zeros(number_of_dofs(sys))
 
 # Set initial positions
 # Ground: already fixed at (0,0,0)
@@ -114,7 +115,7 @@ initial_state[slider_θ] = 0.0
 mass_matrix = sys.mass
 # Simulation parameters
 time_span = 0:0.01:10.0
-sol = Matrix{Float64}(undef, number_of_dofs(sys)+1, length(time_span))
+sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 
 # Solve
 cros!(sol, initial_state, mass_matrix, func, jacoby, step(time_span))

@@ -152,6 +152,7 @@ initial[bd8_t_ind] = pi/2
 
 func(initial)
 jacoby(initial)
+
 mass = get_mass_matrix(sys)
 
 time_span = 0:0.05:200
