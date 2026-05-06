@@ -1,6 +1,7 @@
 mutable struct MBSystem2D
     bodies::Vector{AbstractBody2D}
     joints::Vector{AbstractJoint2D}
+    forces::Vector{AbstractForce2D}
     # bodiesnum::Int64
     # jointsnum::Int64
     bodiesdofs::Vector{Int64}
@@ -13,9 +14,10 @@ mutable struct MBSystem2D
     function MBSystem2D()
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
-        return new([], [], [], [], false, default_rhs, default_jacobian)
+        return new([], [], [], [], [], false, default_rhs, default_jacobian)
     end
 end
+get_mass_matrix(sys::MBSystem2D) = sys.mass
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
 joints(sys::MBSystem2D) = sys.joints
@@ -33,10 +35,10 @@ function last_lm_dof(sys::MBSystem2D)
     end
 end
 
-number_of_dofs(sys) = last_lm_dof(sys)
+number_of_dofs(sys) = last_lm_dof(sys) + 1
 
 function assemble!(sys)
-    state_length = number_of_dofs(sys)+1
+    state_length = number_of_dofs(sys) 
     sys.mass = zeros(state_length, state_length)
 
     for body in sys.bodies
@@ -69,7 +71,10 @@ function assemble!(sys)
         for joint in sys.joints
             add_joint_to_rhs!(ret, state, sys, joint)
         end
-        state[end] = 1.0
+        for force in sys.forces
+            add_force_to_rhs!(ret, state, sys, force)
+        end
+        ret[end] = 1.0
         return ret
     end
 

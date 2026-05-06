@@ -17,7 +17,7 @@ fixed_body = Body2D(100.0, 10.0)
 sliding_body = Body2D(1.0, 0.1)
 
 # Apply gravity to sliding body
-sliding_body.forces[2] = (state) -> -sliding_body.mass * g
+sliding_body.forces[2] = (state, t) -> -sliding_body.mass * g
 
 # 2. Setup System
 sys = MBSystem2D()
@@ -64,10 +64,7 @@ initial_state = zeros(number_of_dofs(sys))
 func = sys.rhs
 jacoby = (x) -> ForwardDiff.jacobian(func, x)
 
-mass_matrix = zeros(number_of_dofs(sys), number_of_dofs(sys))
-for i in 1:last_body_dof(sys)
-    mass_matrix[i, i] = 1.0
-end
+mass_matrix = get_mass_matrix(sys)
 
 time_span = 0:0.02:2.0
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
@@ -75,4 +72,4 @@ cros!(sol, initial_state, mass_matrix, func, jacoby, step(time_span))
 
 # 5. Visualization
 println("Simulated SliderJoint sliding under gravity at 20 degrees.")
-animate(sys, sol, time_span, "slider_example.mp4"; framerate = 30, limits = (-10, 2, -10, 2))
+animate(sys, sol, time_span, "out/slider_example.mp4"; framerate = 30, limits = (-10, 2, -10, 2))

@@ -15,6 +15,61 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     end
     return p;
 end
+function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
+    bd1 = spring.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi1 = state[pos_dofs1[1]]
+    _yi1 = state[pos_dofs1[2]]
+    _θi1 = state[pos_dofs1[3]]
+
+    bd2 = spring.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _xi2 = state[pos_dofs2[1]]
+    _yi2 = state[pos_dofs2[2]]
+    _θi2 = state[pos_dofs2[3]]
+
+    _xi = _xi1 + bd1.length*cos(_θi1)
+    _yi = _yi1 + bd1.length*sin(_θi1)
+
+    return Point2f(_xi ,_yi)
+end
+
+function Makie.lift(system, solution, joint::TorsionalSpring, i::Observable)
+    p = lift(i) do value
+        point = get_torsionalSpring_point(system, joint, view(solution, :, value)) 
+        bd1 = joint.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = joint.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        start_angel = _θi1 + π
+        end_angel = _θi2 + 4*π
+
+        n1 = 2
+
+        r0 = 0.3 / n1
+        r1 = 0.6 / n1
+        N = 100
+
+        t = LinRange(start_angel, end_angel, N)
+        R = LinRange(r0, r1, N)
+        x0 = point[1]
+        y0 = point[2]
+
+        points = Vector{Point2f}(undef, N)
+        for j in 1:N
+            x = R[j] * cos(t[j]) + x0  
+            y = R[j] * sin(t[j]) + y0
+            points[j] = Point2f(x,y)
+        end
+        return points;
+    end
+    return p
+end
+
 function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
 end
 function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observable)
@@ -22,15 +77,26 @@ function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observ
     scatter!(ax, hinge_point);
 end
 
+function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
+end
+
+# function draw!(ax, joint::FixedJoint, system::MBSystem2D, solution, iter::Observable)
+#     fixed_point = lift(system, solution, joint, iter);
+#     lines!(ax, fixed_point);
+# end
+
 function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
     fig = Figure()
     iter = Observable(1)
-    ax = Axis(fig[1, 1])
+    ax = Axis(fig[1, 1], aspect = DataAspect())
 
     for body in bodies(sys)
         bar = lift(sys, sol, body, iter)
         lines!(ax, bar)
     end
+
     for joint in joints(sys)
         draw!(ax, joint, sys, sol, iter)
     end
