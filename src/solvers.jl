@@ -69,9 +69,9 @@ function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter =
     history = [copy(u)]
     residuals = [norm(func(u))]
 
-    for iter in max_iter
-     Fx = func(u)
-        current_residual = norm(Fx)
+    for iter in 1:max_iter
+     Fu = func(u)
+        current_residual = norm(Fu)
         push!(residuals, current_residual)
         
         # Проверка сходимости
@@ -82,34 +82,37 @@ function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter =
         try
             Ju = jac(u)
             
-            # Решаем систему J*dx = -F
-            dx = Ju \ (-Fx)
+            # Решаем систему J*du = -F
+            du = Ju \ (-Fu)
             
             # Обновляем решение
-            u .+= dx
+            u .+= du
             
             push!(history, copy(u))
             
             # Проверка сходимости по изменению решения
-            if norm(dx) < tol_e * max(1.0, norm(u))
-                return x, iter, history, residuals
+            if norm(du) < tol_e * max(1.0, norm(u))
+                @warn "сошлось после $iter"
+                return u
             end
-            
+            @warn "пошла попытка № $iter"
         catch e
+            @warn "Метод не сошёлся:  за $iter из-за ошибки $e"
+            if iter == (max_iter - 1)
+                return u
+            end
         end
     end
-    @warn "Метод не сошёлся"
 
     return u
 end
 
 function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Function) where T<: Real
-    @assert size(sol, 1) == size(u0, 1)
-    @assert size(sol, 1) == size(func(u0),1)
-    sol[:, 1] = u0
-    
+    # @assert size(sol, 1) == size(u0, 1)
+    # @assert size(sol, 1) == size(func(u0),1)
+    sol[1:end-1, 1] = u0[1:end-1]
     for i in 2:size(sol, 2)
-        sol[:, i] = newton_step(func, jac, sol[:, i-1])
+        sol[1:end-1, i] = newton_step(func, jac, sol[1:end-1, i-1])
     end
 
 end
