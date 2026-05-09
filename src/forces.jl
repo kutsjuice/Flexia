@@ -17,7 +17,7 @@ function add!(sys::MBSystem2D, spring::TorsionalSpring)
     push!(sys.forces, spring)
 end
 
-function add_force_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
+function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     bd1 = spring.body1
     bd2 = spring.body2
     

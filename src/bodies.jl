@@ -46,7 +46,7 @@ function get_body_velocity_dofs(sys::MBSystem2D, body::Body2D)
 end
 
 
-function add_body_to_rhs!(rhs, state, sys, body)
+function add_to_rhs!(rhs, state, sys, body)
     last_dof = sys.bodiesdofs[body.index]
 
     position_dofs = [
@@ -74,10 +74,10 @@ function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector
     pos_inds = get_body_position_dofs(sys, body)
     x, y, θ = dofs[pos_inds]
 
-    x1 = x - body.length * cos(θ)
-    x2 = x + body.length * cos(θ)
-    y1 = y - body.length * sin(θ)
-    y2 = y + body.length * sin(θ)
+    x1 = x - body.length/2 * cos(θ)
+    x2 = x + body.length/2 * cos(θ)
+    y1 = y - body.length/2 * sin(θ)
+    y2 = y + body.length/2 * sin(θ)
 
     return Point2f(x1, y1), Point2f(x2, y2)
 end
