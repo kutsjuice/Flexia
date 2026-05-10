@@ -19,14 +19,16 @@ K₅ = K₂
 K₆ = K₁
 
 
-const angle_5 = deg2rad(-110)
+angle_5 = deg2rad(-110)
 
 # Массы в кг
-const m1 = 23e-3
-const m2 = 29e-3
-const m4 = 15e-3
+m1 = 23e-3
+m2 = 29e-3
+m4 = 15e-3
 
-const m5 = 52e-3
+m5 = 1e6
+I5 = 1e6
+
 # Моменты инерции в кг·м²
 # 104726.798394 г·мм² = 104726.798394e-9 кг·м²
 I2 = 104726.798394e-9
@@ -35,7 +37,7 @@ I4 = 28187.202983e-9
 F_container = 1
 omega = 0.5
 # Длины в метрах: было 1.5 дм = 0.15 м, 0.75 дм = 0.075 м, 0.5 дм = 0.05 м
-bd1 = Body2D(m5, 0.1e-30, length = 0.15)
+bd1 = Body2D(m5, I5, length = 0.15)
 bd2 = Body2D(m2+m1, I2, length = 0.075)
 bd3 = Body2D(m2+m1, I2, length = 0.075)
 
@@ -44,7 +46,7 @@ bd4 = Body2D(m4+m1, I4, length = 0.05)
 bd4.forces[1] = (x, t) -> F_container * sin(omega * t) +rand()*0.01
 bd5 = Body2D(m2+m1, I2, length = 0.075)
 bd6 = Body2D(m2+m1, I2, length = 0.075)
-bd7 = Body2D(m5, 0.1e-30, length = 0.15)
+bd7 = Body2D(m5, I5, length = 0.15)
 
 jnt1 = FixedJoint(bd1)
 jnt8 = FixedJoint(bd7)
