@@ -48,8 +48,40 @@ bd5 = Body2D(m2+m1, I2, length = 0.075)
 bd6 = Body2D(m2+m1, I2, length = 0.075)
 bd7 = Body2D(m5, I5, length = 0.15)
 
+slider_ground_1 = Body2D(m5, I5, length = 0.06818)
+slider_ground_2 = Body2D(m5, I5, length = 0.06818)
+
+slider_1 = Body2D(m4, I4, length = 0.05)
+slider_2 = Body2D(m4, I4, length = 0.05)
+
 jnt1 = FixedJoint(bd1)
 jnt8 = FixedJoint(bd7)
+
+jnt_side_hor1 = FixedJoint(slider_ground_1)
+setposition!(jnt_side_hor1, SA[0.03932, 0.1084])
+setrotation!(jnt_side_hor1, 0.0)
+
+jnt_side_hor2 = FixedJoint(slider_ground_2)
+setposition!(jnt_side_hor2, SA[0.11068+0.462, 0.1084])
+setrotation!(jnt_side_hor2, 0.0)
+
+# slider_hor_hinge1 = HingeJoint(slider_ground_1, slider_1)
+slider_bd2_hinge = HingeJoint(slider_1, bd2)
+
+# slider_hor_hinge2 = HingeJoint(slider_ground_2, slider_2)
+slider_bd6_hinge = HingeJoint(slider_2, bd6)
+
+slider_ground_slider_1 = SliderJoint(slider_ground_1, slider_1)
+set_position_on_first_body!(slider_ground_slider_1, SA[0.16, 0.0])
+set_position_on_second_body!(slider_ground_slider_1, SA[0.0, 0.0])
+set_direction_on_first_body!(slider_ground_slider_1, SA[1.0, 0.0])
+set_direction_on_second_body!(slider_ground_slider_1, SA[1.0, 0.0])
+
+slider_ground_slider_2 = SliderJoint(slider_ground_2, slider_2)
+set_position_on_first_body!(slider_ground_slider_2, SA[0.426, 0.0])
+set_position_on_second_body!(slider_ground_slider_2, SA[0.0, 0.0])
+set_direction_on_first_body!(slider_ground_slider_2, SA[1.0, 0.0])
+set_direction_on_second_body!(slider_ground_slider_2, SA[1.0, 0.0])
 
 jnt2 = HingeJoint(bd1, bd2)
 jnt3 = HingeJoint(bd2, bd3)
@@ -102,6 +134,12 @@ add!(sys, bd5)
 add!(sys, bd6)
 add!(sys, bd7)
 
+add!(sys, slider_1)
+add!(sys, slider_2)
+
+add!(sys, slider_ground_1)
+add!(sys, slider_ground_2)
+
 add!(sys, jnt1)
 
 add!(sys, jnt2)
@@ -112,6 +150,15 @@ add!(sys, jnt6)
 add!(sys, jnt7)
 
 add!(sys, jnt8)
+
+add!(sys, slider_bd2_hinge)
+add!(sys, slider_bd6_hinge)
+
+# add!(sys, slider_hor_hinge1)
+# add!(sys, slider_hor_hinge2)
+
+add!(sys, slider_ground_slider_1)
+add!(sys, slider_ground_slider_2)
 
 add!(sys, tcp1)
 add!(sys, tcp2)
@@ -187,8 +234,8 @@ jacoby(initial)
 
 
 mass = get_mass_matrix(sys)
-t_end = π / omega
-time_span = LinRange(0,t_end, 201)
+t_end = 10*π / omega
+time_span = LinRange(0,t_end, 501)
 
 n_steps = length(time_span)
 
@@ -196,4 +243,4 @@ sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
 lines(sol1[end, :])
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "out/triv_dyn3.mp4"; framerate = 30, limits = (0.0, 0.6, -0.1, 0.5))
+animate(sys, sol1, time_span, "out/triv_dyn3.mp4"; framerate = 30, limits = (-0.1, 0.7, -0.1, 0.4))
