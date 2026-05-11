@@ -1,16 +1,21 @@
 mutable struct TorsionalSpring <: AbstractForce2D
-    body1::Body2D
-    body2::Body2D
+    hinge::HingeJoint
     stiffness::Float64
     rest_angle::Float64
     damping::Float64
     vis_r::Float64
     
-    function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
-        return new(body1, body2, stiffness, rest_angle, damping, vis_r)
+    function TorsionalSpring(hinge::HingeJoint, stiffness::Float64=0.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+        return new(hinge, stiffness, rest_angle, damping, vis_r)
     end
-end
 
+    # function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+    #     return new(body1, body2, stiffness, rest_angle, damping, vis_r)
+    # end
+end
+function TorsionalSpring(hinge::HingeJoint; stiffness::Float64=0.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+    return TorsionalSpring(hinge, stiffness, rest_angle, damping, vis_r)
+end
 number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
 
 function add!(sys::MBSystem2D, spring::TorsionalSpring)
@@ -18,8 +23,10 @@ function add!(sys::MBSystem2D, spring::TorsionalSpring)
 end
 
 function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
-    bd1 = spring.body1
-    bd2 = spring.body2
+    
+
+    bd1 = spring.hinge.body1
+    bd2 = spring.hinge.body2
     
     # Получаем индексы DOF
     bd1_pos_dofs = get_body_position_dofs(sys, bd1)
@@ -40,7 +47,7 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
     # Полный момент (пружина + демпфер)
     τ = spring.stiffness * Δθ + spring.damping * Δω #+ spring.stiffness * Δθ^3
     
-    # Добавляем в угловые ускорения (делим на инерцию)
+    # Добавляем в угловые ускорения
     rhs[bd1_vel_dofs[3]] += -τ 
     rhs[bd2_vel_dofs[3]] += τ
 end

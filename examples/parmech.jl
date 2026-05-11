@@ -15,7 +15,7 @@ L = 3.0
 crank1 = Body2D(1, 1; length=crank_len)
 crank2 = Body2D(1, 1; length=crank_len)
 crank3 = Body2D(1, 1; length=crank_len)
-crank4 = Body2D(1, 1; length=crank_len)
+crank4 = Body2D(1, 1.001; length=crank_len)
 
 connector1 = Body2D(1, 1; length=conn_len)
 connector2 = Body2D(1, 1; length=conn_len)
@@ -111,7 +111,6 @@ add!(sys, connector4)
 add!(sys, table1)
 add!(sys, table2)
 
-add!(sys, ground_joint)
 add!(sys, hinge_gr2cr1)
 add!(sys, hinge_gr2cr2)
 add!(sys, hinge_gr2cr3)
@@ -225,4 +224,6 @@ time_span = 0:0.01:5
 sol = simulate(sys, initial_state, time_span)
 
 # Animate
-animate(sys, sol, time_span, "out/parmech.mp4"; framerate= floor(Int, 0.2 /step(time_span)), limits=(-4, 5, -2, 2))
+animate(sys, sol, time_span, "out/parmech.mp4"; framerate= floor(Int, 1.0 /step(time_span)), limits=(-4, 5, -2, 2))
+
+

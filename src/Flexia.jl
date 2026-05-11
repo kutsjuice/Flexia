@@ -3,6 +3,7 @@ module Flexia
 using StaticArrays
 using Makie
 using LinearAlgebra
+using ForwardDiff
 # export MBSystem
 # export Body2D
 
@@ -10,13 +11,26 @@ export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D,
 
 export Body2D
 export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring
+export PositionMotor2D, PositionLinearActuator2D
 export MBSystem2D
 
+# connectors
 export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!
-export add!, assemble!, get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment
-export cros!, static_solver!, simulate
-export get_mass_matrix
+# bodies
 
+export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment
+
+# solve
+export cros!, static_solver!, simulate
+
+# Actuators
+export settarget!
+
+# system
+export add!, assemble!, get_mass_matrix
+export set_initial_position!, set_initial_velocity!
+
+# visualization
 export animate
 
 export test_func

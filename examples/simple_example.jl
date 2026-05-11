@@ -53,4 +53,4 @@ time_span = 0:0.001:10
 
 sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol2, initial, mass, func, jacoby, step(time_span))
-animate(sys, sol2, time_span, "out/simple_bar.mp4"; framerate = 60, limits = (-2,13, -2, 13))
+animate(sys, sol2, time_span, "out/simple_bar.mp4"; framerate = floor(Int64, 1.0 / step(time_span)), limits = (-2,13, -2, 13))

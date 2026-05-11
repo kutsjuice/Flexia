@@ -48,11 +48,11 @@ jnt8 = HingeJoint(bd7,bd8)
 
 jnt9 = FixedJoint(bd8)
 
-tcp2 = TorsionalSpring(bd2, bd3, 100000.,0.0, 0.)
-tcp3 = TorsionalSpring(bd3, bd4, 100000.,0.0, 0.)
-tcp4 = TorsionalSpring(bd4, bd5, 100000.,0.0, 0.)
-tcp5 = TorsionalSpring(bd5, bd6, 100000.,0.0, 0.)
-tcp6 = TorsionalSpring(bd6, bd7, 100000.,0.0, 0.)
+tcp2 = TorsionalSpring(jnt3, 100000.,0.0, 0.)
+tcp3 = TorsionalSpring(jnt4, 100000.,0.0, 0.)
+tcp4 = TorsionalSpring(jnt5, 100000.,0.0, 0.)
+tcp5 = TorsionalSpring(jnt6, 100000.,0.0, 0.)
+tcp6 = TorsionalSpring(jnt7, 100000.,0.0, 0.)
 
 
 set_position_on_second_body!(jnt2, SA[-1., 0])

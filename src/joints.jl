@@ -270,7 +270,7 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     # 1. Perpendicular distance between points is zero
     # 2. Rotation difference (directions aligned)
 
-    # Position of hinge points in global coordinates
+    # Position of slider points in global coordinates
     xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
     ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
 

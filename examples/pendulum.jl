@@ -32,9 +32,9 @@ jnt6 = HingeJoint(bd5, bd6)
 
 jnt7 = FixedJoint(bd6)
 
-tcp1 = TorsionalSpring(bd2, bd3, 1100.,0.0, 100.)
-tcp2 = TorsionalSpring(bd3, bd4, 1100.,0.0, 100.)
-tcp3 = TorsionalSpring(bd4, bd5, 1100.,0.0, 100.)
+tcp1 = TorsionalSpring(jnt3, 1100.,0.0, 100.)
+tcp2 = TorsionalSpring(jnt4, 1100.,0.0, 100.)
+tcp3 = TorsionalSpring(jnt5, 1100.,0.0, 100.)
 
 # traj = TrajectoryJoint(bd3, circular_trajectory([0.4, 1.1], 1.1, 1), 0.0, 10.0)
 
