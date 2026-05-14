@@ -8,6 +8,7 @@ mutable struct MBSystem2D
     rhs::Function
     jacobian::Function
     prestep::Function
+    kinematic_constrains!::Function
     targets::Vector{Float64}
     mass::Matrix{Float64}
     
@@ -22,6 +23,7 @@ mutable struct MBSystem2D
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
         default_prestep = (x) -> nothing
+        default_kinematic_constrains = (residual, q) -> nothing
         targets = Vector{Float64}([])
         mass = Matrix{Float64}([;;])
         return new(
@@ -33,7 +35,8 @@ mutable struct MBSystem2D
             assembeld,
             default_rhs, 
             default_jacobian,
-            default_prestep)
+            default_prestep, 
+            default_kinematic_constrains)
     end
 end
 
@@ -112,7 +115,12 @@ function assemble!(sys)
     end
 
     sys.jacobian = (state) -> ForwardDiff.jacobian(sys.rhs, state)
-    
+    sys.kinematic_constrains! = (residual, generalized_coordinates) -> begin
+        for connector in connectors(sys)
+            compute_kinematic_residual!(residual, generalized_coordinates, sys, connector)
+        end
+    end
+
     sys.assembled = true
 end
 
