@@ -9,7 +9,7 @@ using LinearAlgebra
 export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D
 
 export Body2D
-export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring
+export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, HorizontalSpring
 export MBSystem2D
 
 export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!
