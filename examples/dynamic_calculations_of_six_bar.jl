@@ -51,37 +51,82 @@ bd7 = Body2D(m5, I5, length = 0.15)
 slider_ground_1 = Body2D(m5, I5, length = 0.06818)
 slider_ground_2 = Body2D(m5, I5, length = 0.06818)
 
+slider_rail_1 = Body2D(m2+m1, I2, length = 0.06)
+slider_rail_2 = Body2D(m2+m1, I2, length = 0.06)
+
 slider_1 = Body2D(m4, I4, length = 0.05)
 slider_2 = Body2D(m4, I4, length = 0.05)
 
+hor_bar_slider_bd2 = Body2D(m2+m1, I2, length = 0.06)
+hor_bar_slider_bd6 = Body2D(m2+m1, I2, length = 0.06)
+
 jnt1 = FixedJoint(bd1)
 jnt8 = FixedJoint(bd7)
+
+# right side with actuator
 
 jnt_side_hor1 = FixedJoint(slider_ground_1)
 setposition!(jnt_side_hor1, SA[0.03932, 0.1084])
 setrotation!(jnt_side_hor1, 0.0)
 
-jnt_side_hor2 = FixedJoint(slider_ground_2)
-setposition!(jnt_side_hor2, SA[0.11068+0.462, 0.1084])
-setrotation!(jnt_side_hor2, 0.0)
+ground_rail_hinge1 = HingeJoint(slider_ground_1, slider_rail_1)
+set_position_on_second_body!(ground_rail_hinge1, SA[-0.06, 0.])
 
-# slider_hor_hinge1 = HingeJoint(slider_ground_1, slider_1)
-slider_bd2_hinge = HingeJoint(slider_1, bd2)
+tcp_ground_rail = TorsionalSpring(slider_ground_1, slider_rail_1, K₁, deg2rad(0), 0.1, 0.03)
 
-# slider_hor_hinge2 = HingeJoint(slider_ground_2, slider_2)
-slider_bd6_hinge = HingeJoint(slider_2, bd6)
+slider_rail_hinge1 = HingeJoint(slider_rail_1, slider_1)
+set_position_on_first_body!(slider_rail_hinge1, SA[0.06, 0.])
+set_position_on_second_body!(slider_rail_hinge1, SA[-0.05, 0.])
 
-slider_ground_slider_1 = SliderJoint(slider_ground_1, slider_1)
+slider_ground_slider_1 = SliderJoint(slider_rail_1, slider_1)
 set_position_on_first_body!(slider_ground_slider_1, SA[0.16, 0.0])
 set_position_on_second_body!(slider_ground_slider_1, SA[0.0, 0.0])
 set_direction_on_first_body!(slider_ground_slider_1, SA[1.0, 0.0])
 set_direction_on_second_body!(slider_ground_slider_1, SA[1.0, 0.0])
 
-slider_ground_slider_2 = SliderJoint(slider_ground_2, slider_2)
-set_position_on_first_body!(slider_ground_slider_2, SA[0.426, 0.0])
+hsp1 = HorizontalSpring(slider_rail_1, slider_1, 100., 0., 0.1, 0.1)
+
+slider_hor_bd_hinge = HingeJoint(slider_1, hor_bar_slider_bd2)
+set_position_on_first_body!(slider_hor_bd_hinge, SA[0.05, 0.])
+set_position_on_second_body!(slider_hor_bd_hinge, SA[-0.06, 0.])
+
+hor_bd2_hinge = HingeJoint(hor_bar_slider_bd2, bd2)
+set_position_on_first_body!(hor_bd2_hinge, SA[0.06, 0.])
+set_position_on_second_body!(hor_bd2_hinge, SA[-0.075, 0.])
+
+tcp_hor_bd2 = TorsionalSpring(hor_bar_slider_bd2, bd2, K₁, deg2rad(0), 0.1, 0.03)
+# Left side with actuator
+
+jnt_side_hor2 = FixedJoint(slider_ground_2)
+setposition!(jnt_side_hor2, SA[0.03932, 0.1084])
+setrotation!(jnt_side_hor2, 0.0)
+
+ground_rail_hinge2 = HingeJoint(slider_ground_2, slider_rail_2)
+set_position_on_second_body!(ground_rail_hinge1, SA[-0.06, 0.])
+
+tcp_ground_rail_2 = TorsionalSpring(slider_ground_2, slider_rail_2, K₁, deg2rad(0), 0.1, 0.03)
+
+slider_rail_hinge2 = HingeJoint(slider_rail_2, slider_2)
+set_position_on_first_body!(slider_rail_hinge2, SA[0.06, 0.])
+set_position_on_second_body!(slider_rail_hinge2, SA[-0.05, 0.])
+
+slider_ground_slider_2 = SliderJoint(slider_rail_2, slider_2)
+set_position_on_first_body!(slider_ground_slider_2, SA[0.16, 0.0])
 set_position_on_second_body!(slider_ground_slider_2, SA[0.0, 0.0])
 set_direction_on_first_body!(slider_ground_slider_2, SA[1.0, 0.0])
 set_direction_on_second_body!(slider_ground_slider_2, SA[1.0, 0.0])
+
+hsp2 = HorizontalSpring(slider_rail_2, slider_2, 100., 0., 0.1, 0.1)
+
+slider_hor_bd_hinge_2 = HingeJoint(slider_2, hor_bar_slider_bd6)
+set_position_on_first_body!(slider_hor_bd_hinge_2, SA[0.05, 0.])
+set_position_on_second_body!(slider_hor_bd_hinge_2, SA[-0.06, 0.])
+
+hor_bd6_hinge = HingeJoint(hor_bar_slider_bd6, bd6)
+set_position_on_first_body!(hor_bd6_hinge, SA[0.06, 0.])
+set_position_on_second_body!(hor_bd6_hinge, SA[-0.075, 0.])
+
+tcp_hor_bd6 = TorsionalSpring(hor_bar_slider_bd6, bd6, K₁, deg2rad(0), 0.1, 0.03)
 
 jnt2 = HingeJoint(bd1, bd2)
 jnt3 = HingeJoint(bd2, bd3)
@@ -134,11 +179,17 @@ add!(sys, bd5)
 add!(sys, bd6)
 add!(sys, bd7)
 
+add!(sys, slider_ground_1)
+add!(sys, slider_ground_2)
+
+add!(sys, slider_rail_1)
+add!(sys, slider_rail_2)
+
 add!(sys, slider_1)
 add!(sys, slider_2)
 
-add!(sys, slider_ground_1)
-add!(sys, slider_ground_2)
+add!(sys, hor_bar_slider_bd2)
+add!(sys, hor_bar_slider_bd6)
 
 add!(sys, jnt1)
 
@@ -151,21 +202,32 @@ add!(sys, jnt7)
 
 add!(sys, jnt8)
 
-add!(sys, slider_bd2_hinge)
-add!(sys, slider_bd6_hinge)
-
-# add!(sys, slider_hor_hinge1)
-# add!(sys, slider_hor_hinge2)
-
-add!(sys, slider_ground_slider_1)
-add!(sys, slider_ground_slider_2)
-
 add!(sys, tcp1)
 add!(sys, tcp2)
 add!(sys, tcp3)
 add!(sys, tcp4)
 add!(sys, tcp5)
 add!(sys, tcp6)
+
+add!(sys, jnt_side_hor1)
+add!(sys, ground_rail_hinge1)
+add!(sys, tcp_ground_rail)
+add!(sys, slider_rail_hinge1)
+add!(sys, slider_ground_slider_1)
+add!(sys, hsp1)
+add!(sys, slider_hor_bd_hinge)
+add!(sys, hor_bd2_hinge)
+add!(sys, tcp_hor_bd2)
+
+add!(sys, jnt_side_hor2)
+add!(sys, ground_rail_hinge2)
+add!(sys, tcp_ground_rail_2)
+add!(sys, slider_rail_hinge2)
+add!(sys, slider_ground_slider_2)
+add!(sys, hsp2)
+add!(sys, slider_hor_bd_hinge_2)
+add!(sys, hor_bd6_hinge)
+add!(sys, tcp_hor_bd6)
 
 
 if (!assemble!(sys))
