@@ -47,14 +47,22 @@ function Makie.lift(system, solution, spring::HorizontalSpring, i::Observable)
         pos_dofs2 = get_body_position_dofs(system, bd2)
         _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
 
-        t_spring = spring.vis_r
-        N = 5
+        t_spring = spring.vis_r / 2
+        N = 12
         x_range = LinRange(_xi1, _xi2, N)
         points = Vector{Point2f}(undef, N)
         for j in 1:N
-            x = x_range[j]
-            y = t_spring * (-1)^j
-            points = Point2f(x, y)
+            if (j == 1)
+                x = _xi1
+                y = _yi1
+            elseif (j == N)
+                x = _xi2
+                y = _yi2
+            else
+                x = x_range[j]
+                y = t_spring * (-1)^j
+            end
+            points[j] = Point2f(x, y)
         end
         return points;
     end
