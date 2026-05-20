@@ -69,12 +69,16 @@ set_position_on_second_body!(slider_ground_slider, SA[0.0, 0.0])
 set_direction_on_first_body!(slider_ground_slider, SA[1.0, 0.0])
 set_direction_on_second_body!(slider_ground_slider, SA[1.0, 0.0])
 
+# 6. Horizontal spring for watch on work of visualization
+slider_ground_spring = HorizontalSpring(slider, ground, 100., 0., 0.1, 0.3)
+
 # Add joints to system
 add!(sys, ground_joint)
 add!(sys, crank_ground_hinge)
 add!(sys, crank_connector_hinge)
 add!(sys, connector_slider_hinge)
 add!(sys, slider_ground_slider)
+add!(sys, slider_ground_spring)
 
 # Assemble system
 assemble!(sys)
