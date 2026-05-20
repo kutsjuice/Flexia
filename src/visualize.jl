@@ -16,7 +16,8 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     end
     return p;
 end
-function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
+
+function get_Spring_point(system::MBSystem2D, spring::Union{TorsionalSpring,HorizontalSpring}, state::AbstractVector{Float64})
     bd1 = spring.body1
     pos_dofs1 = get_body_position_dofs(system, bd1)
     _xi1 = state[pos_dofs1[1]]
@@ -35,9 +36,34 @@ function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, 
     return Point2f(_xi ,_yi)
 end
 
+function Makie.lift(system, solution, spring::HorizontalSpring, i::Observable)
+    p = lift(i) do value
+        point = get_Spring_point(system, spring, view(solution, :, value))
+        bd1 = spring.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = spring.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        t_spring = spring.vis_r
+        N = 5
+        x_range = LinRange(_xi1, _xi2, N)
+        points = Vector{Point2f}(undef, N)
+        for j in 1:N
+            x = x_range[j]
+            y = t_spring * (-1)^j
+            points = Point2f(x, y)
+        end
+        return points;
+    end
+    return p
+end
+
 function Makie.lift(system, solution, spring::TorsionalSpring, i::Observable)
     p = lift(i) do value
-        point = get_torsionalSpring_point(system, spring, view(solution, :, value)) 
+        point = get_Spring_point(system, spring, view(solution, :, value)) 
         bd1 = spring.body1
         pos_dofs1 = get_body_position_dofs(system, bd1)
         _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
@@ -79,6 +105,11 @@ function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observ
 end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
+end
+
+function draw!(ax, joint::HorizontalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
     lines!(ax, hinge_point);
 end
