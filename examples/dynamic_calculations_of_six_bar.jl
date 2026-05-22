@@ -80,7 +80,7 @@ set_position_on_second_body!(slider_ground_slider_1, SA[0.462+0.0255+0.017, 0.10
 set_direction_on_first_body!(slider_ground_slider_1, direcrion_SL)
 set_direction_on_second_body!(slider_ground_slider_1, direcrion_SL)
 
-hsp1 = HorizontalSpring(slider_1, slider_rail_1, 100., 0., 0.1, 0.1)
+hsp1 = HorizontalSpring(slider_1, slider_rail_1, 100., 0., 0.1, 0.1, 6)
 
 hor_bd6_hinge = HingeJoint(bd6, slider_1)
 set_position_on_first_body!(hor_bd6_hinge, SA[-0.0334, 0])
@@ -105,7 +105,7 @@ set_position_on_second_body!(slider_ground_slider_2, SA[0.03932+0.068+0.17, 0.10
 set_direction_on_first_body!(slider_ground_slider_2, direcrion_SL)
 set_direction_on_second_body!(slider_ground_slider_2, direcrion_SL)
 
-hsp2 = HorizontalSpring(slider_rail_2, slider_2, 100., 0., 0.1, 0.1)
+hsp2 = HorizontalSpring(slider_rail_2, slider_2, 100., 0., 0.1, 0.1, 6)
 
 hor_bd2_hinge = HingeJoint(slider_2, bd2)
 set_position_on_first_body!(hor_bd2_hinge, SA[0.0255, 0])
