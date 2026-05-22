@@ -84,7 +84,7 @@ hsp1 = HorizontalSpring(slider_1, slider_rail_1, 100., 0., 0.1, 0.1)
 
 hor_bd6_hinge = HingeJoint(bd6, slider_1)
 set_position_on_first_body!(hor_bd6_hinge, SA[-0.0334, 0])
-set_position_on_second_body!(hor_bd6_hinge, SA[0.0255, 0])
+set_position_on_second_body!(hor_bd6_hinge, SA[-0.0255, 0])
 
 tcp_hor_bd6 = TorsionalSpring(slider_1, bd6, K₁, deg2rad(0), 0.1, 0.03)
 
