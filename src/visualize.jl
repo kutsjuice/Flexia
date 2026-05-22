@@ -50,6 +50,7 @@ function Makie.lift(system, solution, spring::HorizontalSpring, i::Observable)
         t_spring = spring.vis_r / 2
         N = 12
         x_range = LinRange(_xi1, _xi2, N)
+        y_range = LinRange(_yi1, _yi2, N)
         points = Vector{Point2f}(undef, N)
         for j in 1:N
             if (j == 1)
@@ -60,7 +61,7 @@ function Makie.lift(system, solution, spring::HorizontalSpring, i::Observable)
                 y = _yi2
             else
                 x = x_range[j]
-                y = t_spring * (-1)^j
+                y = y_range[j] + t_spring * (-1)^j
             end
             points[j] = Point2f(x, y)
         end
