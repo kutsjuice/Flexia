@@ -70,11 +70,11 @@ ground_rail_hinge1 = HingeJoint(slider_rail_1, slider_ground_1)
 set_position_on_first_body!(ground_rail_hinge1, SA[0.068, 0])
 set_position_on_second_body!(ground_rail_hinge1, SA[-0.03932, 0])
 
-tcp_ground_rail = TorsionalSpring(slider_ground_1, slider_rail_1, K₁, deg2rad(0), 0.1, 0.03)
+tcp_ground_rail = TorsionalSpring(slider_rail_1, slider_ground_1 , K₁, deg2rad(0), 0.1, 0.03)
 
 direcrion_SL = SA[cos(0.), sin(0.)]
 
-slider_ground_slider_1 = SliderJoint(slider_1, slider_rail_1)
+slider_ground_slider_1 = SliderJoint(slider_rail_1, slider_1)
 set_position_on_first_body!(slider_ground_slider_1, SA[0.462+0.0255/2, 0.1084])
 set_position_on_second_body!(slider_ground_slider_1, SA[0.462+0.0255+0.017, 0.1084])
 set_direction_on_first_body!(slider_ground_slider_1, direcrion_SL)
@@ -244,7 +244,7 @@ initial[slider_ground_2_X] = 0.
 initial[slider_ground_2_Y] = 0.1084
 
 slider_rail_1_X, slider_rail_1_Y, _ =  get_body_position_dofs(sys, slider_rail_1)
-initial[slider_rail_1_X] = 0.612-0.03932-0.068/2
+initial[slider_rail_1_X] = 0.462+0.0255+0.017+0.068/2
 initial[slider_rail_1_Y] = 0.1084
 
 slider_rail_2_X, slider_rail_2_Y, _ =  get_body_position_dofs(sys, slider_rail_2)
@@ -252,7 +252,7 @@ initial[slider_rail_2_X] = 0.03932+0.068/2
 initial[slider_rail_2_Y] = 0.1084
 
 slider_1_X, slider_1_Y, _ =  get_body_position_dofs(sys, slider_1)
-initial[slider_1_X] = 0.612-(0.03932+0.068+0.017+0.0255/2)
+initial[slider_1_X] = 0.462+0.0255/2
 initial[slider_1_Y] = 0.1084
 
 slider_2_X, slider_2_Y, _ =  get_body_position_dofs(sys, slider_2)
