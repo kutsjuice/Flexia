@@ -117,8 +117,8 @@ tcp_ground_rail_2 = TorsionalSpring(ground_rail_hinge2, K₁, deg2rad(0), 0.1, 0
 tcp_hor_bd2 = TorsionalSpring(hor_bd2_hinge, K₁, deg2rad(0), 0.1, 0.03)
 tcp_hor_bd6 = TorsionalSpring(hor_bd6_hinge, K₁, deg2rad(0), 0.1, 0.03)
 
-hsp1 = HorizontalSpring(slider_rail_1, slider_1, 30., 0., 0.01, 0.1, 6)
-hsp2 = HorizontalSpring(slider_rail_2, slider_2, 30., 0., 0.01, 0.1, 6)
+hsp1 = HorizontalSpring(slider_rail_1, slider_1, 100., -slider_1.length, 0.01, 0.1, 6)
+hsp2 = HorizontalSpring(slider_rail_2, slider_2, 100., slider_2.length, 0.01, 0.1, 6)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
 set_position_on_first_body!(jnt2, SA[bd1.length/2, 0.])
