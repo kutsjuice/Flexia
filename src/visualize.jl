@@ -30,8 +30,8 @@ function get_Spring_point(system::MBSystem2D, spring::Union{TorsionalSpring,Hori
     _yi2 = state[pos_dofs2[2]]
     _θi2 = state[pos_dofs2[3]]
 
-    _xi = _xi1 + bd1.length*cos(_θi1)
-    _yi = _yi1 + bd1.length*sin(_θi1)
+    _xi = (_yi1 - _yi2 + tan(_θi2) * _xi2 - tan(_θi1) * _xi1) / (tan(_θi2) - tan(_θi1))
+    _yi = tan(_θi2) * (_xi - _xi2) + _yi2
 
     return Point2f(_xi ,_yi)
 end
