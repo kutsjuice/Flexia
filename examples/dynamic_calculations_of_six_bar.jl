@@ -18,7 +18,8 @@ K₄ = K₂
 K₅ = K₂
 K₆ = K₁
 
-
+bd2_bd6_offset_x = 0.312
+actuators_offset_y = 0.1084
 const angle_5 = deg2rad(-110)
 
 # Массы в кг
@@ -36,14 +37,14 @@ F_container = 1
 omega = 0.5
 # Длины в метрах: было 1.5 дм = 0.15 м, 0.75 дм = 0.075 м, 0.5 дм = 0.05 м
 bd1 = Body2D(m5, 0.1e-30, length = 0.15)
-bd2 = Body2D(m2+m1, I2, length = 0.075)
-bd3 = Body2D(m2+m1, I2, length = 0.075)
+bd2 = Body2D(m2+m1, I2, length = 0.15)
+bd3 = Body2D(m2+m1, I2, length = 0.15)
 
-bd4 = Body2D(m4+m1, I4, length = 0.05)
+bd4 = Body2D(m4+m1, I4, length = 0.1)
 # bd4.forces[1] = (x) -> -(m4+m1) * F_container
 bd4.forces[1] = (x, t) -> F_container * sin(omega * t) +rand()*0.01
-bd5 = Body2D(m2+m1, I2, length = 0.075)
-bd6 = Body2D(m2+m1, I2, length = 0.075)
+bd5 = Body2D(m2+m1, I2, length = 0.15)
+bd6 = Body2D(m2+m1, I2, length = 0.15)
 bd7 = Body2D(m5, 0.1e-30, length = 0.15)
 
 jnt1 = FixedJoint(bd1)
@@ -68,27 +69,27 @@ tcp5 = TorsionalSpring(jnt6, K₅, deg2rad(45), 0.1, 0.03)
 tcp6 = TorsionalSpring(jnt7, K₆, deg2rad(-90), 0.1, 0.03)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
-set_position_on_first_body!(jnt2, SA[0.15, 0.])
-set_position_on_second_body!(jnt2, SA[-0.075, 0.])
+set_position_on_first_body!(jnt2, SA[bd1.length/2, 0.])
+set_position_on_second_body!(jnt2, SA[-bd2.length/2, 0.])
 
-set_position_on_first_body!(jnt3, SA[0.075, 0])
-set_position_on_second_body!(jnt3, SA[-0.075, 0])
+set_position_on_first_body!(jnt3, SA[bd2.length / 2, 0.])
+set_position_on_second_body!(jnt3, SA[-bd3.length /2, 0.])
 
-set_position_on_first_body!(jnt4, SA[0.075, 0])
-set_position_on_second_body!(jnt4, SA[-0.05, 0])
+set_position_on_first_body!(jnt4, SA[bd3.length/2, 0])
+set_position_on_second_body!(jnt4, SA[-bd4.length/2, 0])
 
-set_position_on_first_body!(jnt5, SA[0.05, 0])
-set_position_on_second_body!(jnt5, SA[-0.075, 0])
+set_position_on_first_body!(jnt5, SA[bd4.length/2, 0])
+set_position_on_second_body!(jnt5, SA[-bd5.length/2, 0])
 
-set_position_on_first_body!(jnt6, SA[0.075, 0])
-set_position_on_second_body!(jnt6, SA[-0.075, 0])
+set_position_on_first_body!(jnt6, SA[bd5.length/2, 0])
+set_position_on_second_body!(jnt6, SA[-bd6.length/2, 0])
 
-set_position_on_first_body!(jnt7, SA[0.075, 0])
-set_position_on_second_body!(jnt7, SA[-0.15, 0])
+set_position_on_first_body!(jnt7, SA[bd6.length/2, 0])
+set_position_on_second_body!(jnt7, SA[-bd7.length/2, 0])
 
 
 # Позиция фиксации тела 7: 6.12 дм = 0.612 м
-jnt8.pos = SA[0.612, 0.]
+jnt8.pos = SA[bd1.length/2 + bd2_bd6_offset_x + bd7.length/2, 0.]
 
 sys = MBSystem2D()
 
@@ -151,30 +152,30 @@ initial = zeros(number_of_dofs(sys))
 # Все начальные координаты переведены из дм в м (делением на 10)
 initial[bd1_x_ind] = 0.
 
-initial[bd2_x_ind] = 0.15
-initial[bd2_y_ind] = 0.15/2
+initial[bd2_x_ind] = bd1.length/2
+initial[bd2_y_ind] = bd2.length/2
 initial[bd2_t_ind] = deg2rad(90)
 
-initial[bd3_x_ind] = 0.15 + 0.15*cos(deg2rad(45))/2
-initial[bd3_y_ind] = 0.15 + 0.15*sin(deg2rad(45))/2
+initial[bd3_x_ind] = bd1.length/2 + bd3.length*cos(deg2rad(45))/2
+initial[bd3_y_ind] = bd2.length + bd3.length*sin(deg2rad(45))/2
 initial[bd3_t_ind] = deg2rad(45)
 
-initial[bd4_x_ind] = 0.15 + 0.05 + 0.15*cos(deg2rad(45))
-initial[bd4_y_ind] = 0.15 + 0.15*sin(deg2rad(45))
+initial[bd4_x_ind] = bd1.length/2 + bd3.length*cos(deg2rad(45)) + bd4.length/2
+initial[bd4_y_ind] = bd2.length + bd3.length*sin(deg2rad(45))
 initial[bd4_t_ind] = deg2rad(0)
 
-initial[bd5_x_ind] = 0.462 - 0.15*cos(deg2rad(46))/2
-initial[bd5_y_ind] = 0.15 + 0.15*sin(deg2rad(45))/2
+initial[bd5_x_ind] = bd1.length/2 + bd2_bd6_offset_x - bd5.length*cos(deg2rad(46))/2
+initial[bd5_y_ind] = bd6.length + bd5.length*sin(deg2rad(45))/2
 initial[bd5_t_ind] = deg2rad(-45)
 
-initial[bd6_x_ind] = 0.462
-initial[bd6_y_ind] = 0.15/2
+initial[bd6_x_ind] = bd1.length/2 + bd2_bd6_offset_x
+initial[bd6_y_ind] = bd6.length/2
 initial[bd6_t_ind] = deg2rad(-90)
 
 # Начальное время (последний элемент)
 initial[end] = 0.0
 
-initial[bd7_x_ind] = 0.612
+initial[bd7_x_ind] = bd1.length/2 + bd2_bd6_offset_x + bd7.length/2
 
 
 f = (t)-> func([initial[1:end-1]; t])[bd4_vx_ind]
