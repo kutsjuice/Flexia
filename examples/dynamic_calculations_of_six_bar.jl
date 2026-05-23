@@ -117,8 +117,8 @@ tcp_ground_rail_2 = TorsionalSpring(ground_rail_hinge2, K₁, deg2rad(0), 0.1, 0
 tcp_hor_bd2 = TorsionalSpring(hor_bd2_hinge, K₁, deg2rad(0), 0.1, 0.03)
 tcp_hor_bd6 = TorsionalSpring(hor_bd6_hinge, K₁, deg2rad(0), 0.1, 0.03)
 
-hsp1 = HorizontalSpring(slider_rail_1, slider_1, 100., 0., 0.1, 0.1, 6)
-hsp2 = HorizontalSpring(slider_rail_2, slider_2, 100., 0., 0.1, 0.1, 6)
+hsp1 = HorizontalSpring(slider_rail_1, slider_1, 30., 0., 0.01, 0.1, 6)
+hsp2 = HorizontalSpring(slider_rail_2, slider_2, 30., 0., 0.01, 0.1, 6)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
 set_position_on_first_body!(jnt2, SA[bd1.length/2, 0.])
@@ -277,8 +277,8 @@ jacoby(initial)
 
 
 mass = get_mass_matrix(sys)
-t_end = π / omega
-time_span = LinRange(0,t_end, 201)
+t_end = 10*π / omega
+time_span = LinRange(0,t_end, 501)
 
 n_steps = length(time_span)
 
@@ -287,3 +287,16 @@ cros!(sol1, initial, mass, func, jacoby, step(time_span))
 lines(sol1[end, :])
 # Лимиты графика тоже в метрах
 animate(sys, sol1, time_span, "out/triv_dyn3.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
+
+##
+fig = Figure()
+ax = Axis(fig[1,1], aspect = DataAspect())
+for body in Flexia.bodies(sys)
+    bar = Vector{Point2f}(undef, 2)
+    bar2 = Vector{Point2f}(undef, 2)
+    bar .= get_boundary_points(sys, body, initial)
+    bar2 .= get_boundary_points(sys, body, sol1[:,2])
+    lines!(ax, bar)
+    lines!(ax, bar2, linestyle=:dash)
+end
+fig
