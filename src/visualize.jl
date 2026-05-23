@@ -16,7 +16,7 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     end
     return p;
 end
-function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
+function get_torsionalSpring_point(system::MBSystem2D, spring::Union{TorsionalSpring,HorizontalSpring}, state::AbstractVector{Float64})
     bd1 = spring.hinge.body1
     pos_dofs1 = get_body_position_dofs(system, bd1)
     _xi1 = state[pos_dofs1[1]]
@@ -37,6 +37,59 @@ function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, 
     _yi = _yi1 + v[2]
 
     return Point2f(_xi ,_yi)
+end
+
+function get_Spring_point(system::MBSystem2D, spring::HorizontalSpring, state::AbstractVector{Float64})
+    bd1 = spring.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi1 = state[pos_dofs1[1]]
+    _yi1 = state[pos_dofs1[2]]
+    _θi1 = state[pos_dofs1[3]]
+
+    bd2 = spring.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _xi2 = state[pos_dofs2[1]]
+    _yi2 = state[pos_dofs2[2]]
+    _θi2 = state[pos_dofs2[3]]
+
+    _xi = (_yi1 - _yi2 + tan(_θi2) * _xi2 - tan(_θi1) * _xi1) / (tan(_θi2) - tan(_θi1))
+    _yi = tan(_θi2) * (_xi - _xi2) + _yi2
+
+    return Point2f(_xi ,_yi)
+end
+
+function Makie.lift(system, solution, spring::HorizontalSpring, i::Observable)
+    p = lift(i) do value
+        point = get_Spring_point(system, spring, view(solution, :, value))
+        bd1 = spring.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = spring.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        t_spring = spring.vis_r / 2
+        N = spring.vis_N
+        x_range = LinRange(_xi1, _xi2, N)
+        y_range = LinRange(_yi1, _yi2, N)
+        points = Vector{Point2f}(undef, N)
+        for j in 1:N
+            if (j == 1)
+                x = _xi1
+                y = _yi1
+            elseif (j == N)
+                x = _xi2
+                y = _yi2
+            else
+                x = x_range[j]
+                y = y_range[j] + t_spring * (-1)^j
+            end
+            points[j] = Point2f(x, y)
+        end
+        return points;
+    end
+    return p
 end
 
 function Makie.lift(system, solution, spring::TorsionalSpring, i::Observable)
@@ -81,6 +134,11 @@ function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observ
 end
 
 function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
+end
+
+function draw!(ax, joint::HorizontalSpring, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
     lines!(ax, hinge_point);
 end

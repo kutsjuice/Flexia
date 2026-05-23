@@ -65,3 +65,51 @@ function get_spring_energy(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
     Δθ_rel = Δθ1 - Δθ2
     return 0.5 * spring.stiffness * Δθ_rel^2
 end
+
+mutable struct HorizontalSpring <: AbstractForce2D
+    body1::Body2D
+    body2::Body2D
+    stiffness::Float64
+    x_dist::Float64
+    damping::Float64
+    vis_r::Float64
+    vis_N::Int
+    
+    function HorizontalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, x_dist::Float64=0.0, damping::Float64=0.0, vis_r =0.3, vis_N = 4)
+        return new(body1, body2, stiffness, x_dist, damping, vis_r, vis_N)
+    end
+end
+
+number_of_dofs(::HorizontalSpring) = 0  # пружина не добавляет лагранжевых множителей
+
+function add!(sys::MBSystem2D, spring::HorizontalSpring)
+    push!(sys.forces, spring)
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::HorizontalSpring)
+    bd1 = spring.body1
+    bd2 = spring.body2
+    
+    # Получаем индексы DOF
+    bd1_pos_dofs = get_body_position_dofs(sys, bd1)
+    bd1_vel_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_pos_dofs = get_body_position_dofs(sys, bd2)
+    bd2_vel_dofs = get_body_velocity_dofs(sys, bd2)
+    
+    # Текущие углы и угловые скорости
+    x1 = state[bd1_pos_dofs[1]]
+    x2 = state[bd2_pos_dofs[1]]
+    Vx1 = state[bd1_vel_dofs[1]]
+    Vx2 = state[bd2_vel_dofs[1]]
+    
+    # Относительное смещение и скорость
+    Δx = x1 - x2 - spring.x_dist
+    ΔVx = Vx1 - Vx2
+    
+    # Полный момент (пружина + демпфер)
+    F = spring.stiffness * Δx + spring.damping * ΔVx #+ spring.stiffness * Δθ^3
+    
+    # Добавляем в горизонтальные ускорения
+    rhs[bd1_vel_dofs[1]] += -F 
+    rhs[bd2_vel_dofs[1]] += F
+end
