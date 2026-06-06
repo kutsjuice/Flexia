@@ -296,15 +296,15 @@ end
 Flexia.find_natural_freqs(sys, initial)
 # k = [0.2, 10]
 k = [0.02, 7500.0]
-apply_stiffnesses!(sys, k, gr)
-Flexia.find_natural_freqs(sys, initial)
-ω_exp = [6, 30]# эксп первая и вторая частоты
-# ω_exp = [1.640, 2.4675]# эксп первая и вторая частоты
 gr1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 gr2 = [11, 12]
 # gr1 = [2, 5, 3, 4]
 # gr2 = [1, 6]
 gr = [gr1, gr2]
+apply_stiffnesses!(sys, k, gr)
+Flexia.find_natural_freqs(sys, initial)
+ω_exp = [6, 30]# эксп первая и вторая частоты
+# ω_exp = [1.640, 2.4675]# эксп первая и вторая частоты
 apply_stiffnesses!(sys, k, gr)
 
 k_result, status = update_stiffnesses!(sys, initial, ω_exp, k, gr;

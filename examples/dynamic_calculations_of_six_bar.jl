@@ -11,8 +11,8 @@ CURRENT_TIME = 0.
 
 # K₁ = 0.03
 # K₂ = 0.0115
-K_hsp = 500.
-K₁ = 0.5
+K_hsp = 7900.
+K₁ = 0.12
 K₂ = K₁
 K₃ = K₂
 K₄ = K₂
@@ -107,27 +107,30 @@ set_position_on_second_body!(slider_ground_slider_2, SA[0., 0.])
 set_direction_on_first_body!(slider_ground_slider_2, direcrion_SL_rev)
 set_direction_on_second_body!(slider_ground_slider_2, direcrion_SL_rev)
 
-tcp1 = TorsionalSpring(jnt2, K₁, deg2rad(-90), 0.1, 0.03)
-tcp2 = TorsionalSpring(jnt3, K₂, deg2rad(45), 0.1, 0.03)
+damp_torsional = 0.001
+damp_linear = 0.01
 
-tcp3 = TorsionalSpring(jnt4, K₃, deg2rad(45), 0.1, 0.03)
-tcp4 = TorsionalSpring(jnt5, K₄, deg2rad(45), 0.1, 0.03)
+tcp1 = TorsionalSpring(jnt2, K₁, deg2rad(-90), damp_torsional, 0.03)
+tcp2 = TorsionalSpring(jnt3, K₂, deg2rad(45), damp_torsional, 0.03)
 
-tcp5 = TorsionalSpring(jnt6, K₅, deg2rad(45), 0.1, 0.03)
-tcp6 = TorsionalSpring(jnt7, K₆, deg2rad(-90), 0.1, 0.03)
+tcp3 = TorsionalSpring(jnt4, K₃, deg2rad(45), damp_torsional, 0.03)
+tcp4 = TorsionalSpring(jnt5, K₄, deg2rad(45), damp_torsional, 0.03)
 
-tcp_ground_rail_1 = TorsionalSpring(ground_rail_hinge1, K₁, deg2rad(0), 0.1, 0.03)
-tcp_ground_rail_2 = TorsionalSpring(ground_rail_hinge2, K₁, deg2rad(0), 0.1, 0.03)
+tcp5 = TorsionalSpring(jnt6, K₅, deg2rad(45), damp_torsional, 0.03)
+tcp6 = TorsionalSpring(jnt7, K₆, deg2rad(-90), damp_torsional, 0.03)
 
-tcp_hor_bd2 = TorsionalSpring(hor_bd2_hinge, K₁, deg2rad(-90), 0.1, 0.03)
-tcp_hor_bd6 = TorsionalSpring(hor_bd6_hinge, K₁, deg2rad(-90), 0.1, 0.03)
+tcp_ground_rail_1 = TorsionalSpring(ground_rail_hinge1, K₁, deg2rad(0), damp_torsional, 0.03)
+tcp_ground_rail_2 = TorsionalSpring(ground_rail_hinge2, K₁, deg2rad(0), damp_torsional, 0.03)
+
+tcp_hor_bd2 = TorsionalSpring(hor_bd2_hinge, K₁, deg2rad(-90), damp_torsional, 0.03)
+tcp_hor_bd6 = TorsionalSpring(hor_bd6_hinge, K₁, deg2rad(-90), damp_torsional, 0.03)
 
 hsp1 = LinearSpring(slider_ground_slider_1;
                     stiffness = K_hsp,
-                    damping = 0.01, vis_r = 0.1, vis_N = 6)
+                    damping = damp_linear, vis_r = 0.1, vis_N = 6)
 hsp2 = LinearSpring(slider_ground_slider_2;
                     stiffness = K_hsp, 
-                    damping = 0.01, vis_r = 0.1, vis_N = 6)
+                    damping = damp_linear, vis_r = 0.1, vis_N = 6)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
 set_position_on_first_body!(jnt2, SA[bd1.length/2, 0.])
@@ -148,7 +151,17 @@ set_position_on_second_body!(jnt6, SA[-bd6.length/2, 0])
 set_position_on_first_body!(jnt7, SA[bd6.length/2, 0])
 set_position_on_second_body!(jnt7, SA[-bd7.length/2, 0])
 
+F_max = 10.0
+T = 0.01
+impact_force = (t) -> begin
+    ifelse(0 <= t <= T, F_max * sin(pi * t / T)^2, zero(t))
+end
 
+hummer_force = Flexia.BodyTimeVariableForce(bd5; 
+    force = impact_force,
+    direction = SA_F64[0, -1],
+    position = SA_F64[-0.02, 0.0] 
+)
 # Позиция фиксации тела 7: 6.12 дм = 0.612 м
 jnt8.pos = SA[bd1.length/2 + bd2_bd6_offset_x + bd7.length/2, 0.]
 
@@ -201,9 +214,9 @@ add!(sys,tcp_ground_rail_2)
 add!(sys,tcp_hor_bd2)
 add!(sys,tcp_hor_bd6)
 
-add!(sys,hsp1)
-add!(sys,hsp2)
-
+add!(sys, hsp1)
+add!(sys, hsp2)
+add!(sys, hummer_force)
 if (!assemble!(sys))
     println("Assembling failed!")
 end
@@ -288,8 +301,12 @@ jacoby(initial)
 #
 
 mass = get_mass_matrix(sys)
-t_end = 10*π / omega
-time_span = LinRange(0,t_end, 501)
+t_end = 5
+time_span = LinRange(0,t_end, 10001)
+
+step(time_span)
+
+fs = 1/ step(time_span)
 
 n_steps = length(time_span)
 
@@ -297,20 +314,6 @@ sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
 # lines(sol1[end, :])
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "Flexia/out/new_6bar.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
-
+animate(sys, sol1, time_span, "./new_6bar.mp4"; framerate = 1 ÷ (1*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
+# animate(sys, sol1[:, 1:150], time_span[1:150], "./new_6bar_slow.mp4"; framerate = 1 ÷ (40*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
 # Flexia.draw_static(sys, initial; limits = (-0.1, 0.6, -0.1, 0.5))
-
-##
-# fig = Figure()
-# ax = Axis(fig[1,1], aspect = DataAspect())
-# for body in Flexia.bodies(sys)
-#     bar = Vector{Point2f}(undef, 2)
-#     bar2 = Vector{Point2f}(undef, 2)
-#     bar .= get_boundary_points(sys, body, initial)
-#     bar2 .= get_boundary_points(sys, body, sol1[:,2])
-#     lines!(ax, bar)
-#     lines!(ax, bar2, linestyle=:dash)
-# end
-# fig
-sys
