@@ -142,6 +142,39 @@ function draw!(ax, joint::LinearSpring, system::MBSystem2D, solution, iter::Obse
     hinge_point = lift(system, solution, joint, iter);
     lines!(ax, hinge_point);
 end
+function draw!(ax, force::AbstractForce2D, system::MBSystem2D, solution, iter::Observable)
+end
+
+function draw!(ax, force::BodyTimeVariableForce, system::MBSystem2D, solution, iter::Observable )
+    p = lift(iter) do value
+        bd = force.body;
+        bd_dofs = get_body_position_dofs(system, bd)
+        xb, yb, θb = solution[bd_dofs, value]
+        rot = [
+            cos(θb) -sin(θb);
+            sin(θb) cos(θb);
+        ]
+        point = Point2d([xb, yb] + rot * force.pos) 
+        return point
+    end
+
+    d = lift(iter) do value
+        bd = force.body;
+        bd_dofs = get_body_position_dofs(system, bd)
+
+        xb, yb, θb = solution[bd_dofs, value]
+        t = solution[end, value]
+        rot = [
+            cos(θb) -sin(θb);
+            sin(θb) cos(θb);
+        ]
+        
+        dir = Point2d(rot * [force.fx(t), force.fy(t)] ) 
+        return dir
+    end
+
+    arrows2d!(ax, p, d; lengthscale = 0.01)
+end
 
 # function draw!(ax, joint::FixedJoint, system::MBSystem2D, solution, iter::Observable)
 #     fixed_point = lift(system, solution, joint, iter);

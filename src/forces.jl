@@ -150,3 +150,58 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::LinearSpring)
     rhs[bd1_v_dofs[2]] += Fy
     rhs[bd2_v_dofs[2]] += -Fy
 end
+
+
+mutable struct BodyTimeVariableForce <: AbstractForce2D
+    body::Body2D
+    pos::SVector{2, Float64}
+    dir::SVector{2, Float64}
+    force::Function
+    fx::Function
+    fy::Function
+    mt::Function
+    
+    function BodyTimeVariableForce(body::Body2D; 
+        position::SVector{2,Float64} = SA_F64[0, 0], 
+        direction::SVector{2,Float64} = SA_F64[1, 0], 
+        force::Function = (t) -> 0
+        )
+        d = normalize(direction)
+        p = position
+        fx = (t) -> force(t) * d[1]
+        fy = (t) -> force(t) * d[2]
+        mt = (t) -> force(t) * ( - d[1] * p[2] + d[2] * p[1] )
+        return new(body, position, direction, force, fx, fy, mt)
+    end
+end
+
+function set_force!(force::BodyTimeVariableForce, func::Function, dir::SVector{2, Float64}=force.dir)
+    p = force.position
+    d = normalize(dir)
+    force.fx = (t) -> func(t) * d[1]
+    force.fy = (t) -> func(t) * d[2]
+    force.mt = (t) -> func(t) * ( - d[1] * p[2] + d[2] * p[1] )
+    return nothing
+end
+function set_position!(force::BodyTimeVariableForce, pos::SVector{2, Float64})
+    p = pos
+    d = force.dir
+    func =  force.force
+    force.fx = (t) -> func(t) * d[1]
+    force.fy = (t) -> func(t) * d[2]
+    force.mt = (t) -> func(t) * ( - d[1] * p[2] + d[2] * p[1] )
+    return nothing
+end
+
+function add!(sys::MBSystem2D, force::BodyTimeVariableForce)
+    push!(sys.forces, force)
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, force::BodyTimeVariableForce)
+    bd = force.body
+    bd_v_dofs = get_body_velocity_dofs(sys, bd)
+
+    rhs[bd_v_dofs[1]] += force.fx(state[end])
+    rhs[bd_v_dofs[2]] += force.fy(state[end])
+    rhs[bd_v_dofs[3]] += force.mt(state[end])
+end
