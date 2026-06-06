@@ -14,11 +14,11 @@ bd4 = Body2D(10, 1)
 bd5 = Body2D(10, 1)
 # bd2 = Body2D(10, 1)
 
-bd1.forces[2] = (x) -> -bd1.mass * g
-bd2.forces[2] = (x) -> -bd2.mass * g
-bd3.forces[2] = (x) -> -bd3.mass * g
-bd4.forces[2] = (x) -> -bd4.mass * g
-bd5.forces[2] = (x) -> -bd5.mass * g
+bd1.forces[2] = (x, t) -> -bd1.mass * g
+bd2.forces[2] = (x, t) -> -bd2.mass * g
+bd3.forces[2] = (x, t) -> -bd3.mass * g
+bd4.forces[2] = (x, t) -> -bd4.mass * g
+bd5.forces[2] = (x, t) -> -bd5.mass * g
 
 
 jnt1 = FixedJoint(bd1)
@@ -75,4 +75,4 @@ time_span = 0:0.01:10
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol, initial, mass, func, jacoby, step(time_span))
 
-animate(sys, sol, time_span, "time_animation2.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+animate(sys, sol, time_span, "out/time_animation2.mp4"; framerate = 30, limits = (-5,5, -5, 5))

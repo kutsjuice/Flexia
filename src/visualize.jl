@@ -38,7 +38,7 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
     limits!(ax, limits...)
 
     record(fig, filename, 1:5:length(time_span);
-        framerate=framerate) do t
+        framerate=framerate / 5) do t
         iter[] = t
     end
 end

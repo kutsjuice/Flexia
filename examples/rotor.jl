@@ -11,8 +11,8 @@ bd1 = Body2D(10, 1)
 bd2 = Body2D(10, 1)
 # bd2 = Body2D(10, 1)
 
-bd1.forces[2] = (x) -> -bd1.mass * g
-bd2.forces[2] = (x) -> -bd2.mass * g
+bd1.forces[2] = (x, t) -> -bd1.mass * g
+bd2.forces[2] = (x, t) -> -bd2.mass * g
 
 
 jnt1 = FixedJoint(bd1)
@@ -64,4 +64,4 @@ end
 time_span = 0:0.01:10
 sol = simulate(sys, initial, time_span)
 
-animate(sys, sol, time_span, "rotor.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+animate(sys, sol, time_span, "rotor.mp4"; framerate = 1.0/step(time_span), limits = (-5,5, -5, 5))

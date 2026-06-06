@@ -79,8 +79,8 @@ add!(sys, slider_ground_slider)
 
 add!(sys, motor)
 
-sys.prestep = (t) -> begin
-    motor.target_angle += 0.01
+sys.prestep = (state) -> begin
+    motor.target_angle = state[end]
 end
 
 # Assemble system
