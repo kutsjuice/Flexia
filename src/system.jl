@@ -1,5 +1,6 @@
 mutable struct MBSystem2D
     bodies::Vector{AbstractBody2D}
+    # joints::Vector{AbstractJoint2D}
     connectors::Vector{AbstractConnector2D}
     forces::Vector{AbstractForce2D}
     bodiesdofs::Vector{Int64}
@@ -43,6 +44,7 @@ end
 get_mass_matrix(sys::MBSystem2D) = sys.mass
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
+joints(sys::MBSystem2D) = sys.joints
 connectors(sys::MBSystem2D) = sys.connectors
 
 get_targets(sys::MBSystem2D) = sys.targets

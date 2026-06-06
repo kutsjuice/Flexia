@@ -11,28 +11,30 @@ CURRENT_TIME = 0.
 
 # K₁ = 0.03
 # K₂ = 0.0115
-K₁ = 0.2
-K₂ = 0.2
+K_hsp = 500.
+K₁ = 0.5
+K₂ = K₁
 K₃ = K₂
 K₄ = K₂
 K₅ = K₂
 K₆ = K₁
+
 
 bd2_bd6_offset_x = 0.312
 actuators_offset_y = 0.1084
 const angle_5 = deg2rad(-110)
 
 # Массы в кг
-const m1 = 23e-3
+const m1 = 24e-3
 const m2 = 29e-3
-const m4 = 15e-3
+const m4 = 51e-3
 
 const m5 = 52e-3
 # Моменты инерции в кг·м²
 # 104726.798394 г·мм² = 104726.798394e-9 кг·м²
 I2 = 104726.798394e-9
 # 28187.202983 г·мм² = 28187.202983e-9 кг·м²
-I4 = 28187.202983e-9
+I4 = 36119.84e-9
 F_container = 1
 omega = 0.5
 # Длины в метрах: было 1.5 дм = 0.15 м, 0.75 дм = 0.075 м, 0.5 дм = 0.05 м
@@ -42,7 +44,7 @@ bd3 = Body2D(m2+m1, I2, length = 0.15)
 
 bd4 = Body2D(m4+m1, I4, length = 0.1)
 # bd4.forces[1] = (x) -> -(m4+m1) * F_container
-bd4.forces[1] = (x, t) -> F_container * sin(omega * t) +rand()*0.01
+# bd4.forces[1] = (x, t) -> F_container * sin(omega * t) +rand()*0.01
 bd5 = Body2D(m2+m1, I2, length = 0.15)
 bd6 = Body2D(m2+m1, I2, length = 0.15)
 bd7 = Body2D(m5, 0.1e-30, length = 0.15)
@@ -67,15 +69,18 @@ jnt7 = HingeJoint(bd6, bd7)
 
 # Left side with actuator
 
+hinge_x_offset = 0.0
 ground_rail_hinge1 = HingeJoint(bd1, slider_rail_1)
-set_position_on_first_body!(ground_rail_hinge1, SA[0., actuators_offset_y])
+set_position_on_first_body!(ground_rail_hinge1, SA[hinge_x_offset, actuators_offset_y])
 set_position_on_second_body!(ground_rail_hinge1, SA[0., 0.])
 
 
-direcrion_SL = SA[1., 0.]
+direcrion_SL = SA[-1., 0.]
+
+x_offset = bd1.length/2 - slider_1.length/2
 
 slider_ground_slider_1 = SliderJoint(slider_rail_1, slider_1)
-set_position_on_first_body!(slider_ground_slider_1, SA[0., 0.])
+set_position_on_first_body!(slider_ground_slider_1, SA[x_offset, 0.])
 set_position_on_second_body!(slider_ground_slider_1, SA[0., 0.])
 set_direction_on_first_body!(slider_ground_slider_1, direcrion_SL)
 set_direction_on_second_body!(slider_ground_slider_1, direcrion_SL)
@@ -83,6 +88,7 @@ set_direction_on_second_body!(slider_ground_slider_1, direcrion_SL)
 hor_bd2_hinge = HingeJoint(slider_1, bd2)
 set_position_on_first_body!(hor_bd2_hinge, SA[slider_1.length/2, 0])
 set_position_on_second_body!(hor_bd2_hinge, SA[-(bd2.length/2-actuators_offset_y), 0])
+
 
 # right side with actuator
 
@@ -95,9 +101,8 @@ set_position_on_first_body!(hor_bd6_hinge, SA[-(actuators_offset_y-bd6.length/2)
 set_position_on_second_body!(hor_bd6_hinge, SA[-(slider_2.length/2), 0])
 
 direcrion_SL_rev = SA[-1., 0.]
-
 slider_ground_slider_2 = SliderJoint(slider_rail_2, slider_2)
-set_position_on_first_body!(slider_ground_slider_2, SA[0., 0.])
+set_position_on_first_body!(slider_ground_slider_2, SA[-x_offset, 0.])
 set_position_on_second_body!(slider_ground_slider_2, SA[0., 0.])
 set_direction_on_first_body!(slider_ground_slider_2, direcrion_SL_rev)
 set_direction_on_second_body!(slider_ground_slider_2, direcrion_SL_rev)
@@ -114,11 +119,15 @@ tcp6 = TorsionalSpring(jnt7, K₆, deg2rad(-90), 0.1, 0.03)
 tcp_ground_rail_1 = TorsionalSpring(ground_rail_hinge1, K₁, deg2rad(0), 0.1, 0.03)
 tcp_ground_rail_2 = TorsionalSpring(ground_rail_hinge2, K₁, deg2rad(0), 0.1, 0.03)
 
-tcp_hor_bd2 = TorsionalSpring(hor_bd2_hinge, K₁, deg2rad(0), 0.1, 0.03)
-tcp_hor_bd6 = TorsionalSpring(hor_bd6_hinge, K₁, deg2rad(0), 0.1, 0.03)
+tcp_hor_bd2 = TorsionalSpring(hor_bd2_hinge, K₁, deg2rad(-90), 0.1, 0.03)
+tcp_hor_bd6 = TorsionalSpring(hor_bd6_hinge, K₁, deg2rad(-90), 0.1, 0.03)
 
-hsp1 = HorizontalSpring(slider_rail_1, slider_1, 100., -slider_1.length, 0.01, 0.1, 6)
-hsp2 = HorizontalSpring(slider_rail_2, slider_2, 100., slider_2.length, 0.01, 0.1, 6)
+hsp1 = LinearSpring(slider_ground_slider_1;
+                    stiffness = K_hsp,
+                    damping = 0.01, vis_r = 0.1, vis_N = 6)
+hsp2 = LinearSpring(slider_ground_slider_2;
+                    stiffness = K_hsp, 
+                    damping = 0.01, vis_r = 0.1, vis_N = 6)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
 set_position_on_first_body!(jnt2, SA[bd1.length/2, 0.])
@@ -239,7 +248,7 @@ initial[bd4_x_ind] = bd1.length/2 + bd3.length*cos(deg2rad(45)) + bd4.length/2
 initial[bd4_y_ind] = bd2.length + bd3.length*sin(deg2rad(45))
 initial[bd4_t_ind] = deg2rad(0)
 
-initial[bd5_x_ind] = bd1.length/2 + bd2_bd6_offset_x - bd5.length*cos(deg2rad(46))/2
+initial[bd5_x_ind] = bd1.length/2 + bd2_bd6_offset_x - bd5.length*cos(deg2rad(45))/2
 initial[bd5_y_ind] = bd6.length + bd5.length*sin(deg2rad(45))/2
 initial[bd5_t_ind] = deg2rad(-45)
 
@@ -254,6 +263,8 @@ initial[slider_rail_1_Y] = actuators_offset_y
 slider_rail_2_X, slider_rail_2_Y, _ =  get_body_position_dofs(sys, slider_rail_2)
 initial[slider_rail_2_X] = bd1.length/2 + bd2_bd6_offset_x + bd7.length/2
 initial[slider_rail_2_Y] = actuators_offset_y
+
+
 
 slider_1_X, slider_1_Y, _ =  get_body_position_dofs(sys, slider_1)
 initial[slider_1_X] = bd1.length/2 - slider_1.length/2
@@ -274,7 +285,7 @@ f = (t)-> func([initial[1:end-1]; t])[bd4_vx_ind]
 
 
 jacoby(initial)
-
+#
 
 mass = get_mass_matrix(sys)
 t_end = 10*π / omega
@@ -284,19 +295,22 @@ n_steps = length(time_span)
 
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
-lines(sol1[end, :])
+# lines(sol1[end, :])
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "out/triv_dyn3.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
+animate(sys, sol1, time_span, "Flexia/out/new_6bar.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
+
+# Flexia.draw_static(sys, initial; limits = (-0.1, 0.6, -0.1, 0.5))
 
 ##
-fig = Figure()
-ax = Axis(fig[1,1], aspect = DataAspect())
-for body in Flexia.bodies(sys)
-    bar = Vector{Point2f}(undef, 2)
-    bar2 = Vector{Point2f}(undef, 2)
-    bar .= get_boundary_points(sys, body, initial)
-    bar2 .= get_boundary_points(sys, body, sol1[:,2])
-    lines!(ax, bar)
-    lines!(ax, bar2, linestyle=:dash)
-end
-fig
+# fig = Figure()
+# ax = Axis(fig[1,1], aspect = DataAspect())
+# for body in Flexia.bodies(sys)
+#     bar = Vector{Point2f}(undef, 2)
+#     bar2 = Vector{Point2f}(undef, 2)
+#     bar .= get_boundary_points(sys, body, initial)
+#     bar2 .= get_boundary_points(sys, body, sol1[:,2])
+#     lines!(ax, bar)
+#     lines!(ax, bar2, linestyle=:dash)
+# end
+# fig
+sys

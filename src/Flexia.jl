@@ -10,7 +10,7 @@ using ForwardDiff
 export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D
 
 export Body2D
-export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, HorizontalSpring
+export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, LinearSpring
 export PositionMotor2D, PositionLinearActuator2D
 export MBSystem2D
 
