@@ -7,7 +7,7 @@ using ForwardDiff
 # export MBSystem
 # export Body2D
 
-export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D
+export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D, AbstractSensor2D
 
 export Body2D
 export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, LinearSpring
@@ -25,6 +25,9 @@ export cros!, static_solver!, simulate
 
 # Actuators
 export settarget!
+
+# Sensors
+export FramePositionSensor, FrameVelocitySensor, FrameAccelerationSensor
 
 # system
 export add!, assemble!, get_mass_matrix
@@ -44,6 +47,8 @@ abstract type AbstractForce2D end
 abstract type AbstractJoint2D <: AbstractConnector2D end
 abstract type AbstractActuator2D <: AbstractConnector2D end
 abstract type AbstractPositionActuator2D <: AbstractActuator2D end
+abstract type AbstractSensor2D end
+
 
 include("system.jl")
 include("solvers.jl")
@@ -53,6 +58,7 @@ include("connectors.jl")
 include("joints.jl")
 include("forces.jl")
 include("actuators.jl")
+include("sensors.jl")
 include("visualize.jl")
 
 function getdofs(sys::MBSystem2D, body::Body2D)

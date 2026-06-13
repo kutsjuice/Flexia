@@ -3,12 +3,14 @@ mutable struct MBSystem2D
     # joints::Vector{AbstractJoint2D}
     connectors::Vector{AbstractConnector2D}
     forces::Vector{AbstractForce2D}
+    sensors::Vector{AbstractSensor2D}
     bodiesdofs::Vector{Int64}
     lmdofs::Vector{Int64}
     assembled::Bool
     rhs::Function
     jacobian::Function
     prestep::Function
+    measure!::Function
     kinematic_constrains!::Function
     targets::Vector{Float64}
     mass::Matrix{Float64}
@@ -18,12 +20,14 @@ mutable struct MBSystem2D
         bodies = Vector{AbstractBody2D}([])
         connectors = Vector{AbstractJoint2D}([])
         forces = Vector{AbstractForce2D}([])
+        sensors = Vector{AbstractSensor2D}([])
         bodiesdofs = Vector{Int64}([])
         lmdofs = Vector{Int64}([])
         assembeld = false
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
         default_prestep = (x) -> nothing
+        default_measure = (measurements, state) -> nothing
         default_kinematic_constrains = (residual, q) -> nothing
         targets = Vector{Float64}([])
         mass = Matrix{Float64}([;;])
@@ -31,13 +35,17 @@ mutable struct MBSystem2D
             bodies,
             connectors, 
             forces,
+            sensors,
             bodiesdofs, 
             lmdofs,
             assembeld,
             default_rhs, 
             default_jacobian,
             default_prestep, 
-            default_kinematic_constrains)
+            default_measure,
+            default_kinematic_constrains, 
+            targets, 
+            mass)
     end
 end
 
@@ -123,6 +131,13 @@ function assemble!(sys)
         end
     end
 
+    sys.measure! = (measurements::Vector{Float64}, state::Vector{Float64}) -> begin
+        for s_id in eachindex(sys.sensors)
+            measurements[s_id] = measure(state, sys, sys.sensors[s_id])
+        end
+        return nothing
+    end
+
     sys.assembled = true
 end
 
@@ -139,3 +154,9 @@ function set_initial_velocity!(
     dofs = get_body_velocity_dofs(sys, body)
     initial[dofs] .= values
 end
+
+function init_measurement(sys::MBSystem2D, state::Matrix{Float64})
+    meas_len = length(sensors);
+    return Matrix{Float64}(undef, meas_len, size(state, 2);)
+end
+
