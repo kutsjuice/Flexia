@@ -342,6 +342,10 @@ animate(sys, sol1, time_span, "./new_6bar.mp4"; framerate = 1 ÷ (1*step(time_sp
 fig = Figure()
 ax = Axis(fig[1, 1])
 
-lines!(ax, time_span, meas[2,:], linestyle = :dashdot)
-lines!(ax, time_span, meas[4,:])
+l1 = lines!(ax, time_span, meas[1,:], linestyle = :dashdot)
+l2 = lines!(ax, time_span, meas[2,:])
+l3 = lines!(ax, time_span, meas[3,:], linestyle = :dashdot)
+l4 = lines!(ax, time_span, meas[4,:])
+
+Legend(fig[1 , 2], [l1,l2,l3, l4], ["A1X", "A1Y", "A2X", "A2Y"], framevisible = false, halign = :right, valign = :top)
 fig
