@@ -19,8 +19,18 @@ jnt2 = HingeJoint(bd1, bd2)
 set_position_on_second_body!(jnt2, SA[-0.5, 0])
 
 
-eop_x = FramePositionSensor(body=bd2, position=SA_F64[0.5, 0.0 ], rot=0., crd=:xcord)
-eop_y = FramePositionSensor(body=bd2, position=SA_F64[0.5, 0.0 ], rot=0., crd=:ycord)
+eop_x = FramePositionSensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:x)
+eop_y = FramePositionSensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:y)
+
+eogv_x = FrameGlobalVelocitySensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:x)
+eogv_y = FrameGlobalVelocitySensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:y)
+
+eolv_x = FrameLocalVelocitySensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:x)
+eolv_y = FrameLocalVelocitySensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:y)
+
+eola_x = FrameLocalAccelerationSensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:x)
+eola_y = FrameLocalAccelerationSensor(body=bd2, position=SA_F64[0.5, 0.0 ], axis=:y)
+
 
 sys = MBSystem2D()
 
@@ -32,6 +42,13 @@ add!(sys, jnt2)
 
 add!(sys, eop_x)
 add!(sys, eop_y)
+add!(sys, eogv_x)
+add!(sys, eogv_y)
+add!(sys, eolv_x)
+add!(sys, eolv_y)
+
+add!(sys, eola_x)
+add!(sys, eola_y)
 
 if (!assemble!(sys))
     println("Assembling failed!")
@@ -59,7 +76,7 @@ time_span = 0:0.001:10
 
 sol2 = simulate(sys, initial, time_span)
 
-meas = similar(sol2, (2, length(time_span)))
+meas = similar(sol2, (8, length(time_span)))
 buf = meas[:, 1]
 for i in axes(meas, 2)
     sys.measure!(buf, sol2[:, i] )
@@ -73,7 +90,10 @@ fig = Figure()
 ax = Axis(fig[1, 1])
 
 lines!(ax, time_span, meas[2,:])
-lines!(ax, time_span, sol2[bd2_y_ind,:])
+lines!(ax, time_span, meas[4,:])
+lines!(ax, time_span, meas[6,:])
+lines!(ax, time_span, meas[8,:])
+# lines!(ax, time_span, sol2[bd2_y_ind,:])
 fig
 
 

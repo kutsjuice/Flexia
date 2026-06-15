@@ -27,7 +27,7 @@ export cros!, static_solver!, simulate
 export settarget!
 
 # Sensors
-export FramePositionSensor, FrameVelocitySensor, FrameAccelerationSensor
+export FramePositionSensor, FrameGlobalVelocitySensor, FrameLocalVelocitySensor, FrameLocalAccelerationSensor
 
 # system
 export add!, assemble!, get_mass_matrix
@@ -48,7 +48,14 @@ abstract type AbstractJoint2D <: AbstractConnector2D end
 abstract type AbstractActuator2D <: AbstractConnector2D end
 abstract type AbstractPositionActuator2D <: AbstractActuator2D end
 abstract type AbstractSensor2D end
+abstract type AbstractPositionSensor <: AbstractSensor2D end
+abstract type AbstractVelocitySensor <: AbstractSensor2D end
+abstract type AbstractAccelerationSensor <: AbstractSensor2D end
 
+
+abstract type AbstractAxis end
+struct XAxis <: AbstractAxis end
+struct YAxis <: AbstractAxis end
 
 include("system.jl")
 include("solvers.jl")

@@ -130,10 +130,18 @@ function assemble!(sys)
             compute_kinematic_residual!(residual, generalized_coordinates, sys, connector)
         end
     end
-
+    lbd = last_body_dof(sys)
+    de_ = 1:lbd;
+    mass_de_factorization = lu(sys.mass[de_, de_])
     sys.measure! = (measurements::Vector{Float64}, state::Vector{Float64}) -> begin
+        current_rhs = sys.rhs(state)
+        dstate = similar(state)
+        fill!(dstate, zero(state[1]))
+
+        dstate[de_] = mass_de_factorization \ current_rhs[de_]
+        
         for s_id in eachindex(sys.sensors)
-            measurements[s_id] = measure(state, sys, sys.sensors[s_id])
+            measurements[s_id] = measure(state, dstate, sys, sys.sensors[s_id])
         end
         return nothing
     end
