@@ -165,6 +165,12 @@ hummer_force = Flexia.BodyTimeVariableForce(bd5;
 # Позиция фиксации тела 7: 6.12 дм = 0.612 м
 jnt8.pos = SA[bd1.length/2 + bd2_bd6_offset_x + bd7.length/2, 0.]
 
+eola_x = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[0.015, 0.0 ], axis=:x)
+eola_y = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[0.015, 0.0 ], axis=:y)
+
+eola2_x = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[-0.015, 0.0 ], axis=:x)
+eola2_y = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[-0.015, 0.0 ], axis=:y)
+
 sys = MBSystem2D()
 
 add!(sys, bd1)
@@ -217,6 +223,13 @@ add!(sys,tcp_hor_bd6)
 add!(sys, hsp1)
 add!(sys, hsp2)
 add!(sys, hummer_force)
+
+add!(sys, eola_x)
+add!(sys, eola_y)
+
+add!(sys, eola2_x)
+add!(sys, eola2_y)
+
 if (!assemble!(sys))
     println("Assembling failed!")
 end
@@ -310,10 +323,25 @@ fs = 1/ step(time_span)
 
 n_steps = length(time_span)
 
-sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
-cros!(sol1, initial, mass, func, jacoby, step(time_span))
+# sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+# cros!(sol1, initial, mass, func, jacoby, step(time_span))
 # lines(sol1[end, :])
 # Лимиты графика тоже в метрах
+sol1 = simulate(sys, initial, time_span)
+
+meas = similar(sol1, (4, length(time_span)))
+buf = meas[:, 1]
+for i in axes(meas, 2)
+    sys.measure!(buf, sol1[:, i] )
+    meas[:, i] .= buf;
+end
+
 animate(sys, sol1, time_span, "./new_6bar.mp4"; framerate = 1 ÷ (1*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
 # animate(sys, sol1[:, 1:150], time_span[1:150], "./new_6bar_slow.mp4"; framerate = 1 ÷ (40*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
 # Flexia.draw_static(sys, initial; limits = (-0.1, 0.6, -0.1, 0.5))
+fig = Figure()
+ax = Axis(fig[1, 1])
+
+lines!(ax, time_span, meas[2,:], linestyle = :dashdot)
+lines!(ax, time_span, meas[4,:])
+fig
