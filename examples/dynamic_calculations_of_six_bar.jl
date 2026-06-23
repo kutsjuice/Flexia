@@ -655,8 +655,8 @@ function calculate_sistem(F_max, T, t_end, damp_torsional, damp_linear, hinge_x_
     # Позиция фиксации тела 7
     jnt8.pos = SA[bd1.length/2 + bd2_bd6_offset_x + bd7.length/2, 0.]
 
-    eola_x  = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[0.015, 0.0],  axis=:x)
-    eola2_y = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[-0.015, 0.0], axis=:y)
+    eola_x  = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[-0.015, 0.01],  axis=:x)
+    eola2_y = FrameLocalAccelerationSensor(body=bd4, position=SA_F64[0.015, 0.01], axis=:y)
 
     sys = MBSystem2D()
 
@@ -852,10 +852,10 @@ begin # парсинг данных и поиск пиков
 end
 ##
 
-damp_torsional = 1.0e-3
+damp_torsional = 1.2e-3
 damp_linear = 1.0e-4
-F_max = 20.8
-T = 0.007
+F_max = 10.0
+T = 0.005
 t_end = 2.1
 
 # Расчет жесткости и сдвига пружины для каждой конфигурации (80°, 90°, 100°) на основе экспериментальных частот.
@@ -875,13 +875,13 @@ hinge_x_offset_80 = -0.0189329 # для 80°
 hinge_x_offset_90 = 0.0 # для 90°
 hinge_x_offset_100 = 0.01902 # для 100°
 
-sys, sol1, time_span, time_span_sp, meas, angle = calculate_sistem(F_max, T, t_end, damp_torsional, damp_linear, hinge_x_offset_80)
+sys, sol1, time_span, time_span_sp, meas, angle = calculate_sistem(F_max, T, t_end, damp_torsional, damp_linear, hinge_x_offset_90)
 signal_x_model = meas[1, :]
 signal_y_model = meas[2, :]
 signal_x_model[1:9] .= 0.0;
 signal_y_model[1:8] .= 0.0;
 
-animate(sys, sol1, time_span_sp, "./new_6bar.mp4"; framerate = 1 ÷ (1*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
+# animate(sys, sol1, time_span_sp, "./new_6bar.mp4"; framerate = 1 ÷ (1*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
 
 # animate(sys, sol1[:, 1:150], time_span_sp[1:150], "./new_6bar_slow.mp4"; framerate = 1 ÷ (40*step(time_span)), limits = (-0.1, 0.6, -0.1, 0.5))
 # Flexia.draw_static(sys, initial; limits = (-0.1, 0.6, -0.1, 0.5))
@@ -895,39 +895,212 @@ animate(sys, sol1, time_span_sp, "./new_6bar.mp4"; framerate = 1 ÷ (1*step(time
 
 
 signal_x_experiment = result_90[:, 7]
-signal_y_experiment = result_90[:, 4]
+signal_y_experiment = result_90[:, 3]
 
 Flexia.find_natural_freqs(sys, sol1[:, end])
-begin #графики спектра симуляции и удара
-    ω = [7,30, 35.78]
+begin #графики спектра симуляции и удара 80
+    sys, sol1, time_span, time_span_sp, meas, angle = calculate_sistem(F_max, T, t_end, damp_torsional, damp_linear, hinge_x_offset_80)
+    signal_x_model = meas[1, :]
+    signal_y_model = meas[2, :]
+    signal_x_model[1:9] .= 0.0;
+    signal_y_model[1:8] .= 0.0;
+    signal_x_experiment = result_80[:, 7]
+    signal_y_experiment = result_80[:, 3]
+    # ω_exp = [7, 30] #для 90° экспериментальные частоты
+    # ω_model = [7.0,30.1, 36.8]
+
+    ω_exp = [8,33] #для 80° экспериментальные частоты
+    ω_model = [8.4,25.5, 34.0]
+
+    # ω_exp = [6,36] #для 100° экспериментальные частоты
+    # ω_model = [8.4,25.5, 34.0]
+
     dt_model = step(time_span_sp)
     fx_model, Tx_model = easyspectrum(signal_x_model; dt = dt_model)
     fy_model, Ty_model = easyspectrum(signal_y_model; dt = dt_model)
-
+    
     fx_exp, Tx_exp = easyspectrum(signal_x_experiment; dt = dt)
     fy_exp, Ty_exp = easyspectrum(signal_y_experiment; dt = dt)
 
     fig = Figure(size = (800, 600))
-    ax1 = Axis(fig[1,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal_X", yscale = log10)
-    ax2 = Axis(fig[2,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal_Y", yscale = log10)
-    l1 = lines!(ax1, fx_exp, Tx_exp, color=:red)
-    lines!(ax2, fy_exp, Ty_exp, color=:red)
+    ax1 = Axis(fig[1,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal X", yscale = log10)
+    ax2 = Axis(fig[2,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal Y", yscale = log10)
+    l1 = lines!(ax1, fx_exp, Tx_exp.*9, color=:red)
+    lines!(ax2, fy_exp, Ty_exp.*9, color=:red)
 
     l2 = lines!(ax1, fx_model, Tx_model, color=:blue)
     lines!(ax2, fy_model, Ty_model, color=:blue)
 
-    l3 = vlines!(ax1, ω, color=:black, linestyle = :dashdot)
-    vlines!(ax2, ω, color=:black, linestyle = :dashdot)
-    xlims!(ax1, 0, 100)
-    xlims!(ax2, 0, 100)
-    ylims!(ax1, 0.0001, 1)
-    ylims!(ax2, 0.0001, 1)
-    Legend(fig[1 , 2], [l1, l2, l3], ["experiment", "model", "experimental modes"], framevisible = false, halign = :right, valign = :top)
+    l3 = vlines!(ax1, ω_exp, color=:black, linestyle = :dashdot)
+    vlines!(ax2, ω_exp, color=:black, linestyle = :dashdot)
+
+    l4 = vlines!(ax1, ω_model, color=:green, linestyle = :dashdot)
+    vlines!(ax2, ω_model, color=:green, linestyle = :dashdot)
+
+    xlims!(ax1, 0, 50)
+    xlims!(ax2, 0, 50)
+    ylims!(ax1, 0.0001, 3.2)
+    ylims!(ax2, 0.0001, 3.2)
+    
+    text!(ax1, 9, 0.8, text = "$(ω_model[1])Hz", align = (:left, :center), color = :green)
+    text!(ax1, 7, 0.001, text = "$(ω_exp[1])Hz", align = (:right, :center), color = :black)
+
+    text!(ax2, 9, 0.8, text = "$(ω_model[1])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 7, 0.001, text = "$(ω_exp[1])Hz", align = (:right, :center), color = :black)
+
+    text!(ax1, 24, 0.001, text = "$(ω_model[2])Hz", align = (:right, :center), color = :green)
+    text!(ax2, 24, 0.001, text = "$(ω_model[2])Hz", align = (:right, :center), color = :green)
+
+    text!(ax1, 32.5, 0.01, text = "$(ω_exp[2])Hz", align = (:right, :center), color = :black)
+    text!(ax2, 32.5, 0.01, text = "$(ω_exp[2])Hz", align = (:right, :center), color = :black)
+
+    text!(ax1, 35.0, 0.001, text = "$(ω_model[3])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 35.0, 0.001, text = "$(ω_model[3])Hz", align = (:left, :center), color = :green)
+
+    # text!(ax1, 30, 1.0, text = " 30Hz", align = (:right, :center), color = :black)
+    Legend(fig[1 , 2], [l1, l2, l3, l4], ["experiment", "model", "experimental modes", "model modes"], framevisible = false, halign = :right, valign = :top)
+    Label(fig[0, :], "80°", fontsize = 22, font = :bold)
+    fname = joinpath(OUTDIR, "spectr_80_combined.png")
+    save(fname, fig)
+    fig
+end
+##
+begin #графики спектра симуляции и удара 90
+    sys, sol1, time_span, time_span_sp, meas, angle = calculate_sistem(F_max, T, t_end, damp_torsional, damp_linear, hinge_x_offset_90)
+    signal_x_model = meas[1, :]
+    signal_y_model = meas[2, :]
+    signal_x_model[1:9] .= 0.0;
+    signal_y_model[1:8] .= 0.0;
+    signal_x_experiment = result_90[:, 7]
+    signal_y_experiment = result_90[:, 3]
+    ω_exp = [7, 30] #для 90° экспериментальные частоты
+    ω_model = [7.0,30.8, 36.8]
+
+    # ω_exp = [8,33] #для 80° экспериментальные частоты
+    # ω_model = [8.4,25.5, 34.0]
+
+    # ω_exp = [6,36] #для 100° экспериментальные частоты
+    # ω_model = [8.4,25.5, 34.0]
+
+    dt_model = step(time_span_sp)
+    fx_model, Tx_model = easyspectrum(signal_x_model; dt = dt_model)
+    fy_model, Ty_model = easyspectrum(signal_y_model; dt = dt_model)
+    
+    fx_exp, Tx_exp = easyspectrum(signal_x_experiment; dt = dt)
+    fy_exp, Ty_exp = easyspectrum(signal_y_experiment; dt = dt)
+
+    fig = Figure(size = (800, 600))
+    ax1 = Axis(fig[1,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal X", yscale = log10)
+    ax2 = Axis(fig[2,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal Y", yscale = log10)
+    l1 = lines!(ax1, fx_exp, Tx_exp.*9, color=:red)
+    lines!(ax2, fy_exp, Ty_exp.*9, color=:red)
+
+    l2 = lines!(ax1, fx_model, Tx_model, color=:blue)
+    lines!(ax2, fy_model, Ty_model, color=:blue)
+
+    l3 = vlines!(ax1, ω_exp, color=:black, linestyle = :dashdot)
+    vlines!(ax2, ω_exp, color=:black, linestyle = :dashdot)
+
+    l4 = vlines!(ax1, ω_model, color=:green, linestyle = :dashdot)
+    vlines!(ax2, ω_model, color=:green, linestyle = :dashdot)
+
+    xlims!(ax1, 0, 50)
+    xlims!(ax2, 0, 50)
+    ylims!(ax1, 0.0001, 3.5)
+    ylims!(ax2, 0.0001, 3.5)
+    
+    text!(ax1, 8, 0.8, text = "$(ω_model[1])Hz", align = (:left, :center), color = :green)
+    text!(ax1, 6.5, 0.001, text = "$(ω_exp[1])Hz", align = (:right, :center), color = :black)
+
+    text!(ax2, 9, 0.8, text = "$(ω_model[1])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 6.5, 0.001, text = "$(ω_exp[1])Hz", align = (:right, :center), color = :black)
+
+    text!(ax1, 31.5, 0.001, text = "$(ω_model[2])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 31.5, 0.001, text = "$(ω_model[2])Hz", align = (:left, :center), color = :green)
+
+    text!(ax1, 29.5, 0.01, text = "$(ω_exp[2])Hz", align = (:right, :center), color = :black)
+    text!(ax2, 29.5, 0.01, text = "$(ω_exp[2])Hz", align = (:right, :center), color = :black)
+
+    text!(ax1, 37.0, 0.001, text = "$(ω_model[3])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 37.0, 0.001, text = "$(ω_model[3])Hz", align = (:left, :center), color = :green)
+
+    # text!(ax1, 30, 1.0, text = " 30Hz", align = (:right, :center), color = :black)
+    Legend(fig[1 , 2], [l1, l2, l3, l4], ["experiment", "model", "experimental modes", "model modes"], framevisible = false, halign = :right, valign = :top)
+    Label(fig[0, :], "90°", fontsize = 22, font = :bold)
+    fname = joinpath(OUTDIR, "spectr_90_combined.png")
+    save(fname, fig)
+    fig
+end
+
+begin #графики спектра симуляции и удара 100
+    sys, sol1, time_span, time_span_sp, meas, angle = calculate_sistem(F_max, T, t_end, damp_torsional, damp_linear, hinge_x_offset_100)
+    signal_x_model = meas[1, :]
+    signal_y_model = meas[2, :]
+    signal_x_model[1:9] .= 0.0;
+    signal_y_model[1:8] .= 0.0;
+    signal_x_experiment = result_100[:, 7]
+    signal_y_experiment = result_100[:, 3]
+    # ω_exp = [7, 30] #для 90° экспериментальные частоты
+    # ω_model = [7.0,30.8, 36.8]
+
+    # ω_exp = [8,33] #для 80° экспериментальные частоты
+    # ω_model = [8.4,25.5, 34.0]
+
+    ω_exp = [6,36] #для 100° экспериментальные частоты
+    ω_model = [6.0,35.1, 39.2]
+
+    dt_model = step(time_span_sp)
+    fx_model, Tx_model = easyspectrum(signal_x_model; dt = dt_model)
+    fy_model, Ty_model = easyspectrum(signal_y_model; dt = dt_model)
+    
+    fx_exp, Tx_exp = easyspectrum(signal_x_experiment; dt = dt)
+    fy_exp, Ty_exp = easyspectrum(signal_y_experiment; dt = dt)
+
+    fig = Figure(size = (800, 600))
+    ax1 = Axis(fig[1,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal X", yscale = log10)
+    ax2 = Axis(fig[2,1], xlabel = "Frequency, [Hz]", ylabel = "Amplitude", title = "Signal Y", yscale = log10)
+    l1 = lines!(ax1, fx_exp, Tx_exp.*9, color=:red)
+    lines!(ax2, fy_exp, Ty_exp.*9, color=:red)
+
+    l2 = lines!(ax1, fx_model, Tx_model, color=:blue)
+    lines!(ax2, fy_model, Ty_model, color=:blue)
+
+    l3 = vlines!(ax1, ω_exp, color=:black, linestyle = :dashdot)
+    vlines!(ax2, ω_exp, color=:black, linestyle = :dashdot)
+
+    l4 = vlines!(ax1, ω_model, color=:green, linestyle = :dashdot)
+    vlines!(ax2, ω_model, color=:green, linestyle = :dashdot)
+
+    xlims!(ax1, 0, 50)
+    xlims!(ax2, 0, 50)
+    ylims!(ax1, 0.0001, 3.5)
+    ylims!(ax2, 0.0001, 3.5)
+    
+    text!(ax1, 7, 0.8, text = "$(ω_model[1])Hz", align = (:left, :center), color = :green)
+    text!(ax1, 5.5, 0.001, text = "$(ω_exp[1])Hz", align = (:right, :center), color = :black)
+
+    text!(ax2, 7, 0.8, text = "$(ω_model[1])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 5.5, 0.001, text = "$(ω_exp[1])Hz", align = (:right, :center), color = :black)
+
+    text!(ax1, 30.5, 0.001, text = "$(ω_model[2])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 30.5, 0.001, text = "$(ω_model[2])Hz", align = (:left, :center), color = :green)
+
+    text!(ax1, 36.5, 0.01, text = "$(ω_exp[2])Hz", align = (:left, :center), color = :black)
+    text!(ax2, 36.5, 0.01, text = "$(ω_exp[2])Hz", align = (:left, :center), color = :black)
+
+    text!(ax1, 40.0, 0.001, text = "$(ω_model[3])Hz", align = (:left, :center), color = :green)
+    text!(ax2, 40.0, 0.001, text = "$(ω_model[3])Hz", align = (:left, :center), color = :green)
+
+    # text!(ax1, 30, 1.0, text = " 30Hz", align = (:right, :center), color = :black)
+    Legend(fig[1 , 2], [l1, l2, l3, l4], ["experiment", "model", "experimental modes", "model modes"], framevisible = false, halign = :right, valign = :top)
+    Label(fig[0, :], "100°", fontsize = 22, font = :bold)
+    fname = joinpath(OUTDIR, "spectr_100_combined.png")
+    save(fname, fig)
     fig
 end
 ##
 
-fig = Figure(size = (800, 600))
+cfig = Figure(size = (800, 600))
 ax1 = Axis(fig[1,1], xlabel = "time, [s]", ylabel = "acceleration, [g]", title = "Signal_Y")
 lines!(ax1, ((1:length(signal_x_experiment)).*dt).- 0.38, signal_x_experiment, color=:green, linestyle = :dash)
 xlims!(ax1, 0, 0.5)
