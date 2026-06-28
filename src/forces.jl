@@ -5,7 +5,7 @@ mutable struct TorsionalSpring <: AbstractForce2D
     damping::Float64
     vis_r::Float64
     
-    function TorsionalSpring(hinge::HingeJoint, stiffness::Float64=0.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+    function TorsionalSpring(hinge::HingeJoint, stiffness::Float64, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
         return new(hinge, stiffness, rest_angle, damping, vis_r)
     end
 

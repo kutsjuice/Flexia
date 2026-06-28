@@ -169,7 +169,7 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
 end
 
 
-function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::FixedJoint)
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::HingeJoint)
     bd1 = joint.body1
     bd2 = joint.body2
 
@@ -345,7 +345,7 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     rhs[bd2_v_dofs[3]] += λ2
 end
 
-function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::FixedJoint)
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::SliderJoint)
     bd1 = joint.body1
     bd2 = joint.body2
 
@@ -359,7 +359,6 @@ function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vec
     _xj = coordinates[bd2_g_dofs[1]]
     _yj = coordinates[bd2_g_dofs[2]]
     _θj = coordinates[bd2_g_dofs[3]]
-
 
 
     xci = joint.body1_position[1]
