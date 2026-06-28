@@ -69,7 +69,18 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::FixedJoint)
     rhs[joint_dofs[2]] = state[position_dofs[2]] - joint.pos[2]
     rhs[joint_dofs[3]] = state[position_dofs[3]] - joint.θ
 end
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::FixedJoint)
+    body = joint.body
 
+    generalized_dofs = get_body_generalized_dofs(sys, body)
+
+    joint_dofs = get_lms(sys, joint) .- last_body_dof(sys)
+
+    residual[joint_dofs[1]] = coordinates[generalized_dofs[1]] - joint.pos[1]
+    residual[joint_dofs[2]] = coordinates[generalized_dofs[2]] - joint.pos[2]
+    residual[joint_dofs[3]] = coordinates[generalized_dofs[3]] - joint.θ
+    return nothing
+end
 
 mutable struct HingeJoint <: AbstractJoint2D
     body1::Body2D
@@ -155,6 +166,36 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
                   (_yj + xcj * sin(_θj) + ycj * cos(_θj))
 
 
+end
+
+
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::HingeJoint)
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
+    bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
+
+    _xi = coordinates[bd1_g_dofs[1]]
+    _yi = coordinates[bd1_g_dofs[2]]
+    _θi = coordinates[bd1_g_dofs[3]]
+
+    _xj = coordinates[bd2_g_dofs[1]]
+    _yj = coordinates[bd2_g_dofs[2]]
+    _θj = coordinates[bd2_g_dofs[3]]
+
+    xci = joint.body1_hinge_point[1]
+    yci = joint.body1_hinge_point[2]
+    xcj = joint.body2_hinge_point[1]
+    ycj = joint.body2_hinge_point[2]
+
+    residual[joint_dofs[1]] = (_xi + xci * cos(_θi) - yci * sin(_θi)) - 
+                         (_xj + xcj * cos(_θj) - ycj * sin(_θj))
+    residual[joint_dofs[2]] = (_yi + xci * sin(_θi) + yci * cos(_θi)) -
+                         (_yj + xcj * sin(_θj) + ycj * cos(_θj))
+
+
+    return nothing;
 end
 
 function get_hinge_point(system::MBSystem2D, joint::HingeJoint, state::AbstractVector{Float64})
@@ -270,7 +311,7 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     # 1. Perpendicular distance between points is zero
     # 2. Rotation difference (directions aligned)
 
-    # Position of hinge points in global coordinates
+    # Position of slider points in global coordinates
     xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
     ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
 
@@ -302,4 +343,54 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     # For constraint 2: d/dt of direction alignment
     rhs[bd1_v_dofs[3]] += -λ2 
     rhs[bd2_v_dofs[3]] += λ2
+end
+
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::SliderJoint)
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
+    bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
+
+    _xi = coordinates[bd1_g_dofs[1]]
+    _yi = coordinates[bd1_g_dofs[2]]
+    _θi = coordinates[bd1_g_dofs[3]]
+
+    _xj = coordinates[bd2_g_dofs[1]]
+    _yj = coordinates[bd2_g_dofs[2]]
+    _θj = coordinates[bd2_g_dofs[3]]
+
+
+    xci = joint.body1_position[1]
+    yci = joint.body1_position[2]
+    xdi = joint.body1_direction[1]
+    ydi = joint.body1_direction[2]
+
+    xcj = joint.body2_position[1]
+    ycj = joint.body2_position[2]
+
+    αi = joint.alpha1
+    αj = joint.alpha2
+    
+    # Position of slider points in global coordinates
+    xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
+    ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
+
+    xpj = _xj + xcj * cos(_θj) - ycj * sin(_θj)
+    ypj = _yj + xcj * sin(_θj) + ycj * cos(_θj)
+
+
+    # normal to direction in terms of first body in global CS
+    G_xni = -xdi*sin(_θi) - ydi*cos(_θi)
+    G_yni =  xdi*cos(_θi) - ydi*sin(_θi)
+
+
+    joint_dofs = get_lms(sys, joint) .- last_body_dof(sys)
+    
+    # Constraint 1: perpendicular distance
+    residual[joint_dofs[1]] = (xpj - xpi) * G_xni + (ypj - ypi) * G_yni
+
+    # Constraint 2: direction alignment (rotation difference)
+    # dx_gj * dy_gi - dy_gj * dx_gi = 0 (cross product)
+    residual[joint_dofs[2]] = _θj + αj - (_θi + αi)
 end

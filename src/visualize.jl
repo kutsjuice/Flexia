@@ -17,20 +17,24 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     return p;
 end
 function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
-    bd1 = spring.body1
+    bd1 = spring.hinge.body1
     pos_dofs1 = get_body_position_dofs(system, bd1)
     _xi1 = state[pos_dofs1[1]]
     _yi1 = state[pos_dofs1[2]]
     _θi1 = state[pos_dofs1[3]]
 
-    bd2 = spring.body2
+    bd2 = spring.hinge.body2
     pos_dofs2 = get_body_position_dofs(system, bd2)
     _xi2 = state[pos_dofs2[1]]
     _yi2 = state[pos_dofs2[2]]
     _θi2 = state[pos_dofs2[3]]
-
-    _xi = _xi1 + bd1.length*cos(_θi1)
-    _yi = _yi1 + bd1.length*sin(_θi1)
+    R = SA_F64[
+        cos(_θi1) -sin(_θi1);
+        sin(_θi1) cos(_θi1)
+    ]
+    v = R * spring.hinge.body1_hinge_point
+    _xi = _xi1 + v[1]
+    _yi = _yi1 + v[2]
 
     return Point2f(_xi ,_yi)
 end
@@ -38,18 +42,16 @@ end
 function Makie.lift(system, solution, spring::TorsionalSpring, i::Observable)
     p = lift(i) do value
         point = get_torsionalSpring_point(system, spring, view(solution, :, value)) 
-        bd1 = spring.body1
+        bd1 = spring.hinge.body1
         pos_dofs1 = get_body_position_dofs(system, bd1)
         _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
 
-        bd2 = spring.body2
+        bd2 = spring.hinge.body2
         pos_dofs2 = get_body_position_dofs(system, bd2)
         _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
 
         start_angel = _θi1 + π
         end_angel = _θi2 + 4*π
-
-  
 
         r0 = spring.vis_r/2
         r1 = spring.vis_r
@@ -71,7 +73,7 @@ function Makie.lift(system, solution, spring::TorsionalSpring, i::Observable)
     return p
 end
 
-function draw!(ax, joint::AbstractJoint2D, system::MBSystem2D, solution, iter::Observable)
+function draw!(ax, joint::AbstractConnector2D, system::MBSystem2D, solution, iter::Observable)
 end
 function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observable)
     hinge_point = lift(system, solution, joint, iter);
@@ -109,7 +111,7 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
     limits!(ax, limits...)
 
     record(fig, filename, 1:5:length(time_span);
-        framerate=framerate) do t
+        framerate=framerate / 5) do t
         iter[] = t
     end
 end

@@ -1,0 +1,189 @@
+---
+title: "Optimal trajectory planning for kinematically redundant parallel mechanism"
+author: 
+  - name: Michael Kuts
+    orcid: 0000-0002-0760-5497
+    corresponding: true
+    email: kuts@bmstu.ru
+    roles:
+      - Investigation
+      - Software
+      - Visualization
+    affiliations:
+      - Bauman Moscow State Technical University
+  - name: Alexey Novikov
+    orcid: 0000-0002-0760-5497
+    corresponding: true
+    email: novikov@email.com
+    roles:
+      - Investigation
+      - Project administration
+    affiliations:
+      - Mechanical Engineering Research Institute of the Russian Academy of Sciences
+  - name: Pavel Larushkin
+    orcid: 0000-0002-0760-5497
+    corresponding: true
+    email: pav.and.lar@bmstu.ru
+    roles:
+      - Investigation
+      - Software
+    affiliations:
+      - Bauman Moscow State Technical University
+  - name: Alexey Fomin
+    orcid: 0000-0002-0760-5497
+    corresponding: true
+    email: fomin@email.com
+    roles:
+      - Investigation
+      - Visualization
+    affiliations:
+      - Mechanical Engineering Research Institute of the Russian Academy of Sciences
+keywords:
+  - parallel kinematics
+  - trajectory planning
+  - inverce dynamics
+  - julia
+abstract: |
+  Some abstract
+plain-language-summary: |
+  Summary
+date: last-modified
+bibliography: references.bib
+citation:
+  container-title: Optimal trajectory planning for kinematically redundant parallel mechanism
+number-sections: true
+lang: en
+engine: julia
+execute:
+  eval: false
+---
+
+# Introduction
+Modern trends in industrial robotics demand the development of high-speed and high-precision manipulators. Parallel mechanisms offer several advantages over their serial counterparts, such as high stiffness, lower inertia of moving parts, and high payload capacity. However, a significant drawback is the presence of complex closed kinematic chains, which lead to a reduced workspace and the existence of singular configurations (singularities) where the mechanism loses stiffness or controllability.
+
+To overcome these limitations, kinematic or actuation redundancy is often introduced into the design. The addition of extra degrees of freedom allows the mechanism to reconfigure itself during motion, avoiding singularities and optimizing load distribution among the actuators. Nevertheless, dynamics modeling and trajectory planning for such systems present a challenging computational task.
+
+Traditional trajectory planning methods based on minimal coordinates require a complex analytical derivation of the equations of motion, which is often unjustifiably time-consuming for closed parallel structures. This paper proposes an approach based on modeling the mechanism dynamics in redundant (maximal) coordinates using the Lagrange formulation of the first kind. The primary objective of this work is to develop a trajectory planning methodology for a kinematically redundant 4-DOF gripping mechanism that enables the specified motion of the end-effector while utilizing the redundant degree of freedom to avoid singularities and keep dynamic loads within prescribed limits.
+
+# Methods
+## Mechanism dynamics in redundant coordinates
+
+The dynamics of a closed-loop parallel mechanism are most naturally described by a system of index-3 differential-algebraic equations (DAEs). Using the Lagrange formulation of the first kind, the mechanism dynamics are written as:
+
+$$
+\begin{cases}
+\mathbf{M}(\mathbf{q})\ddot{\mathbf{q}} + \Phi_q^T(\mathbf{q})\lambda = \mathbf{Q}(\mathbf{q}, \dot{\mathbf{q}})\\
+\Phi(q) = 0
+\end{cases}
+$$
+
+where $\mathbf{M}(\mathbf{q})$ -- global mass matrix of the system; $\Phi(q)$ -- holonomic constrains applyed to the system with Jacoby matrix $\Phi_q^T(q)$; $\lambda$ -- Lagrange multipliers; $\mathbf{Q}(\mathbf{q}, \dot{\mathbf{q}})$ -- vector of generalized applied forces, including actuator torques and gravity.
+
+Using this mathematical model makes it possible to determine both the required actuator torques (solving the inverse dynamics problem) and the internal joint reaction forces without the need to derive the equations of motion in minimal coordinates, which is particularly effective for software implementation.
+
+In this work, a 2D formulation is utilized. The mechanism under investigation features the following types of joints:
+- hinge joint
+- slider joint
+
+Hinge joint enforces constraint on points $\mathbf{p}^{b1}_{c}$ and $\mathbf{p}^{b2}_{c}$ defined in body's local frame. 
+
+The constraint equations looks 
+
+$$
+\mathbf{R}_{b1} \mathbf{p}^{b1}_{c} + \mathbf{p}_{b1} = \mathbf{R}_{b2} \mathbf{p}^{b2}_{c} + \mathbf{p}_{b2} 
+$$
+
+Slider joint enforces two following constraint:
+1. Zero relative displacement perpendicular to the sliding axis
+2. Parallel alignment of the sliding directions
+
+Let $\alpha_1 = \operatorname{atan2}(d^{b1}_y, d^{b1}_x)$ and $\alpha_2 = \operatorname{atan2}(d^{b2}_y, d^{b2}_x)$ be the constant local angles of the direction vectors. The complete constraint system is:
+
+$$
+\mathbf{F}_s(\mathbf{x}) = \begin{cases}
+    \Phi_1 = (\mathbf{p}_{b1} + \mathbf{R}_{b1} \mathbf{p}^{b1}_{c} - \mathbf{p}_{b2} - \mathbf{R}_{b2} \mathbf{p}^{b2}_{c}) \cdot \hat{\mathbf{n}}' = 0 \\[1em]
+    \Phi_2 = (\theta_{b2} + \alpha_2) - (\theta_{b1} + \alpha_1) = 0
+\end{cases}
+$$
+
+Equivalent angle-based formulation using precomputed offset:
+$$
+\theta_{\text{offset}} = \alpha_1 - \alpha_2
+$$
+$$
+\Phi_2 = \theta_{b2} - \theta_{b1} - \theta_{\text{offset}} = 0
+$$
+
+## Forward and inverse kinematics using redundant coordinates
+
+Considering the system above, described using redundant coordinates. Besides joints constraints there exists $K=(N-M)$ actuator constrains, defined by the equations $\mathbf{a}(\mathbf{q}) - \mathbf{u} = \mathbf{0}$ with jacoby matrix $\mathbf{a}_{q}=\frac{\partial \mathbf{a}}{\partial \mathbf{q}}$ and $\mathbf{u}$ -- input (control) coordinates. Additionally there exist measurements $\mathbf{y} \in \mathbb{R}^K$ described by algebraic equations:
+$$
+\mathbf{y}=\mathbf{s}(\mathbf{q})
+$$ {#eq-sensors}
+
+Forward kinemtcis can be derived from system of nonlinear equations:
+$$
+\begin{cases}
+\mathbf{g}(\mathbf{q}) = \mathbf{0}\\
+\mathbf{a}(\mathbf{q}) - \mathbf{u} = \mathbf{0}
+\end{cases}
+$$ {#eq-fk}
+
+Defining system block Jacoby matrix $\mathbf{J}_{ig}=\begin{bmatrix}\mathbf{g}_q\\\mathbf{a}_q\end{bmatrix}$ we can solve system @eq-fk numerically using Newton-Raphson method:
+
+$$
+\mathbf{q}_{i+1}=\mathbf{q}_i - \mathbf{J}^{-1}_{ig}\begin{Bmatrix}\mathbf{g}(\mathbf{q}_i)\\\mathbf{a}(\mathbf{q}_i) - \mathbf{u}_t\end{Bmatrix}
+$$
+
+where $\mathbf{u}_t$ is a target values of input coordinates.
+
+Sensors values derived by substituting found generalized coordinates into @eq-sensors.
+
+To derive relation between input and output velocities we need to differentiate @eq-fk:
+$$
+\begin{cases}
+\mathbf{g}_q \dot{\mathbf{q}} = \mathbf{0}\\
+\mathbf{a}_q \dot{\mathbf{q}} = \dot{\mathbf{u}} 
+\end{cases}
+$$
+
+Velocity of generalized coordinates:
+$$
+\dot{\mathbf{q}}=\mathbf{J}^{-1}_{ig}\begin{bmatrix}\mathbf{0}\\ \dot{\mathbf{u}}\end{bmatrix} = \mathbf{J}^{-1}_{ig} \mathbf{B}\dot{\mathbf{u}} 
+$$ {#eq-input-gen_velocities}
+
+where $\mathbf{B}=\begin{bmatrix}\mathbf{0}\\ \mathbf{I}\end{bmatrix}$ mapping from input to generalized coordinates.
+
+Sensors velocities is defined $\dot{\mathbf{y}}=\mathbf{s}_q\dot{\mathbf{q}}$ and substituting into @eq-input-gen_velocities finally got:
+
+$$
+\dot{\mathbf{y}}=\underbrace{\mathbf{s}_q\mathbf{J}^{-1}_{ig} \mathbf{B}}_{\mathbf{J}_{FK}}\dot{\mathbf{u}}
+$$
+
+where ${\mathbf{J}_{FK}}$ -- is forward kinematics Jacoby matrix.
+##
+We consider the problem of moving the mechanism's end-effector along a specified geometric path (e.g., a spiral). The motion is parameterized by a scalar variable $p \in [0, 1]$, where $p=0$ corresponds to the start of the path and $p=1$ corresponds to its end.
+
+According to the process requirements, the coordinates of the platform center $x(p)$ and $y(p)$, as well as the gripper opening width $s(p)$, are strictly specified for each value of the parameter $p$. The orientation angle of the platform $R_z$ is not restricted by the task and acts as a free variable. Thus, the full configuration of the mechanism is a function of the path parameter and the free orientation: $q = f(p, R_z(p))$.
+
+The main challenge when parallel mechanisms move along complex trajectories is the crossing of singularity zones (specifically, Type II parallel singularities), near which the required control torques $\tau$ tend to infinity.
+
+**Optimization Objective:**
+It is necessary to find a continuous function for the redundant angle variation $R_z(p)$ and a path velocity profile $\dot{p}(t)$ that ensure:
+
+1. **Trajectory Feasibility:** Evasion of kinematic singularities throughout the entire path.
+2. **Adherence to Dynamic Constraints:** Actuator torques must not exceed the hardware limits of the motors:
+
+$$|\tau_i(p, \dot{p}, \ddot{p}, R_z)| \le \tau_{max}, \quad i = 1..4$$
+
+
+3. **Motion Time Minimization:** Optimization of the velocity profile for the fastest execution of the technological operation.
+
+Incorporating torque limits as hard constraints within the optimization problem naturally guarantees that the obtained trajectory will pass far from parallel singularity zones, thereby making the motion physically feasible.
+
+# Numerical setup
+
+
+# Results
+# Discussion
+# Conclusion

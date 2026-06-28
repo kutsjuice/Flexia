@@ -45,6 +45,15 @@ function get_body_velocity_dofs(sys::MBSystem2D, body::Body2D)
     ]
 end
 
+function get_body_generalized_dofs(sys::MBSystem2D, body::Body2D)
+    bid = get_index(body)
+    lg_dof = Int(sys.bodiesdofs[bid] ÷ 2)
+    return SA[
+        lg_dof - 2,
+        lg_dof - 1,
+        lg_dof - 0,
+    ]
+end
 
 function add_to_rhs!(rhs, state, sys, body)
     last_dof = sys.bodiesdofs[body.index]
