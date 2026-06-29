@@ -494,13 +494,18 @@ let # спектр для удара для 80 градусов оба датч�
     pks2, proms = peakproms!(allpks2; min = 0.0017)
     # peaksplot(f1, T1, significant_peaks; show_prominences=true, show_widths=false, color=:red, markersize=8)
     # подберите диапазон под ваш сигнал
+    annotation!(ax1, 1, 20, 2.1, g(2.1),
+    text = "(1, 20)\nlabelspace = :data",
+    path = Ann.Paths.Arc(0.3),
+    style = Ann.Styles.LineArrow(),
+    labelspace = :data)
     scatter!(ax1, f2[pks2], T2[pks2], color = :black, markersize = 10, label = "Top freqs of signal 2")
     label_piks = ["$(round(f2[pks2][i], sigdigits=3)) Hz" for i in 1:length(pks2)]
     text!(ax1, f2[pks2], T2[pks2], text = label_piks, align = (:left, :bottom), offset = (5, 5))
     axislegend(ax1)
     display(fig)
     fname = joinpath(OUTDIR, "spectr_80_combined.png")
-    save(fname, fig)
+    # save(fname, fig)
 end
 
 let # спектр для удара для 90 градусов оба датчика отдельно
