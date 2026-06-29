@@ -13,22 +13,13 @@ mutable struct FramePositionSensor{A <: AbstractAxis} <: AbstractPositionSensor
     position::SVector{2, Float64}
     axis::A
 end
-function FramePositionSensor(;body::Body2D, position::SVector{2, Float64}, axis::Int64)
-    if axis == 1
+function FramePositionSensor(;body::Body2D, position::SVector{2, Float64}, axis::Union{Int64, Symbol})
+    if axis == 1 || :x || axis == :X
         return FramePositionSensor(body, position, XAxis())
-    elseif axis == 1
+    elseif axis == 2 || :y || axis == :Y
         return FramePositionSensor(body, position, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
-    end
-end
-function FramePositionSensor(;body::Body2D, position::SVector{2, Float64}, axis::Symbol)
-    if axis == :x || axis == :X
-        return FramePositionSensor(body, position, XAxis())
-    elseif axis == :y || axis == :Y
-        return FramePositionSensor(body, position, YAxis())
-    else
-        throw(ArgumentError("Ось должна быть :x или :y"))
     end
 end
 
@@ -51,25 +42,15 @@ mutable struct FrameGlobalVelocitySensor{A <: AbstractAxis} <: AbstractSensor2D
     position::SVector{2, Float64}
     axis::A
 end
-function FrameGlobalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, axis::Int64)
-    if axis == 1
+function FrameGlobalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, axis::Union{Int64, Symbol})
+    if axis == 1 || :x || axis == :X
         return FrameGlobalVelocitySensor(body, position, XAxis())
-    elseif axis == 1
+    elseif axis == 2 || :y || axis == :Y
         return FrameGlobalVelocitySensor(body, position, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
     end
 end
-function FrameGlobalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, axis::Symbol)
-    if axis == :x || axis == :X
-        return FrameGlobalVelocitySensor(body, position, XAxis())
-    elseif axis == :y || axis == :Y
-        return FrameGlobalVelocitySensor(body, position, YAxis())
-    else
-        throw(ArgumentError("Axis must be either :x, :X or :y, :Y "))
-    end
-end
-
 
 function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameGlobalVelocitySensor{XAxis})::Float64
     body = sensor.body;
@@ -104,22 +85,13 @@ mutable struct FrameLocalVelocitySensor{A<:AbstractAxis} <: AbstractSensor2D
     axis::A    
 end
 
-function FrameLocalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Int64)
-    if axis == 1
+function FrameLocalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Union{Int64,Symbol})
+    if axis == 1 || :x || axis == :X
         return FrameLocalVelocitySensor(body, position, rot, XAxis())
-    elseif axis == 1
+    elseif axis == 2 | :y || axis == :Y
         return FrameLocalVelocitySensor(body, position, rot, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
-    end
-end
-function FrameLocalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Symbol)
-    if axis == :x || axis == :X
-        return FrameLocalVelocitySensor(body, position, rot, XAxis())
-    elseif axis == :y || axis == :Y
-        return FrameLocalVelocitySensor(body, position, rot, YAxis())
-    else
-        throw(ArgumentError("Axis must be either :x, :X or :y, :Y "))
     end
 end
 
@@ -158,22 +130,13 @@ mutable struct FrameLocalAccelerationSensor{A<:AbstractAxis} <: AbstractSensor2D
     axis::A    
 end
 
-function FrameLocalAccelerationSensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Int64)
-    if axis == 1
+function FrameLocalAccelerationSensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Union{Int64, Symbol})
+    if axis == 1 || :x || axis == :X
         return FrameLocalAccelerationSensor(body, position, rot, XAxis())
-    elseif axis == 1
+    elseif axis == 2 || :y || axis == :Y
         return FrameLocalAccelerationSensor(body, position, rot, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
-    end
-end
-function FrameLocalAccelerationSensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Symbol)
-    if axis == :x || axis == :X
-        return FrameLocalAccelerationSensor(body, position, rot, XAxis())
-    elseif axis == :y || axis == :Y
-        return FrameLocalAccelerationSensor(body, position, rot, YAxis())
-    else
-        throw(ArgumentError("Axis must be either :x, :X or :y, :Y "))
     end
 end
 

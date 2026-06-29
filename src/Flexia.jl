@@ -7,7 +7,25 @@ using ForwardDiff
 # export MBSystem
 # export Body2D
 
+
+
 export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D, AbstractSensor2D
+
+abstract type AbstractBody2D end
+abstract type AbstractConnector2D end
+abstract type AbstractForce2D end
+abstract type AbstractJoint2D <: AbstractConnector2D end
+abstract type AbstractActuator2D <: AbstractConnector2D end
+abstract type AbstractPositionActuator2D <: AbstractActuator2D end
+abstract type AbstractSensor2D end
+abstract type AbstractPositionSensor <: AbstractSensor2D end
+abstract type AbstractVelocitySensor <: AbstractSensor2D end
+abstract type AbstractAccelerationSensor <: AbstractSensor2D end
+
+
+abstract type AbstractAxis end
+struct XAxis <: AbstractAxis end
+struct YAxis <: AbstractAxis end
 
 export Body2D
 export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, LinearSpring
@@ -40,22 +58,6 @@ export test_func
 
 
 test_func() = 1
-
-abstract type AbstractBody2D end
-abstract type AbstractConnector2D end
-abstract type AbstractForce2D end
-abstract type AbstractJoint2D <: AbstractConnector2D end
-abstract type AbstractActuator2D <: AbstractConnector2D end
-abstract type AbstractPositionActuator2D <: AbstractActuator2D end
-abstract type AbstractSensor2D end
-abstract type AbstractPositionSensor <: AbstractSensor2D end
-abstract type AbstractVelocitySensor <: AbstractSensor2D end
-abstract type AbstractAccelerationSensor <: AbstractSensor2D end
-
-
-abstract type AbstractAxis end
-struct XAxis <: AbstractAxis end
-struct YAxis <: AbstractAxis end
 
 include("system.jl")
 include("solvers.jl")
