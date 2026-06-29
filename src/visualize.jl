@@ -16,7 +16,7 @@ function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
     end
     return p;
 end
-function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, state::AbstractVector{Float64})
+function get_torsionalSpring_point(system::MBSystem2D, spring::Union{TorsionalSpring,LinearSpring}, state::AbstractVector{Float64})
     bd1 = spring.hinge.body1
     pos_dofs1 = get_body_position_dofs(system, bd1)
     _xi1 = state[pos_dofs1[1]]
@@ -37,6 +37,59 @@ function get_torsionalSpring_point(system::MBSystem2D, spring::TorsionalSpring, 
     _yi = _yi1 + v[2]
 
     return Point2f(_xi ,_yi)
+end
+
+function get_Spring_point(system::MBSystem2D, spring::LinearSpring, state::AbstractVector{Float64})
+    bd1 = spring.joint.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi1 = state[pos_dofs1[1]]
+    _yi1 = state[pos_dofs1[2]]
+    _θi1 = state[pos_dofs1[3]]
+
+    bd2 = spring.joint.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _xi2 = state[pos_dofs2[1]]
+    _yi2 = state[pos_dofs2[2]]
+    _θi2 = state[pos_dofs2[3]]
+
+    _xi = (_yi1 - _yi2 + tan(_θi2) * _xi2 - tan(_θi1) * _xi1) / (tan(_θi2) - tan(_θi1))
+    _yi = tan(_θi2) * (_xi - _xi2) + _yi2
+
+    return Point2f(_xi ,_yi)
+end
+
+function Makie.lift(system, solution, spring::LinearSpring, i::Observable)
+    p = lift(i) do value
+        point = get_Spring_point(system, spring, view(solution, :, value))
+        bd1 = spring.joint.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = spring.joint.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        t_spring = spring.vis_r / 2
+        N = spring.vis_N
+        x_range = LinRange(_xi1, _xi2, N)
+        y_range = LinRange(_yi1, _yi2, N)
+        points = Vector{Point2f}(undef, N)
+        for j in 1:N
+            if (j == 1)
+                x = _xi1
+                y = _yi1
+            elseif (j == N)
+                x = _xi2
+                y = _yi2
+            else
+                x = x_range[j]
+                y = y_range[j] + t_spring * (-1)^j
+            end
+            points[j] = Point2f(x, y)
+        end
+        return points;
+    end
+    return p
 end
 
 function Makie.lift(system, solution, spring::TorsionalSpring, i::Observable)
@@ -85,6 +138,44 @@ function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::O
     lines!(ax, hinge_point);
 end
 
+function draw!(ax, joint::LinearSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
+end
+function draw!(ax, force::AbstractForce2D, system::MBSystem2D, solution, iter::Observable)
+end
+
+function draw!(ax, force::BodyTimeVariableForce, system::MBSystem2D, solution, iter::Observable )
+    p = lift(iter) do value
+        bd = force.body;
+        bd_dofs = get_body_position_dofs(system, bd)
+        xb, yb, θb = solution[bd_dofs, value]
+        rot = [
+            cos(θb) -sin(θb);
+            sin(θb) cos(θb);
+        ]
+        point = Point2d([xb, yb] + rot * force.pos) 
+        return point
+    end
+
+    d = lift(iter) do value
+        bd = force.body;
+        bd_dofs = get_body_position_dofs(system, bd)
+
+        xb, yb, θb = solution[bd_dofs, value]
+        t = solution[end, value]
+        rot = [
+            cos(θb) -sin(θb);
+            sin(θb) cos(θb);
+        ]
+        
+        dir = Point2d(rot * [force.fx(t), force.fy(t)] ) 
+        return dir
+    end
+
+    arrows2d!(ax, p, d; lengthscale = 0.01)
+end
+
 # function draw!(ax, joint::FixedJoint, system::MBSystem2D, solution, iter::Observable)
 #     fixed_point = lift(system, solution, joint, iter);
 #     lines!(ax, fixed_point);
@@ -114,4 +205,27 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
         framerate=framerate / 5) do t
         iter[] = t
     end
+end
+
+
+function draw_static(sys::MBSystem2D, sol;  limits = (-1, 1, 1, 1))
+    fig = Figure()
+    iter = Observable(1)
+    ax = Axis(fig[1, 1], aspect = DataAspect())
+
+    for body in bodies(sys)
+        bar = lift(sys, sol, body, iter)
+        lines!(ax, bar)
+    end
+
+    for connector in connectors(sys)
+        draw!(ax, connector, sys, sol, iter)
+    end
+    for force in sys.forces
+        draw!(ax, force, sys, sol, iter)
+    end
+
+    limits!(ax, limits...)
+
+    return fig;
 end

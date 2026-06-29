@@ -1,47 +1,44 @@
 using Pkg; Pkg.activate("./examples")
 using Flexia
-using ForwardDiff
 using GLMakie
-using StaticArrays
-# using CSV
-# using DataFrames
-const g = 9.81
+using ForwardDiff
 
-CURRENT_TIME = 0.
+using StaticArrays
+
+const g = 9.81
 
 # K₁ = 0.03
 # K₂ = 0.0115
-K₁ = 0.2
-K₂ = 0.2
+K₁ = 0.02
+K₂ = 0.02
 K₃ = K₂
 K₄ = K₂
 K₅ = K₂
 K₆ = K₁
 
 
-const angle_5 = deg2rad(-110)
 
 # Массы в кг
-const m1 = 23e-3
-const m2 = 29e-3
-const m4 = 15e-3
+m1 = 23e-3
+m2 = 29e-3
+m4 = 15e-3
 
-const m5 = 52e-3
+m5 = 52e-3
+
 # Моменты инерции в кг·м²
 # 104726.798394 г·мм² = 104726.798394e-9 кг·м²
 I2 = 104726.798394e-9
 # 28187.202983 г·мм² = 28187.202983e-9 кг·м²
 I4 = 28187.202983e-9
-F_container = 1
-omega = 0.5
+
+
 # Длины в метрах: было 1.5 дм = 0.15 м, 0.75 дм = 0.075 м, 0.5 дм = 0.05 м
 bd1 = Body2D(m5, 0.1e-30, length = 0.15)
 bd2 = Body2D(m2+m1, I2, length = 0.075)
 bd3 = Body2D(m2+m1, I2, length = 0.075)
 
 bd4 = Body2D(m4+m1, I4, length = 0.05)
-# bd4.forces[1] = (x) -> -(m4+m1) * F_container
-bd4.forces[1] = (x, t) -> F_container * sin(omega * t) +rand()*0.01
+
 bd5 = Body2D(m2+m1, I2, length = 0.075)
 bd6 = Body2D(m2+m1, I2, length = 0.075)
 bd7 = Body2D(m5, 0.1e-30, length = 0.15)
@@ -58,14 +55,14 @@ jnt5 = HingeJoint(bd4, bd5)
 jnt6 = HingeJoint(bd5, bd6)
 jnt7 = HingeJoint(bd6, bd7)
 
-tcp1 = TorsionalSpring(jnt2, K₁, deg2rad(-90), 0.1, 0.03)
-tcp2 = TorsionalSpring(jnt3, K₂, deg2rad(45), 0.1, 0.03)
+tcp1 = TorsionalSpring(jnt2, K₁, deg2rad(-90), 0., 0.03)
+tcp2 = TorsionalSpring(jnt3, K₂, deg2rad(45), 0., 0.03)
 
-tcp3 = TorsionalSpring(jnt4, K₃, deg2rad(45), 0.1, 0.03)
-tcp4 = TorsionalSpring(jnt5, K₄, deg2rad(45), 0.1, 0.03)
+tcp3 = TorsionalSpring(jnt4, K₃, deg2rad(45), 0., 0.03)
+tcp4 = TorsionalSpring(jnt5, K₄, deg2rad(45), 0., 0.03)
 
-tcp5 = TorsionalSpring(jnt6, K₅, deg2rad(45), 0.1, 0.03)
-tcp6 = TorsionalSpring(jnt7, K₆, deg2rad(-90), 0.1, 0.03)
+tcp5 = TorsionalSpring(jnt6, K₅, deg2rad(45), 0., 0.03)
+tcp6 = TorsionalSpring(jnt7, K₆, deg2rad(-90), 0., 0.03)
 
 # Позиции присоединений: всё было в дм, теперь в м (делим на 10)
 set_position_on_first_body!(jnt2, SA[0.15, 0.])
@@ -118,7 +115,6 @@ add!(sys, tcp4)
 add!(sys, tcp5)
 add!(sys, tcp6)
 
-
 if (!assemble!(sys))
     println("Assembling failed!")
 end
@@ -134,7 +130,6 @@ bd2_x_ind, bd2_y_ind, bd2_t_ind = get_body_position_dofs(sys, bd2)
 bd3_x_ind, bd3_y_ind, bd3_t_ind = get_body_position_dofs(sys, bd3)
 
 bd4_x_ind, bd4_y_ind, bd4_t_ind = get_body_position_dofs(sys, bd4)
-bd4_vx_ind, bd4_vy_ind, bd4_vt_ind = get_body_velocity_dofs(sys, bd4)
 
 bd5_x_ind, bd5_y_ind, bd5_t_ind = get_body_position_dofs(sys, bd5)
 
@@ -142,11 +137,7 @@ bd6_x_ind, bd6_y_ind, bd6_t_ind = get_body_position_dofs(sys, bd6)
 
 bd7_x_ind, bd7_y_ind, bd7_t_ind = get_body_position_dofs(sys, bd7)
 
-bd4_Vx_ind, bd4_Vy_ind, bd4_Vt_ind = get_body_velocity_dofs(sys, bd4)
-
-
 initial = zeros(number_of_dofs(sys))
-
 
 # Все начальные координаты переведены из дм в м (делением на 10)
 initial[bd1_x_ind] = 0.
@@ -171,27 +162,16 @@ initial[bd6_x_ind] = 0.462
 initial[bd6_y_ind] = 0.15/2
 initial[bd6_t_ind] = deg2rad(-90)
 
-# Начальное время (последний элемент)
-initial[end] = 0.0
-
 initial[bd7_x_ind] = 0.612
 
-
-f = (t)-> func([initial[1:end-1]; t])[bd4_vx_ind]
-
-
-
+func(initial)
 jacoby(initial)
 
+mass = Flexia.get_mass_matrix(sys)
 
-mass = get_mass_matrix(sys)
-t_end = π / omega
-time_span = LinRange(0,t_end, 201)
-
-n_steps = length(time_span)
-
+time_span = 0:0.005:10
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
-lines(sol1[end, :])
+
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "out/triv_dyn3.mp4"; framerate = 30, limits = (0.0, 0.6, -0.1, 0.5))
+animate(sys, sol1, time_span, "triv_dyn.mp4"; framerate = 60, limits = (-0.1, 0.5, -0.1, 0.5))

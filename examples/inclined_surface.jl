@@ -73,3 +73,4 @@ cros!(sol, initial_state, mass_matrix, func, jacoby, step(time_span))
 # 5. Visualization
 println("Simulated SliderJoint sliding under gravity at 20 degrees.")
 animate(sys, sol, time_span, "out/slider_example.mp4"; framerate = 30, limits = (-10, 2, -10, 2))
+
