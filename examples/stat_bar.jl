@@ -66,8 +66,8 @@ bd3_Vx_ind, bd3_Vy_ind, bd3_Vt_ind = get_body_velocity_dofs(sys, bd3)
 
 initial = zeros(number_of_dofs(sys))
 
-initial[bd2_x_ind] = 2.
-initial[bd2_y_ind] = 0.
+initial[bd2_x_ind] = 0.
+initial[bd2_y_ind] = 2.
 initial[bd3_x_ind] = 3.75
 initial[bd3_y_ind] = 0.1
 initial[bd3_t_ind] = asin(0.1 / 1)
