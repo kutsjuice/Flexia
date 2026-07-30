@@ -181,6 +181,82 @@ $$|\tau_i(p, \dot{p}, \ddot{p}, R_z)| \le \tau_{max}, \quad i = 1..4$$
 
 Incorporating torque limits as hard constraints within the optimization problem naturally guarantees that the obtained trajectory will pass far from parallel singularity zones, thereby making the motion physically feasible.
 
+## Coordinate reduction
+Optimal trajectory planning algorithm requiers model in explicit form:
+
+$$
+\mathbf{\tau} = \mathbf{M}(\mathbf{q})\mathbf{\ddot{q}} + \mathbf{h}(\mathbf{q}, \mathbf{\dot{q}}), \mathbf{\tau}_{min} \le \mathbf{\tau} \le \mathbf{\tau}_{max}
+$${#eq-topp-formulation}
+
+plus dependence of generalized coordinates on path function  $q(s), s \in [0, 1].$
+This is important because after substitution of $\dot{q} = \frac{dq}{ds} \frac{ds}{dt}$ torque restrictions become linear to $(\ddot{s}, \dot{s^2})$ and problem becomes convex.\
+Flexia gives system in an absolute coordinates:
+
+$$
+M_a \dot{v} = Q(t, p, v) + C^{\intercal}\lambda, \Phi(p)=0,
+$${#eq-flexia-formulation}
+
+where $M_a$ is constant, when $M(q)$ is dependent on pose. System ([-@eq-flexia-formulation]) is a differential-algebraic system: the constraints do not contain derivatives, so the matrix associated with the derivatives is singular (the rows corresponding to the multipliers are zero),
+and the system cannot be solved directly for the highest-order derivatives. The reduction from ([-@eq-flexia-formulation]) to ([-@eq-topp-formulation]) is required.\
+**Model assembly.** To properly calculate $\mathbf{M}$ and $\mathbf{h}$ the model must be assembled without actuators, because in the current Flexia implementation an actuator is a kinematic constraint rather than a source of generalized force. Including all four actuators would leave $d=0$ free generalized coordinates. Drive coordinates $\mathbf{q}$ must therefore remain free, and the actuator torques must enter the right-hand side as generalized forces.
+
+### Reduction algorithm
+
+**Velocities.** Differentiating $\Phi(\mathbf{p})=\mathbf{0}$ gives $\mathbf{C}\mathbf{v}=\mathbf{0}$. Split the coordinate indices into an independent set $\mathcal{I}$ ($d$ items, the generalized coordinates $\mathbf{q}$) and a dependent set $\mathcal{D}$ ($m$ items). Then $\mathbf{C}_{\mathcal{I}}\mathbf{v}_{\mathcal{I}} + \mathbf{C}_{\mathcal{D}}\mathbf{v}_{\mathcal{D}} = \mathbf{0}$, and with $\mathbf{q} := \mathbf{p}_{\mathcal{I}}$
+
+$$
+\mathbf{v}=\mathbf{R}\dot{\mathbf{q}}, \qquad
+\mathbf{R}_{\mathcal{I},:}=\mathbf{I}_d, \qquad
+\mathbf{R}_{\mathcal{D},:}=-\mathbf{C}_{\mathcal{D}}^{-1}\mathbf{C}_{\mathcal{I}}, \qquad
+\mathbf{C}\mathbf{R}=\mathbf{0}.
+$$ {#eq-R}
+
+The columns of $\mathbf{R}$ form a basis of $\ker\mathbf{C}$, i.e. the tangent space to the manifold $\Phi(\mathbf{p})=\mathbf{0}$.
+
+**Accelerations.** Differentiating once more gives $\mathbf{C}\dot{\mathbf{v}} = \boldsymbol{\gamma}$, with $\boldsymbol{\gamma} = -\dot{\mathbf{C}}\mathbf{v}$, so that
+
+$$
+\dot{\mathbf{v}} = \mathbf{R}\ddot{\mathbf{q}} + \mathbf{s}, \qquad
+\mathbf{s}_{\mathcal{I}} = \mathbf{0}, \qquad
+\mathbf{s}_{\mathcal{D}} = \mathbf{C}_{\mathcal{D}}^{-1}\boldsymbol{\gamma}.
+$$ {#eq-s}
+
+Comparing with the differentiated form of @eq-R shows $\mathbf{s}=\dot{\mathbf{R}}\dot{\mathbf{q}}$, so $\mathbf{R}$ need not be differentiated explicitly. The bias term $\boldsymbol{\gamma}$ is a directional derivative and is obtained by automatic differentiation:
+
+$$
+\boldsymbol{\gamma} = -\left.\frac{d}{d\varepsilon}\right|_{\varepsilon=0} \mathbf{C}(\mathbf{p}+\varepsilon\mathbf{v})\,\mathbf{v}.
+$$
+
+**Projection.** Substituting @eq-s into @eq-flexia-formulation, adding the actuator torques to the right-hand side, and left-multiplying by $\mathbf{R}^{T}$ gives $\mathbf{R}^{T}\mathbf{C}^{T} = (\mathbf{C}\mathbf{R})^{T} = \mathbf{0}$ (reaction forces of ideal constraints are orthogonal to admissible motions), so the Lagrange multipliers vanish and the reduced dynamics take the explicit form required by ([-@eq-topp-formulation]):
+
+$$
+\mathbf{M}(\mathbf{q})\ddot{\mathbf{q}} + \mathbf{h}(\mathbf{q},\dot{\mathbf{q}}) = \mathbf{R}^{T}\mathbf{B}\boldsymbol{\tau}, \qquad
+\mathbf{M} = \mathbf{R}^{T}\mathbf{M}_a\mathbf{R}, \qquad
+\mathbf{h} = \mathbf{R}^{T}\mathbf{M}_a\mathbf{s} - \mathbf{R}^{T}\mathbf{Q}.
+$$ {#eq-Mh}
+
+The matrix $\mathbf{M}$ is symmetric positive-definite whenever $\operatorname{rank}\mathbf{R}=d$, which also follows from the identity $\tfrac12\mathbf{v}^{T}\mathbf{M}_a\mathbf{v} = \tfrac12\dot{\mathbf{q}}^{T}\mathbf{M}\dot{\mathbf{q}}$.
+
+The column of $\mathbf{B}$ corresponding to torque $\tau_k$ contains $\pm1$ in the angular rows of the two bodies joined by the actuator. When an actuator connects the fixed base to a body whose angle is chosen as an independent coordinate, $\mathbf{R}^{T}\mathbf{B}=\mathbf{I}_d$ and @eq-Mh reduces to $\boldsymbol{\tau}=\mathbf{M}\ddot{\mathbf{q}}+\mathbf{h}$; otherwise the product $\mathbf{R}^{T}\mathbf{B}$ is evaluated explicitly.
+
+### Path parameterization and torque decomposition
+
+The path $\mathbf{q}(s)$, $s\in[0,1]$, is obtained either directly as a spline through nodes given in generalized coordinates, or through an inverse problem: for each $s_k$ the system $[\Phi(\mathbf{p});\ \mathbf{g}(\mathbf{p})-\mathbf{g}_{\text{target}}(s_k)]=\mathbf{0}$ is solved by the Newton method starting from the previous node, and the $\mathcal{I}$-components of the solution are retained.
+
+Substituting $\dot{\mathbf{q}}=\mathbf{q}'\dot{s}$ and $\ddot{\mathbf{q}}=\mathbf{q}'\ddot{s}+\mathbf{q}''\dot{s}^2$ into @eq-Mh gives the decomposition used by the trajectory optimizer:
+
+$$
+\boldsymbol{\tau}(s)=\mathbf{a}(s)\ddot{s}+\mathbf{b}(s)\dot{s}^2+\mathbf{c}(s),
+$$ {#eq-tau-decomposition}
+
+$$
+\mathbf{a}=\mathbf{M}(\mathbf{q})\mathbf{q}', \qquad
+\mathbf{c}=\mathbf{h}(\mathbf{q},\mathbf{0}), \qquad
+\mathbf{b}=\mathbf{M}(\mathbf{q})\mathbf{q}''+\mathbf{h}(\mathbf{q},\mathbf{q}')-\mathbf{c}.
+$$
+
+This uses the fact that $\mathbf{h}$ splits into a term homogeneous of degree two in velocity and a positional term, so all three coefficients are obtained from just three evaluations of $\mathbf{M}$ and $\mathbf{h}$, without assembling a separate Coriolis matrix. The decomposition ([-@eq-tau-decomposition]) is linear in $(\ddot{s}, \dot{s}^2)$, which is exactly the convexity property required by the optimizer; it holds only if $\mathbf{Q}$ does not depend on velocities, which is satisfied for the mechanism considered here since no dissipative elements are present in the model.
+
 # Numerical setup
 
 
