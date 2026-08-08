@@ -225,6 +225,8 @@ time_span = 0:0.01:5
 sol = simulate(sys, initial_state, time_span)
 
 # Animate
-animate(sys, sol, time_span, "out/parmech.mp4"; framerate= floor(Int, 1.0 /step(time_span)), limits=(-4, 5, -2, 2))
+animate(sys, sol, time_span, "out/parmech.mp4"; 
+    framerate= floor(Int, 1.0 /step(time_span)),
+    limits=(-0.5, 0.5, -0.5, 0.5))
 
 
