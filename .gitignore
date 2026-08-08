@@ -5,3 +5,4 @@ out/*
 */*/.quarto/
 */*/*_files/
 *.html
+.vscode
