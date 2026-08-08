@@ -11,21 +11,31 @@ const g = 9.81
 
 bd1 = Body2D(1, 1)
 bd2 = Body2D(1, 1)
+bd3 = Body2D(1, 1)
 
 bd2.forces[2] = (x, t) -> -bd2.mass * g
+bd3.forces[2] = (x, t) -> -bd3.mass * g
+
+# bd2.forces[1] = (x, t) -> -0.1
 
 jnt1 = FixedJoint(bd1)
 jnt2 = HingeJoint(bd1, bd2)
+jnt3 = HingeJoint(bd2, bd3)
 
-set_position_on_second_body!(jnt2, SA[-1., 0])
+
+set_position_on_second_body!(jnt2, SA[-1., 0.])
+set_position_on_second_body!(jnt3, SA[-1., 0.])
+
 
 sys = MBSystem2D()
 
 add!(sys, bd1)
 add!(sys, bd2)
+add!(sys, bd3)
 
 add!(sys, jnt1)
 add!(sys, jnt2)
+add!(sys, jnt3)
 
 if (!assemble!(sys))
     println("Assembling failed!")
@@ -39,6 +49,9 @@ bd1_x_ind, bd1_y_ind, _ = get_body_position_dofs(sys, bd1)
 bd2_x_ind, bd2_y_ind, bd2_t_ind = get_body_position_dofs(sys, bd2)
 
 initial = zeros(number_of_dofs(sys))
+θ0 = π/2 - .01
+set_initial_position!(initial, sys, bd2, SA[cos(θ0), sin(θ0), θ0])
+set_initial_position!(initial, sys, bd3, SA[2cos(θ0), 2sin(θ0), θ0])
 
 func(initial)
 jacoby(initial)
