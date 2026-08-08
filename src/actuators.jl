@@ -46,8 +46,8 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionMotor2D)
     # Constraint: θ2 - θ1 - target = 0
     rhs[lms[1]] = θ2 - θ1
 
-    rhs[bd1_p_dofs[3]] -= λ
-    rhs[bd2_p_dofs[3]] += λ
+    rhs[bd1_v_dofs[3]] -= λ
+    rhs[bd2_v_dofs[3]] += λ
 end
 
 function propagate_targets!(sys::MBSystem2D, act::PositionMotor2D)
@@ -97,6 +97,9 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionLinearActuator2D)
     bd1_p_dofs = get_body_position_dofs(sys, bd1)
     bd2_p_dofs = get_body_position_dofs(sys, bd2)
 
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
+
     _xi = state[bd1_p_dofs[1]]
     _yi = state[bd1_p_dofs[2]]
     _θi = state[bd1_p_dofs[3]]
@@ -131,11 +134,11 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionLinearActuator2D)
 
     rhs[lms[1]] = (xpj-xpi) * N_xni + (ypj-ypi) * N_yni
 
-    rhs[bd1_p_dofs[1]] += λ * (-N_xni)
-    rhs[bd1_p_dofs[2]] += λ * (-N_yni)
-    rhs[bd1_p_dofs[3]] += λ * ((ypj - _yi)*(N_xni) - (xpj - _xi) * N_yni)
+    rhs[bd1_v_dofs[1]] += λ * (-N_xni)
+    rhs[bd1_v_dofs[2]] += λ * (-N_yni)
+    rhs[bd1_v_dofs[3]] += λ * ((ypj - _yi)*(N_xni) - (xpj - _xi) * N_yni)
     
-    rhs[bd2_p_dofs[1]] += λ * (N_xni)
-    rhs[bd2_p_dofs[2]] += λ * (N_yni)
-    rhs[bd2_p_dofs[3]] += λ * ((_yj - ypj)*N_xni + (_xj - xpj)*N_yni)
+    rhs[bd2_v_dofs[1]] += λ * (N_xni)
+    rhs[bd2_v_dofs[2]] += λ * (N_yni)
+    rhs[bd2_v_dofs[3]] += λ * ((_yj - ypj)*N_xni + (_xj - xpj)*N_yni)
 end
