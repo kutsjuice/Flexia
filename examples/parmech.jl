@@ -6,42 +6,43 @@ using StaticArrays
 
 ground = Body2D(1e6, 1e6; length=0.01)  # Large mass/inertia to simulate fixed ground
 const g = 9.81
-crank_len = 1.0;
-conn_len = 1.0;
-table_heigh = 1.5;
+crank_len = 0.144; # length of crank (m)
+conn_len = 0.130; # length of connector (m)
+table_heigh = 0.230; # height of table (m)
 
-H = 1.5;
-L = 3.0
-crank1 = Body2D(1, 1; length=crank_len)
-crank2 = Body2D(1, 1; length=crank_len)
-crank3 = Body2D(1, 1; length=crank_len)
-crank4 = Body2D(1, 1.001; length=crank_len)
+H = 0.230 # distance between joints (along Ox axis (m))
+L = 0.400; # distance between joints (along Oy axis (m))
 
-connector1 = Body2D(1, 1; length=conn_len)
-connector2 = Body2D(1, 1; length=conn_len)
-connector3 = Body2D(1, 1; length=conn_len)
-connector4 = Body2D(1, 1; length=conn_len)
+crank1 = Body2D(0.060, 0.00061; length=crank_len) # mass (kg), inertia (kg·m^2); length of crank1 (m)
+crank2 = Body2D(0.060, 0.00061; length=crank_len) # mass (kg), inertia (kg·m^2); length of crank2 (m)
+crank3 = Body2D(0.060, 0.00061; length=crank_len) # mass (kg), inertia (kg·m^2); length of crank3 (m)
+crank4 = Body2D(0.060, 0.00061; length=crank_len) # mass (kg), inertia (kg·m^2); length of crank4 (m)
 
-table1 = Body2D(1, 1; length=table_heigh)
-table2 = Body2D(1, 1; length=table_heigh)
+connector1 = Body2D(0.052, 0.00046; length=conn_len) # mass (kg), inertia (kg·m^2); length of connector1 (m)
+connector2 = Body2D(0.052, 0.00046; length=conn_len) # mass (kg), inertia (kg·m^2); length of connector2 (m)
+connector3 = Body2D(0.052, 0.00046; length=conn_len) # mass (kg), inertia (kg·m^2); length of connector3 (m)
+connector4 = Body2D(0.052, 0.00046; length=conn_len) # mass (kg), inertia (kg·m^2); length of connector4 (m)
 
-crank1.forces[2] = (x, t) -> -crank1.mass * g
-crank2.forces[2] = (x, t) -> -crank2.mass * g
-crank3.forces[2] = (x, t) -> -crank3.mass * g
-crank4.forces[2] = (x, t) -> -crank3.mass * g
+table1 = Body2D(0.166, 0.00032; length=table_heigh) # mass (kg), inertia (kg·m^2); height of table1 (m)
+table2 = Body2D(0.103, 0.00016; length=table_heigh) # mass (kg), inertia (kg·m^2); height of table2 (m)
 
-connector1.forces[2] = (x, t) -> -connector1.mass * g
-connector2.forces[2] = (x, t) -> -connector2.mass * g
-connector3.forces[2] = (x, t) -> -connector4.mass * g
-connector4.forces[2] = (x, t) -> -connector4.mass * g
-table1.forces[2] = (x, t) -> -table1.mass * g
-table2.forces[2] = (x, t) -> -table2.mass * g
+crank1.forces[2] = (x, t) -> -crank1.mass * g # gravity acting on the crank1 (N)
+crank2.forces[2] = (x, t) -> -crank2.mass * g # gravity acting on the crank2 (N)
+crank3.forces[2] = (x, t) -> -crank3.mass * g # gravity acting on the crank3 (N)
+crank4.forces[2] = (x, t) -> -crank4.mass * g # gravity acting on the crank4 (N)
+
+connector1.forces[2] = (x, t) -> -connector1.mass * g # gravity acting on the connector1 (N)
+connector2.forces[2] = (x, t) -> -connector2.mass * g # gravity acting on the connector2 (N)
+connector3.forces[2] = (x, t) -> -connector3.mass * g # gravity acting on the connector3 (N)
+connector4.forces[2] = (x, t) -> -connector4.mass * g # gravity acting on the connector4 (N)
+table1.forces[2] = (x, t) -> -table1.mass * g # gravity acting on the table1 (N)
+table2.forces[2] = (x, t) -> -table2.mass * g # gravity acting on the table2 (N)
 
 
 
-ground_joint = FixedJoint(ground)
-setposition!(ground_joint, SA[0.0, 0.0])
-setrotation!(ground_joint, π)
+ground_joint = FixedJoint(ground) # ground is fixed in space, so we use a fixed joint to attach it to the world frame
+setposition!(ground_joint, SA[0.0, 0.0]) #  position of the ground_joint
+setrotation!(ground_joint, π) # rotation of the ground_joint
 
 hinge_gr2cr1 = HingeJoint(ground, crank1)
 set_position_on_first_body!(hinge_gr2cr1, SA[-L/2, H/2])
@@ -224,6 +225,8 @@ time_span = 0:0.01:5
 sol = simulate(sys, initial_state, time_span)
 
 # Animate
-animate(sys, sol, time_span, "out/parmech.mp4"; framerate= floor(Int, 1.0 /step(time_span)), limits=(-4, 5, -2, 2))
+animate(sys, sol, time_span, "out/parmech.mp4"; 
+    framerate= floor(Int, 1.0 /step(time_span)),
+    limits=(-0.5, 0.5, -0.5, 0.5))
 
 
