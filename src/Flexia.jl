@@ -40,6 +40,7 @@ export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body
 
 # solve
 export cros!, static_solver!, simulate
+export honest_constraint_forces
 
 # Actuators
 export settarget!
@@ -61,6 +62,7 @@ test_func() = 1
 
 include("system.jl")
 include("solvers.jl")
+include("constraint_forces.jl")
 # include("markers.jl")
 include("bodies.jl")
 include("connectors.jl")
