@@ -79,6 +79,7 @@ function last_lm_dof(sys::MBSystem2D)
 end
 
 number_of_dofs(sys) = last_lm_dof(sys) + 1
+number_of_generalized_coordinates(sys) = length(sys.bodies) * 3
 
 function assemble!(sys)
     state_length = number_of_dofs(sys) 

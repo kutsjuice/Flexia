@@ -176,6 +176,8 @@ function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vec
     bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
     bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
 
+    joint_dofs = get_lms(sys, joint) .- last_body_dof(sys)
+
     _xi = coordinates[bd1_g_dofs[1]]
     _yi = coordinates[bd1_g_dofs[2]]
     _θi = coordinates[bd1_g_dofs[3]]

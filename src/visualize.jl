@@ -208,7 +208,7 @@ function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits
 end
 
 
-function draw_static(sys::MBSystem2D, sol;  limits = (-1, 1, 1, 1))
+function draw_static(sys::MBSystem2D, sol;  limits = (-1, 1, -1, 1))
     fig = Figure()
     iter = Observable(1)
     ax = Axis(fig[1, 1], aspect = DataAspect())

@@ -35,11 +35,15 @@ export MBSystem2D
 # connectors
 export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!
 # bodies
+export bodies, number_of_bodies, connectors
 
-export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment
+export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment, get_spring_energy, number_of_generalized_coordinates, get_body_generalized_dofs
+
+# forces
+export BodyTimeVariableForce, set_force!, set_position!
 
 # solve
-export cros!, static_solver!, simulate
+export cros!, static_solver!, simulate, find_natural_freqs
 
 # Actuators
 export settarget!
@@ -52,7 +56,10 @@ export add!, assemble!, get_mass_matrix
 export set_initial_position!, set_initial_velocity!
 
 # visualization
-export animate
+export animate, draw_static
+
+# utils
+export set_initial_state_value!, set_pos_state_value! 
 
 export test_func
 
@@ -69,6 +76,7 @@ include("forces.jl")
 include("actuators.jl")
 include("sensors.jl")
 include("visualize.jl")
+include("utils.jl")
 
 function getdofs(sys::MBSystem2D, body::Body2D)
     if (body.index == -1)
