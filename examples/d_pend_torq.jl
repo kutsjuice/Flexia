@@ -43,7 +43,11 @@ initial = zeros(number_of_dofs(sys))
 initial[bd2_x_ind] = 0.5
 sys.prestep = (state) -> begin
     t = state[end]
-    settarget!(mot1,  π*t)
+    if t < 5
+        settarget!(mot1,  π*t)
+    else 
+        settarget!(mot1,  π*(10 - t))
+    end
 end
 
 time_start = 0

@@ -169,3 +169,11 @@ function init_measurement(sys::MBSystem2D, state::Matrix{Float64})
     return Matrix{Float64}(undef, meas_len, size(state, 2);)
 end
 
+
+
+
+function update_act_jacobian!(sys::MBSystem2D, jac::Matrix{Float64})
+    for connector in connectors(sys)
+        update_jacobian!(jac, connector)
+    end
+end

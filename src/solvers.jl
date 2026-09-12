@@ -16,6 +16,7 @@ end
 function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, sys::MBSystem2D, time_step::T) where T<:Real
     @assert size(sol, 1) == size(u0, 1)
     @assert size(sol, 1) == size(sys.rhs(u0), 1)
+    act_jac = zeros(size(sys.rhs(u0), 1), size(sys.rhs(u0), 1))
     sol[:, 1] = u0
     for i in 2:size(sol, 2)
         #cros_step(sys.func, sys.jac, mass, time_step, sol[:, i-1])
@@ -23,6 +24,8 @@ function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, sys::MBSystem2D, 
         sys.prestep(u_cur)
         update_targets!(sys)
         f_i = sys.rhs(u_cur)
+        update_act_jacobian!(sys, act_jac)
+        jac_ful = sys.jacobian(u_cur) + act_jac
         ζ = (mass - (1 + im) / 2 * time_step * sys.jacobian(u_cur)) \ f_i
         sol[:, i] = u_cur + time_step * real.(ζ);
     end

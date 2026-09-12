@@ -1,17 +1,19 @@
 mutable struct PositionMotor2D <: AbstractPositionActuator2D
     joint::HingeJoint
     target_angle::Float64
+    current_velocity::Float64
     index::Int64
 
-    function PositionMotor2D(joint::HingeJoint, target_angle::Float64)
-        return new(joint, target_angle, -1)
+    function PositionMotor2D(joint::HingeJoint, target_angle::Float64, current_velocity::Float64)
+        return new(joint, target_angle, current_velocity, -1)
     end
 end
 
 
 
-function settarget!(act::PositionMotor2D, angle::Float64)
+function settarget!(act::PositionMotor2D, angle::Float64, vel::Float64)
     act.target_angle = angle
+    act.current_velocity = vel
     return nothing
 end
 
@@ -54,6 +56,12 @@ function propagate_targets!(sys::MBSystem2D, act::PositionMotor2D)
     lms = get_lms(sys, act)
     sys.targets[lms[1]] = act.target_angle
     return nothing
+end
+
+function update_jacobian!(jac::Matrix{Float64}, act::PositionMotor2D)
+    lms = get_lms(sys, act)
+    jac[lms[1], end] = act.current_velocity
+    return nothing;
 end
 
 function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, act::PositionMotor2D)
