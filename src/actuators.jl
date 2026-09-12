@@ -58,7 +58,7 @@ function propagate_targets!(sys::MBSystem2D, act::PositionMotor2D)
     return nothing
 end
 
-function update_jacobian!(jac::Matrix{Float64}, act::PositionMotor2D)
+function update_jacobian!(sys::MBSystem2D, jac::Matrix{Float64}, act::PositionMotor2D)
     lms = get_lms(sys, act)
     jac[lms[1], end] = act.current_velocity
     return nothing;

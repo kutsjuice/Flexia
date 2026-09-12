@@ -26,7 +26,7 @@ function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, sys::MBSystem2D, 
         f_i = sys.rhs(u_cur)
         update_act_jacobian!(sys, act_jac)
         jac_ful = sys.jacobian(u_cur) + act_jac
-        ζ = (mass - (1 + im) / 2 * time_step * sys.jacobian(u_cur)) \ f_i
+        ζ = (mass - (1 + im) / 2 * time_step * jac_ful) \ f_i
         sol[:, i] = u_cur + time_step * real.(ζ);
     end
 end
