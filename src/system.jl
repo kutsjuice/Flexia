@@ -174,6 +174,6 @@ end
 
 function update_act_jacobian!(sys::MBSystem2D, jac::Matrix{Float64})
     for connector in connectors(sys)
-        update_jacobian!(jac, connector)
+        update_jacobian!(sys, jac, connector)
     end
 end

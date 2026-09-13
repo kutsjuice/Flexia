@@ -60,7 +60,8 @@ end
 
 function update_jacobian!(sys::MBSystem2D, jac::Matrix{Float64}, act::PositionMotor2D)
     lms = get_lms(sys, act)
-    jac[lms[1], end] = act.current_velocity
+    # rhs row is  f = θ2 - θ1 - target(t),  so ∂f/∂t = -d(target)/dt
+    jac[lms[1], end] = -act.current_velocity
     return nothing;
 end
 
