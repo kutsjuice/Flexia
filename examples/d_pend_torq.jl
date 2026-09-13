@@ -6,12 +6,12 @@ using LinearAlgebra
 
 using StaticArrays
 
-const g = 900.81
+const g = 9.81
 
 bd1 = Body2D(1, 1)
 bd2 = Body2D(1, 1)
 
-bd2.forces[2] = (x, t) -> -bd2.mass * g
+# bd2.forces[2] = (x, t) -> -bd2.mass * g
 
 jnt1 = FixedJoint(bd1)
 jnt2 = HingeJoint(bd1, bd2)
@@ -27,7 +27,7 @@ add!(system, bd2)
 
 add!(system, jnt1)
 add!(system, jnt2)
-# add!(system, mot1)
+add!(system, mot1)
 
 if (!assemble!(system))
     println("Assembling failed!")
@@ -45,11 +45,11 @@ system.prestep = (state) -> begin
     t = state[end]
     # settarget!(mot1,  sin(t), cos(t))
 
-    # if t < 5
-    #     settarget!(mot1,  sin(t), sin(t))
-    # else 
-    #     settarget!(mot1,  π*(10 - t), -Float64(π))
-    # end
+    if t < 5
+        settarget!(mot1,  π*t, Float64(π))
+    else 
+        settarget!(mot1,  π*(10 - t), -Float64(π))
+    end
 end
 
 time_start = 0
@@ -63,14 +63,25 @@ animate(system, sol2, time_span, "out/d_pend_torq.mp4"; framerate = floor(Int64,
 ##
 jnt1_lbd = Flexia.get_lms(system, jnt1)
 jnt2_lbd = Flexia.get_lms(system, jnt2)
-# mot1_lbd = Flexia.get_lms(system, mot1)
+mot1_lbd = Flexia.get_lms(system, mot1)
 
 
 
-λ = sol2[[jnt1_lbd; jnt2_lbd ], :]
-inds = [4, 5]
+λ = sol2[[jnt1_lbd; jnt2_lbd; mot1_lbd ], :]
+inds = [6]
 str = [string(i) for i in inds]
 f, ax = series(time_span, λ[inds, :],labels=str)
 axislegend(ax)
 
 f
+##
+bd2_pos_dofs = get_body_position_dofs(system, bd2)
+bd2_vel_dofs = get_body_velocity_dofs(system, bd2)
+
+θ = sol2[bd2_pos_dofs[3], :]
+ω = sol2[bd2_vel_dofs[3], :]
+
+# lines(time_span[2:end], diff(θ)/step(time_span)/π)
+# lines(time_span, ω)
+# lines(time_span, θ)
+series(time_span, sol2[bd2_vel_dofs, :])

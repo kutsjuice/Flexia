@@ -48,8 +48,8 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionMotor2D)
     # Constraint: θ2 - θ1 - target = 0
     rhs[lms[1]] = θ2 - θ1
 
-    rhs[bd1_p_dofs[3]] -= λ
-    rhs[bd2_p_dofs[3]] += λ
+    rhs[bd1_v_dofs[3]] -= λ
+    rhs[bd2_v_dofs[3]] += λ
 end
 
 function propagate_targets!(sys::MBSystem2D, act::PositionMotor2D)
