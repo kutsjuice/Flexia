@@ -86,17 +86,19 @@ end
 mutable struct PositionLinearActuator2D <: AbstractPositionActuator2D
     joint::SliderJoint
     target_position::Float64
+    current_velocity::Float64
     index::Int64
 
-    function PositionLinearActuator2D(joint::SliderJoint, target_angle::Float64)
-        return new(joint, target_angle, -1)
+    function PositionLinearActuator2D(joint::SliderJoint, target_position::Float64, current_velocity::Float64)
+        return new(joint, target_position, current_velocity, -1)
     end
 end
 
 
 
-function settarget!(act::PositionLinearActuator2D, position::Float64)
+function settarget!(act::PositionLinearActuator2D, position::Float64, vel::Float64)
     act.target_position = position
+    act.current_velocity = vel
     return nothing
 end
 
@@ -115,13 +117,22 @@ function propagate_targets!(sys::MBSystem2D, act::PositionLinearActuator2D)
     return nothing
 end
 
+function update_jacobian!(sys::MBSystem2D, jac::Matrix{Float64}, act::PositionLinearActuator2D)
+    lms = get_lms(sys, act)
+    # rhs row is  f = s - target(t),  so ∂f/∂t = -d(target)/dt
+    jac[lms[1], end] = -act.current_velocity
+    return nothing
+end
+
 function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionLinearActuator2D)
     joint = act.joint
     bd1 = joint.body1
     bd2 = joint.body2
 
     bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
     bd2_p_dofs = get_body_position_dofs(sys, bd2)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
 
     _xi = state[bd1_p_dofs[1]]
     _yi = state[bd1_p_dofs[2]]
@@ -157,13 +168,15 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionLinearActuator2D)
 
     rhs[lms[1]] = (xpj-xpi) * N_xni + (ypj-ypi) * N_yni
 
-    rhs[bd1_p_dofs[1]] += λ * (-N_xni)
-    rhs[bd1_p_dofs[2]] += λ * (-N_yni)
-    rhs[bd1_p_dofs[3]] += λ * ((ypj - _yi)*(N_xni) - (xpj - _xi) * N_yni)
+    # Generalized force Q = (∂g/∂q)ᵀ λ belongs to the velocity (momentum)
+    # equations, exactly as in every joint implementation.
+    rhs[bd1_v_dofs[1]] -= λ * (-N_xni)
+    rhs[bd1_v_dofs[2]] -= λ * (-N_yni)
+    rhs[bd1_v_dofs[3]] -= λ * ((ypj - _yi)*(N_xni) - (xpj - _xi) * N_yni)
     
-    rhs[bd2_p_dofs[1]] += λ * (N_xni)
-    rhs[bd2_p_dofs[2]] += λ * (N_yni)
-    rhs[bd2_p_dofs[3]] += λ * ((_yj - ypj)*N_xni + (_xj - xpj)*N_yni)
+    rhs[bd2_v_dofs[1]] -= λ * (N_xni)
+    rhs[bd2_v_dofs[2]] -= λ * (N_yni)
+    rhs[bd2_v_dofs[3]] -= λ * ((_yj - ypj)*N_xni + (_xj - xpj)*N_yni)
 end
 
 function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, act::PositionLinearActuator2D)
