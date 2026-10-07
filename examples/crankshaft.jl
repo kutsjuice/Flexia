@@ -1,4 +1,4 @@
-using Pkg; Pkg.activate("./examples")
+# using Pkg; Pkg.activate("./examples")
 using Flexia
 using GLMakie
 using ForwardDiff
@@ -31,7 +31,7 @@ connector = Body2D(5.0, 0.5; length=2.0)
 # Apply gravity
 crank.forces[2] = (x, t) -> -crank.mass * g
 slider.forces[2] = (x, t) -> -slider.mass * g
-slider.forces[1] = (x, t) -> 2050*sin(4*t)
+# slider.forces[1] = (x, t) -> 2050*sin(4*t)
 connector.forces[2] = (x, t) -> -connector.mass * g
 
 # Create system
@@ -69,12 +69,16 @@ set_position_on_second_body!(slider_ground_slider, SA[0.0, 0.0])
 set_direction_on_first_body!(slider_ground_slider, SA[1.0, 0.0])
 set_direction_on_second_body!(slider_ground_slider, SA[1.0, 0.0])
 
+motor = PositionMotor2D(crank_ground_hinge, 0.0, 0.0)
+spring = LinearSpring(slider_ground_slider; stiffness = 20.0, vis_r =0.3, vis_N = 8)
 # Add joints to system
 add!(sys, ground_joint)
 add!(sys, crank_ground_hinge)
 add!(sys, crank_connector_hinge)
 add!(sys, connector_slider_hinge)
 add!(sys, slider_ground_slider)
+add!(sys, motor)
+add!(sys, spring)
 
 # Assemble system
 assemble!(sys)
@@ -107,18 +111,18 @@ initial_state[slider_x] = 3.0
 initial_state[slider_y] = 0.0
 initial_state[slider_θ] = 0.0
 
-# Mass matrix
-# mass_matrix = zeros(number_of_dofs(sys), number_of_dofs(sys))
-# for i in 1:last_body_dof(sys)
-    # mass_matrix[i, i] = 1.0
-# end
+sys.prestep = (state) -> begin
+    t = state[end]
+    # settarget!(mot1,  sin(t), cos(t))
+
+    settarget!(motor,  π*t, Float64(π))
+end
+
 mass_matrix = sys.mass
 # Simulation parameters
 time_span = 0:0.01:10.0
-sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+sol = simulate(sys, initial_state, time_span)
 
-# Solve
-cros!(sol, initial_state, mass_matrix, func, jacoby, step(time_span))
 
 # Animate
-animate(sys, sol, time_span, "out/crankshaft.mp4"; framerate=30, limits=(-2, 5, -2, 2))
+animate(sys, sol, time_span, "out/crankshaft.mp4"; framerate=60, limits=(-2, 5, -2, 2))

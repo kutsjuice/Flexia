@@ -1,4 +1,4 @@
-using Pkg; Pkg.activate("./examples")
+# using Pkg; Pkg.activate("./examples")
 using Flexia
 using ForwardDiff
 using GLMakie
@@ -53,5 +53,5 @@ n_steps = length(time_span)
 
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
-animate(sys, sol1, time_span, "Flexia/out/test.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
+animate(sys, sol1, time_span, "out/test.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
 

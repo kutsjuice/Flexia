@@ -1,4 +1,4 @@
-using Pkg; Pkg.activate("./examples")
+# using Pkg; Pkg.activate("./examples")
 using Flexia
 using GLMakie
 using ForwardDiff
@@ -33,7 +33,7 @@ hinge_joint = HingeJoint(slider, crank)
 set_position_on_first_body!(hinge_joint, SA[0.0, 0.0])
 set_position_on_second_body!(hinge_joint, SA[-crank.length/2, 0.0])
 
-slider_actuator = PositionLinearActuator2D(slider_joint, 0.0)
+slider_actuator = PositionLinearActuator2D(slider_joint, 0.0, 0.0)
 
 spring_damper = TorsionalSpring(hinge_joint; stiffness=0.0, damping=0.1, vis_r=0.1)
 

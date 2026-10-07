@@ -1,4 +1,4 @@
-using Pkg; Pkg.activate("./examples")
+# using Pkg; Pkg.activate("./examples")
 using Flexia
 using GLMakie
 using ForwardDiff

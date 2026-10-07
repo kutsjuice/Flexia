@@ -1,4 +1,4 @@
-using Pkg; Pkg.activate("./examples")
+# using Pkg; Pkg.activate("./examples")
 using Flexia
 using GLMakie
 using ForwardDiff
@@ -31,7 +31,11 @@ setposition!(fixed_jnt, SA[0.0, 0.0])
 setrotation!(fixed_jnt, 0.0)
 
 # Connect sliding body to fixed body via SliderJoint
-slider_jnt = SliderJoint(fixed_body, sliding_body)
+# vis_* — только геометрия отрисовки: ось (линия) на теле 1 и ползун
+# (прямоугольник вдоль оси) на теле 2 в масштабе этого примера.
+slider_jnt = SliderJoint(fixed_body, sliding_body,
+                         vis_axis_length = 2.0, vis_slider_length = 0.6,
+                         vis_slider_width = 0.25)
 # Slider starts at origin of fixed body
 set_position_on_first_body!(slider_jnt, SA[0.0, 0.0])
 # Slider connected to center of sliding body

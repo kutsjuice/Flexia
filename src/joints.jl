@@ -226,13 +226,36 @@ mutable struct SliderJoint <: AbstractJoint2D
     alpha1::Float64
     alpha2::Float64
     index::Int64
+    vis_axis_length::Float64
+    vis_slider_length::Float64
+    vis_slider_width::Float64
 
 
-    function SliderJoint(bd1::Body2D, bd2::Body2D)
+    function SliderJoint(bd1::Body2D, bd2::Body2D;
+                         vis_axis_length::Float64 = 2.0,
+                         vis_slider_length::Float64 = 0.5,
+                         vis_slider_width::Float64 = 0.2)
         α1 = 0;
         α2 = 0;
-        return new(bd1, SA[0.0, 0.0], SA[1.0, 0.0], bd2, SA[0.0, 0.0], SA[1.0, 0.0], α1, α2, -1)
+        return new(bd1, SA[0.0, 0.0], SA[1.0, 0.0], bd2, SA[0.0, 0.0], SA[1.0, 0.0], α1, α2, -1,
+                   vis_axis_length, vis_slider_length, vis_slider_width)
     end
+end
+
+# Параметры отрисовки SliderJoint (см. src/visualize.jl)
+function set_visualization!(joint::SliderJoint; vis_axis_length::Union{Float64,Nothing} = nothing,
+                            vis_slider_length::Union{Float64,Nothing} = nothing,
+                            vis_slider_width::Union{Float64,Nothing} = nothing)
+    if (vis_axis_length !== nothing)
+        joint.vis_axis_length = vis_axis_length
+    end
+    if (vis_slider_length !== nothing)
+        joint.vis_slider_length = vis_slider_length
+    end
+    if (vis_slider_width !== nothing)
+        joint.vis_slider_width = vis_slider_width
+    end
+    return nothing
 end
 
 number_of_dofs(::SliderJoint) = 2
@@ -333,14 +356,18 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
     rhs[lms[2]] = _θj + αj - (_θi + αi)
 
     # Velocity constraints
-    # For constraint 1: d/dt of the perpendicular distance
-    rhs[bd1_v_dofs[1]] += λ1 * G_xni 
-    rhs[bd1_v_dofs[2]] += λ1 * G_yni
-    rhs[bd1_v_dofs[3]] += λ1 * ((_yi - ypj) * G_xni + (xpj - _xi) * G_yni)
+    # Constraint 1 is Φ₁ = (r_pj - r_pi)·n_i, so ∂Φ₁/∂r_i = -n_i and the generalized
+    # forces carried by λ₁ are  -λ₁ n_i  on body 1 and  +λ₁ n_i  on body 2.
+    # (The signs here used to be the other way round, which made the λ₁ reaction of a
+    # slider do spurious virtual work: B = ∂F/∂λ did not match Cᵀ = (∂Φ/∂q)ᵀ, while
+    # every other joint in the library did match exactly.)
+    rhs[bd1_v_dofs[1]] -= λ1 * G_xni
+    rhs[bd1_v_dofs[2]] -= λ1 * G_yni
+    rhs[bd1_v_dofs[3]] -= λ1 * ((_yi - ypj) * G_xni + (xpj - _xi) * G_yni)
 
-    rhs[bd2_v_dofs[1]] += -λ1 * G_xni
-    rhs[bd2_v_dofs[2]] += -λ1 * G_yni
-    rhs[bd2_v_dofs[3]] += -λ1 * ((ypj - _yj ) * G_xni + (_xj - xpj) * G_yni)
+    rhs[bd2_v_dofs[1]] += λ1 * G_xni
+    rhs[bd2_v_dofs[2]] += λ1 * G_yni
+    rhs[bd2_v_dofs[3]] += λ1 * ((ypj - _yj ) * G_xni + (_xj - xpj) * G_yni)
 
     # For constraint 2: d/dt of direction alignment
     rhs[bd1_v_dofs[3]] += -λ2 
