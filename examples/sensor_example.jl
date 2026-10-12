@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using LinearAlgebra
 
@@ -83,7 +83,10 @@ for i in axes(meas, 2)
     meas[:, i] .= buf;
 end
 
-animate(sys, sol2, time_span, "out/simple_bar.mp4"; framerate = floor(Int64, 1.0 / step(time_span)), limits = (-2,2, -2, 2))
+fig, ax, p = systemfigure(sys, sol2)
+record(fig, "out/simple_bar.mp4", 1:5:length(time_span); framerate = (floor(Int64, 1.0 / step(time_span))) / 5) do t
+    p.time = t
+end
 
 ##
 fig = Figure()

@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 # using JSON
 
@@ -159,8 +159,14 @@ time_span = 0:0.05:200
 
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
-animate(sys, sol1, time_span, "out/diag_bar.mp4"; framerate = 60, limits = (-2,13, -2, 13))
+fig, ax, p = systemfigure(sys, sol1)
+record(fig, "out/diag_bar.mp4", 1:5:length(time_span); framerate = (60) / 5) do t
+    p.time = t
+end
 
 sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 static_solver!( sol2 , initial, func, jacoby)
-animate(sys, sol2, time_span, "out/diag_bar_stat.mp4"; framerate = 60, limits = (-2, 13, -2, 13))
+fig, ax, p = systemfigure(sys, sol2)
+record(fig, "out/diag_bar_stat.mp4", 1:5:length(time_span); framerate = (60) / 5) do t
+    p.time = t
+end

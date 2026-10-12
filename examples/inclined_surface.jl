@@ -1,6 +1,6 @@
-# using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using StaticArrays
 
@@ -76,5 +76,8 @@ cros!(sol, initial_state, mass_matrix, func, jacoby, step(time_span))
 
 # 5. Visualization
 println("Simulated SliderJoint sliding under gravity at 20 degrees.")
-animate(sys, sol, time_span, "out/slider_example.mp4"; framerate = 30, limits = (-10, 2, -10, 2))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/slider_example.mp4", 1:5:length(time_span); framerate = (30) / 5) do t
+    p.time = t
+end
 

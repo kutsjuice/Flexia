@@ -14,9 +14,9 @@ mutable struct FramePositionSensor{A <: AbstractAxis} <: AbstractPositionSensor
     axis::A
 end
 function FramePositionSensor(;body::Body2D, position::SVector{2, Float64}, axis::Union{Int64, Symbol})
-    if axis == 1 || :x || axis == :X
+    if axis == 1 || axis == :x || axis == :X
         return FramePositionSensor(body, position, XAxis())
-    elseif axis == 2 || :y || axis == :Y
+    elseif axis == 2 || axis == :y || axis == :Y
         return FramePositionSensor(body, position, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
@@ -43,9 +43,9 @@ mutable struct FrameGlobalVelocitySensor{A <: AbstractAxis} <: AbstractSensor2D
     axis::A
 end
 function FrameGlobalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, axis::Union{Int64, Symbol})
-    if axis == 1 || :x || axis == :X
+    if axis == 1 || axis == :x || axis == :X
         return FrameGlobalVelocitySensor(body, position, XAxis())
-    elseif axis == 2 || :y || axis == :Y
+    elseif axis == 2 || axis == :y || axis == :Y
         return FrameGlobalVelocitySensor(body, position, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
@@ -86,9 +86,9 @@ mutable struct FrameLocalVelocitySensor{A<:AbstractAxis} <: AbstractSensor2D
 end
 
 function FrameLocalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Union{Int64,Symbol})
-    if axis == 1 || :x || axis == :X
+    if axis == 1 || axis == :x || axis == :X
         return FrameLocalVelocitySensor(body, position, rot, XAxis())
-    elseif axis == 2 | :y || axis == :Y
+    elseif axis == 2 || axis == :y || axis == :Y
         return FrameLocalVelocitySensor(body, position, rot, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
@@ -131,9 +131,9 @@ mutable struct FrameLocalAccelerationSensor{A<:AbstractAxis} <: AbstractSensor2D
 end
 
 function FrameLocalAccelerationSensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Union{Int64, Symbol})
-    if axis == 1 || :x || axis == :X
+    if axis == 1 || axis == :x || axis == :X
         return FrameLocalAccelerationSensor(body, position, rot, XAxis())
-    elseif axis == 2 || :y || axis == :Y
+    elseif axis == 2 || axis == :y || axis == :Y
         return FrameLocalAccelerationSensor(body, position, rot, YAxis())
     else
         throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))

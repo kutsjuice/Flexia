@@ -1,0 +1,149 @@
+using Pkg; Pkg.activate(@__DIR__)
+using Flexia
+using CairoMakie
+using ForwardDiff
+using StaticArrays
+
+
+# Копия examples/crankshaft.jl, в которой звенья нарисованы новым компаньоном
+# Link2DVisual — «звено со скруглёнными концами» (объединение прямоугольника и
+# двух кружков радиуса width/2 с центрами в ±length/2).
+#
+# Физика не изменена: те же массы, те же шарниры, те же начальные условия.
+# Изменилась только визуализация, поэтому видео можно сравнить с
+# out/crankshaft.mp4 построчно.
+#
+# Важно, почему форма ложится на механизм идеально: центры скруглений совпадают
+# с концами стержня BarVisual той же длины, то есть с точками крепления
+# шарниров — (±0.5, 0) у кривошипа и (±1.0, 0) у шатуна.
+
+# Parameters
+const g = 9.81
+
+# Crankshaft mechanism example demonstrating the use of HingeJoint and SliderJoint
+#
+# This example models a crankshaft mechanism with 4 bodies:
+# 1. Ground: Fixed at (0,0), length=0.01
+# 2. Crank: Rotating at (0.5,0), length=1.0
+# 3. Horizontal slider: Sliding at (3,0), length=0.25
+# 4. Connection rod: Connecting crank to slider at (2,0), length=2.0
+#
+# Joints:
+# 1. Ground-to-crank: HingeJoint at point (0,0) on ground, (-0.5,0) on crank
+# 2. Crank-to-connector: HingeJoint at point (0.5,0) on crank, (-1,0) on connector
+# 3. Connector-to-slider: HingeJoint at point (1,0) on connector, (0,0) on slider
+# 4. Slider-to-ground: SliderJoint at point (0,0) on slider, (3,0) on ground, axis (1,0)
+
+# Create bodies
+# ground оставляем стержнем: он всё равно скрыт под штриховкой заделки,
+# а его длина 0.01 задаёт точку крепления
+ground = Body2D(1e6, 1e6; length=0.01)
+# --- отличие от оригинала: звенья со скруглёнными концами ---
+crank = Body2D(10.0, 1.0; visual = Link2DVisual(length = 1.0, width = 0.25))
+slider = Body2D(5.0, 0.1; visual = Link2DVisual(length = 0.25, width = 0.25))
+connector = Body2D(5.0, 0.5; visual = Link2DVisual(length = 2.0, width = 0.25))
+
+# Apply gravity
+crank.forces[2] = (x, t) -> -crank.mass * g
+slider.forces[2] = (x, t) -> -slider.mass * g
+# slider.forces[1] = (x, t) -> 2050*sin(4*t)
+connector.forces[2] = (x, t) -> -connector.mass * g
+
+# Create system
+sys = MBSystem2D()
+add!(sys, ground)
+add!(sys, crank)
+add!(sys, connector)
+add!(sys, slider)
+
+# Create joints
+# 1. Fix ground
+ground_joint = FixedJoint(ground)
+setposition!(ground_joint, SA[0.0, 0.0])
+setrotation!(ground_joint, 0.0)
+
+# 2. Ground to crank hinge
+crank_ground_hinge = HingeJoint(ground, crank)
+set_position_on_first_body!(crank_ground_hinge, SA[0.0, 0.0])
+set_position_on_second_body!(crank_ground_hinge, SA[-0.5, 0.0])
+
+# 3. Crank to connector hinge
+crank_connector_hinge = HingeJoint(crank, connector)
+set_position_on_first_body!(crank_connector_hinge, SA[0.5, 0.0])
+set_position_on_second_body!(crank_connector_hinge, SA[-1.0, 0.0])
+
+# 4. Connector to slider hinge
+connector_slider_hinge = HingeJoint(connector, slider)
+set_position_on_first_body!(connector_slider_hinge, SA[1.0, 0.0])
+set_position_on_second_body!(connector_slider_hinge, SA[0.0, 0.0])
+
+# 5. Slider to ground slider joint
+slider_ground_slider = SliderJoint(ground, slider)
+set_position_on_first_body!(slider_ground_slider, SA[3.0, 0.0])
+set_position_on_second_body!(slider_ground_slider, SA[0.0, 0.0])
+set_direction_on_first_body!(slider_ground_slider, SA[1.0, 0.0])
+set_direction_on_second_body!(slider_ground_slider, SA[1.0, 0.0])
+
+motor = PositionMotor2D(crank_ground_hinge, 0.0, 0.0)
+spring = LinearSpring(slider_ground_slider; stiffness = 20.0, vis_r =0.3, vis_N = 8)
+# Add joints to system
+add!(sys, ground_joint)
+add!(sys, crank_ground_hinge)
+add!(sys, crank_connector_hinge)
+add!(sys, connector_slider_hinge)
+add!(sys, slider_ground_slider)
+add!(sys, motor)
+add!(sys, spring)
+
+# Assemble system
+assemble!(sys)
+println("System assembled successfully")
+
+# Set up simulation
+func = sys.rhs
+jacoby = (x) -> ForwardDiff.jacobian(func, x)
+
+# Initial conditions - need to satisfy constraints
+initial_state = zeros(number_of_dofs(sys))
+
+# Set initial positions
+# Ground: already fixed at (0,0,0)
+# Crank: center at (0.5, 0), rotation 0
+crank_x, crank_y, crank_θ = get_body_position_dofs(sys, crank)
+initial_state[crank_x] = 0.5
+initial_state[crank_y] = 0.0
+initial_state[crank_θ] = 0.0
+
+# Connector: center at (2,0), rotation such that it connects properly
+connector_x, connector_y, connector_θ = get_body_position_dofs(sys, connector)
+initial_state[connector_x] = 2.0
+initial_state[connector_y] = 0.0
+initial_state[connector_θ] = 0.0
+
+# Slider: center at (3,0), rotation 0 (aligned with x-axis)
+slider_x, slider_y, slider_θ = get_body_position_dofs(sys, slider)
+initial_state[slider_x] = 3.0
+initial_state[slider_y] = 0.0
+initial_state[slider_θ] = 0.0
+
+sys.prestep = (state) -> begin
+    t = state[end]
+    # settarget!(mot1,  sin(t), cos(t))
+
+    settarget!(motor,  π*t, Float64(π))
+end
+
+mass_matrix = sys.mass
+# Simulation parameters
+time_span = 0:0.01:10.0
+sol = simulate(sys, initial_state, time_span)
+
+# Animate
+fig, ax, p = systemfigure(sys, sol)
+# кадры идут с шагом 5 при шаге времени 0.01 с, поэтому для реального времени
+# нужно 1 / (5 * step(time_span)) = 20 кадров в секунду
+fps = round(Int, 1 / (5 * step(time_span)))
+record(fig, "out/crankshaft_link2d.mp4", 1:5:length(time_span);
+       framerate = fps) do t
+    p.time = t
+end

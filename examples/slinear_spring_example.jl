@@ -1,7 +1,7 @@
-# using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
 using ForwardDiff
-using GLMakie
+using CairoMakie
 using StaticArrays
 # using CSV
 # using DataFrames
@@ -53,5 +53,8 @@ n_steps = length(time_span)
 
 sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
-animate(sys, sol1, time_span, "out/test.mp4"; framerate = 30, limits = (-0.1, 0.6, -0.1, 0.5))
+fig, ax, p = systemfigure(sys, sol1)
+record(fig, "out/test.mp4", 1:5:length(time_span); framerate = (30) / 5) do t
+    p.time = t
+end
 

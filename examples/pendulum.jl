@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 
 using StaticArrays
@@ -159,4 +159,7 @@ time_span = 0:0.01:10
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol, initial, mass, func, jacoby, step(time_span))
 
-animate(sys, sol, time_span, "out/pendulum.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/pendulum.mp4", 1:5:length(time_span); framerate = (30) / 5) do t
+    p.time = t
+end

@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using StaticArrays
 
 ground = Body2D(1e6, 1e6; length=0.01)  # Large mass/inertia to simulate fixed ground
@@ -46,7 +46,7 @@ init_state = zeros(number_of_dofs(sys))
 set_initial_state_value!(init_state, sys, crank, SA_F64[crank_len/2, 0.0, 0.0])
 set_initial_state_value!(init_state, sys, arm, SA_F64[crank_len, arm_len/2, pi/2])
 
-draw_static(sys, init_state)
+fig, ax, p = systemfigure(sys, reshape(init_state, :, 1))
 
 time_span = 0:0.01:10
 
@@ -65,7 +65,10 @@ set_pos_state_value!(p_state, sys, crank, SA_F64[crank_len/2, 0.0, 0.0])
 set_pos_state_value!(p_state, sys, arm, SA_F64[crank_len, arm_len/2, pi/2])
 # sys.kinematic_residual!()
 
-animate(sys, sol, time_span, "out/scara.mp4"; framerate= floor(Int, 1.0 /step(time_span)), limits=(-4, 5, -2, 2))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/scara.mp4", 1:5:length(time_span); framerate = (floor(Int, 1.0 /step(time_span))) / 5) do t
+    p.time = t
+end
 
 
 sys.kinematic_constrains!(kin_constraints, p_state)

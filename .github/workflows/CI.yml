@@ -27,9 +27,11 @@ jobs:
           - 'pre'
         os:
           - ubuntu-latest
+        # Только x64: тестовые зависимости включают CairoMakie, а её
+        # бинарные артефакты (Cairo_jll, FFMPEG_jll) на 32-битном Linux
+        # недоступны — ветка x86 падала бы на этапе установки, не дойдя до тестов.
         arch:
           - x64
-          - x86
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2

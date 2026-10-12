@@ -3,20 +3,24 @@ uuid = "2666d27d-cdb3-457d-8dda-c8ec34a93f6f"
 version = "1.0.0-DEV"
 authors = ["Kuts Michael <kutsjuice@gmail.com> and contributors"]
 
+# Бэкендов визуализации здесь нет намеренно: пакет зависит только от Makie
+# core, поэтому рецепты рисуются любым бэкендом. Бэкенд выбирает скрипт
+# пользователя:
+#   using GLMakie      # интерактивное окно
+#   using CairoMakie   # без дисплея, файлы, CI
+#   using WGLMakie     # браузер/WebGL (запись видео ограничена)
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-GLMakie = "0.13.9"
 LinearAlgebra = "1.11.0"
 
-
 [extras]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "CairoMakie"]

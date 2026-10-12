@@ -4,11 +4,14 @@ mutable struct FixedJoint <: AbstractJoint2D
     pos::SVector{2,Float64}
     θ::Float64
     index::Int64
+    visual::AbstractVisual
 
-    function FixedJoint(body::Body2D)
-        return new(body, [0, 0], 0, -1)
+    function FixedJoint(body::Body2D; visual::AbstractVisual = FixedVisual())
+        return new(body, [0, 0], 0, -1, visual)
     end
 end
+
+visual(joint::FixedJoint) = joint.visual
 
 function setposition!(joint::FixedJoint, pos)
     joint.pos = SA[pos[1], pos[2]]
@@ -88,11 +91,14 @@ mutable struct HingeJoint <: AbstractJoint2D
     body2::Body2D
     body2_hinge_point::SVector{2,Float64}
     index::Int64
+    visual::AbstractVisual
 
-    function HingeJoint(bd1::Body2D, bd2::Body2D)
-        return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0], -1)
+    function HingeJoint(bd1::Body2D, bd2::Body2D; visual::AbstractVisual = HingeVisual())
+        return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0], -1, visual)
     end
 end
+
+visual(joint::HingeJoint) = joint.visual
 
 number_of_dofs(::HingeJoint) = 2
 function setid!(jnt::T, index) where T<:AbstractJoint2D
@@ -226,34 +232,41 @@ mutable struct SliderJoint <: AbstractJoint2D
     alpha1::Float64
     alpha2::Float64
     index::Int64
-    vis_axis_length::Float64
-    vis_slider_length::Float64
-    vis_slider_width::Float64
+    visual::AbstractVisual
 
 
+    # kwarg'и vis_* сохранены ради совместимости: они конструируют SliderVisual.
     function SliderJoint(bd1::Body2D, bd2::Body2D;
                          vis_axis_length::Float64 = 2.0,
                          vis_slider_length::Float64 = 0.5,
-                         vis_slider_width::Float64 = 0.2)
+                         vis_slider_width::Float64 = 0.2,
+                         visual::AbstractVisual = SliderVisual(axis_length = vis_axis_length,
+                                                               slider_length = vis_slider_length,
+                                                               slider_width = vis_slider_width))
         α1 = 0;
         α2 = 0;
         return new(bd1, SA[0.0, 0.0], SA[1.0, 0.0], bd2, SA[0.0, 0.0], SA[1.0, 0.0], α1, α2, -1,
-                   vis_axis_length, vis_slider_length, vis_slider_width)
+                   visual)
     end
 end
 
-# Параметры отрисовки SliderJoint (см. src/visualize.jl)
+visual(joint::SliderJoint) = joint.visual
+
+# Параметры отрисовки SliderJoint: совместимость со старым kwarg-API.
+# Мутирует вложенный SliderVisual, а не поля сущности.
 function set_visualization!(joint::SliderJoint; vis_axis_length::Union{Float64,Nothing} = nothing,
                             vis_slider_length::Union{Float64,Nothing} = nothing,
                             vis_slider_width::Union{Float64,Nothing} = nothing)
-    if (vis_axis_length !== nothing)
-        joint.vis_axis_length = vis_axis_length
-    end
-    if (vis_slider_length !== nothing)
-        joint.vis_slider_length = vis_slider_length
-    end
-    if (vis_slider_width !== nothing)
-        joint.vis_slider_width = vis_slider_width
+    v = visual(joint)
+    if (v isa SliderVisual)
+        joint.visual = SliderVisual(
+            axis_length = vis_axis_length === nothing ? v.axis_length : vis_axis_length,
+            slider_length = vis_slider_length === nothing ? v.slider_length : vis_slider_length,
+            slider_width = vis_slider_width === nothing ? v.slider_width : vis_slider_width,
+            attachment = v.attachment,
+            style = v.style,
+            prism_style = v.prism_style,
+        )
     end
     return nothing
 end

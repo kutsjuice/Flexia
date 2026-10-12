@@ -3,10 +3,10 @@ mutable struct TorsionalSpring <: AbstractForce2D
     stiffness::Float64
     rest_angle::Float64
     damping::Float64
-    vis_r::Float64
-    
+    visual::AbstractVisual
+
     function TorsionalSpring(hinge::HingeJoint, stiffness::Float64, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
-        return new(hinge, stiffness, rest_angle, damping, vis_r)
+        return new(hinge, stiffness, rest_angle, damping, TorsionalSpringVisual(coil_radius = vis_r))
     end
 
     # function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
@@ -16,6 +16,7 @@ end
 function TorsionalSpring(hinge::HingeJoint; stiffness::Float64=0.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
     return TorsionalSpring(hinge, stiffness, rest_angle, damping, vis_r)
 end
+visual(spring::TorsionalSpring) = spring.visual
 number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
 
 function add!(sys::MBSystem2D, spring::TorsionalSpring)
@@ -71,17 +72,18 @@ mutable struct LinearSpring <: AbstractForce2D
     stiffness::Float64
     x_dist::Float64
     damping::Float64
-    vis_r::Float64
-    vis_N::Int
-    
+    visual::AbstractVisual
+
     function LinearSpring(joint::SliderJoint, stiffness::Float64, x_dist::Float64=0.0, damping::Float64=0.0, vis_r =0.3, vis_N = 4)
-        return new(joint, stiffness, x_dist, damping, vis_r, vis_N)
+        return new(joint, stiffness, x_dist, damping, LinearSpringVisual(coil_radius = vis_r, n_coils = vis_N))
     end
 end
 
 function LinearSpring(joint::SliderJoint; stiffness::Float64=1.0, x_dist::Float64=0.0, damping::Float64=0.0, vis_r =0.3, vis_N = 4)
     return LinearSpring(joint, stiffness, x_dist, damping, vis_r, vis_N)
 end
+
+visual(spring::LinearSpring) = spring.visual
 
 number_of_dofs(::LinearSpring) = 0  # пружина не добавляет лагранжевых множителей
 
@@ -160,20 +162,24 @@ mutable struct BodyTimeVariableForce <: AbstractForce2D
     fx::Function
     fy::Function
     mt::Function
+    visual::AbstractVisual
     
     function BodyTimeVariableForce(body::Body2D; 
         position::SVector{2,Float64} = SA_F64[0, 0], 
         direction::SVector{2,Float64} = SA_F64[1, 0], 
-        force::Function = (t) -> 0
+        force::Function = (t) -> 0,
+        visual::AbstractVisual = ArrowVisual()
         )
         d = normalize(direction)
         p = position
         fx = (t) -> force(t) * d[1]
         fy = (t) -> force(t) * d[2]
         mt = (t) -> force(t) * ( - d[1] * p[2] + d[2] * p[1] )
-        return new(body, position, direction, force, fx, fy, mt)
+        return new(body, position, direction, force, fx, fy, mt, visual)
     end
 end
+
+visual(force::BodyTimeVariableForce) = force.visual
 
 function set_force!(force::BodyTimeVariableForce, func::Function, dir::SVector{2, Float64}=force.dir)
     p = force.position

@@ -4,19 +4,25 @@ mutable struct Body2D <: AbstractBody2D
 
     forces::Vector{Function}
     index::Int64
-    length::Float64
 
-    function Body2D(mass, inertia; length=1.0)
+    # Визуальный компаньон: как тело выглядит. Длина звена переехала сюда
+    # (бывшее поле `length`) — в динамике она не участвовала никогда.
+    visual::AbstractVisual
+
+    # `length` сохранён как kwarg ради совместимости: он конструирует
+    # стандартный BarVisual. Для других форм передавайте `visual = ...`.
+    function Body2D(mass, inertia; length = 1.0, visual::AbstractVisual = BarVisual(length = length))
         return new(mass, inertia, [
                 (x, t) -> 0,
                 (x, t) -> 0,
                 (x, t) -> 0
-            ], -1, length)
+            ], -1, visual)
     end
 end
 get_index(body::Body2D) = body.index
 number_of_dofs(::Body2D) = 3
-# get_lenght(body::Body2D)
+
+visual(body::Body2D) = body.visual
 
 function add!(sys::MBSystem2D, body::Body2D)
     push!(sys.bodies, body)
@@ -79,14 +85,15 @@ function add_to_rhs!(rhs, state, sys, body)
     rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]], state[end])
 end
 
+"""
+    get_boundary_points(sys, body, dofs) -> (Point2f, Point2f)
+
+Совместимость: две крайние точки контура тела. Реальная геометрия — в
+[`body_contour`](@ref) (`src/plotdata.jl`), которая диспетчеризуется по
+визуальному компаньону тела.
+"""
 function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})::Tuple{Point2f, Point2f}
-    pos_inds = get_body_position_dofs(sys, body)
-    x, y, θ = dofs[pos_inds]
-
-    x1 = x - body.length/2 * cos(θ)
-    x2 = x + body.length/2 * cos(θ)
-    y1 = y - body.length/2 * sin(θ)
-    y2 = y + body.length/2 * sin(θ)
-
-    return Point2f(x1, y1), Point2f(x2, y2)
+    pts = body_contour(sys, body, dofs)
+    isempty(pts) && return Point2f(0, 0), Point2f(0, 0)
+    return pts[1], pts[end]
 end

@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 
 using StaticArrays
@@ -174,4 +174,7 @@ sol1 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 cros!(sol1, initial, mass, func, jacoby, step(time_span))
 
 # Лимиты графика тоже в метрах
-animate(sys, sol1, time_span, "triv_dyn.mp4"; framerate = 60, limits = (-0.1, 0.5, -0.1, 0.5))
+fig, ax, p = systemfigure(sys, sol1)
+record(fig, "triv_dyn.mp4", 1:5:length(time_span); framerate = (60) / 5) do t
+    p.time = t
+end

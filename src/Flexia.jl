@@ -55,8 +55,18 @@ export FramePositionSensor, FrameGlobalVelocitySensor, FrameLocalVelocitySensor,
 export add!, assemble!, get_mass_matrix
 export set_initial_position!, set_initial_velocity!
 
-# visualization
-export animate, draw_static
+# визуализация: визуальные компаньоны + рецепты Makie
+# (бэкенд выбирает пользователь: GLMakie / CairoMakie / WGLMakie)
+export AbstractVisual, NoVisual, Attachment, VisualStyle
+export AbstractBodyVisual, AbstractConnectorVisual, AbstractForceVisual
+export BarVisual, RectVisual, CircleVisual, MeshVisual, Link2DVisual
+export HingeVisual, FixedVisual, SliderVisual
+export LinearSpringVisual, TorsionalSpringVisual, ArrowVisual
+export visual, set_visualization!, resolve_style
+export systemplot, systemplot!, systemfigure
+export trajectory_limits
+export bodyplot, bodyplot!, hingeplot, fixedplot, sliderplot
+export linearspringplot, torsionalspringplot, arrowplot
 
 # utils
 export set_initial_state_value!, set_pos_state_value! 
@@ -69,13 +79,19 @@ test_func() = 1
 include("system.jl")
 include("solvers.jl")
 # include("markers.jl")
+# visuals.jl идёт до математических типов: они используют AbstractVisual
+# в аннотации поля-компаньона.
+include("visuals.jl")
 include("bodies.jl")
 include("connectors.jl")
 include("joints.jl")
 include("forces.jl")
 include("actuators.jl")
 include("sensors.jl")
-include("visualize.jl")
+# plotdata.jl — чистая геометрия, диспетчеризуется по компаньонам
+include("plotdata.jl")
+# recipes.jl — рецепты Makie (зависит только от Makie, не от бэкенда)
+include("recipes.jl")
 include("utils.jl")
 
 function getdofs(sys::MBSystem2D, body::Body2D)

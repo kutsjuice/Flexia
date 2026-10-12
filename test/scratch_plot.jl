@@ -1,5 +1,5 @@
 using ForwardDiff
-using GLMakie
+using CairoMakie
 using Flexia
 
 include("solvers.jl")

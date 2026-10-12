@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using StaticArrays
 
@@ -142,6 +142,8 @@ fig
 ##
 # Визуализация наклонного случая
 last = results[end]
-animate(last.sys, last.sol, time_span, "out/linear_actuator.mp4";
-        framerate = 30, limits = (-0.5, 2.0, -0.5, 1.5))
+fig, ax, p = systemfigure(last.sys, last.sol)
+record(fig, "out/linear_actuator.mp4", 1:5:length(time_span); framerate = (30) / 5) do t
+    p.time = t
+end
 

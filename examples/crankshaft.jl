@@ -1,6 +1,6 @@
-# using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using StaticArrays
 
@@ -125,4 +125,7 @@ sol = simulate(sys, initial_state, time_span)
 
 
 # Animate
-animate(sys, sol, time_span, "out/crankshaft.mp4"; framerate=60, limits=(-2, 5, -2, 2))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/crankshaft.mp4", 1:5:length(time_span); framerate = (60) / 5) do t
+    p.time = t
+end

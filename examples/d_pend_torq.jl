@@ -1,6 +1,6 @@
-# using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using LinearAlgebra
 
@@ -59,7 +59,10 @@ time_step = 1
 time_span = 0:0.001:10
 
 sol2 = simulate(system, initial, time_span)
-animate(system, sol2, time_span, "out/d_pend_torq.mp4"; framerate = floor(Int64, 1.0 / step(time_span)), limits = (-3,3, -3, 3))
+fig, ax, p = systemfigure(system, sol2)
+record(fig, "out/d_pend_torq.mp4", 1:5:length(time_span); framerate = (floor(Int64, 1.0 / step(time_span))) / 5) do t
+    p.time = t
+end
 ##
 jnt1_lbd = Flexia.get_lms(system, jnt1)
 jnt2_lbd = Flexia.get_lms(system, jnt2)
