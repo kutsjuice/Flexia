@@ -87,57 +87,148 @@ function norm(A::AbstractMatrix, norm_type::Symbol=:frobenius)
     return matrix_norm(A, norm_type)
 end
 
-function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-2) where T<: Real
+# ===========================================================================
+# Статика: решение F(u) = 0 методом Ньютона
+# ===========================================================================
+#
+# ПРО СЛОТ ВРЕМЕНИ. `number_of_dofs(sys) = last_lm_dof + 1`: последняя
+# компонента состояния — время, и `sys.rhs` возвращает в этой строке константу
+# `ret[end] = 1.0`. В статике время не неизвестное, а ПАРАМЕТР, поэтому оно
+# исключается из решаемой системы: `newton_step` отрезает последнюю компоненту,
+# подставляет её значение как параметр и решает систему размерности n−1.
+#
+# Раньше решалась полная система n×n, а её якобиан структурно вырожден
+# (нулевая строка времени) — `J \ (-F)` бросал `SingularException`, исключение
+# глушил пустой `catch`, и решатель молча возвращал начальное приближение.
+#
+# Уравнения статики (абсолютные координаты, Лагранж I рода):
+#     Q(q) − Φ_qᵀ λ = 0,    Φ(q) = 0,
+# а строки `rhs[vel] = ...` при обращении в ноль сами дают v = 0.
 
-    u = copy(u_cur)
-    n = length(u)
-    
-    history = [copy(u)]
-    residuals = [norm(func(u))]
+"""
+    newton_solve(F, J, u0; max_iter, tol, tol_step, max_backtrack)
+        -> (u, status, iterations, residuals)
 
-    for iter in max_iter
-     Fx = func(u)
-        current_residual = norm(Fx)
-        push!(residuals, current_residual)
-        
-        # Проверка сходимости
-        if current_residual < tol_e
-            return u
+Метод Ньютона для `F(u) = 0` в чистом виде (без слота времени): `u0` — полный
+вектор неизвестных, `F` и `J` — невязка и её якобиан той же размерности.
+
+Статус:
+
+  * `:converged` — `‖F‖ < tol`;
+  * `:stalled` — шаг стал меньше `tol_step`, а `‖F‖` так и не упала ниже `tol`;
+  * `:max_iter` — исчерпан `max_iter`.
+
+Шаг демпфируется по невязке: полный шаг Ньютона принимается, только если он
+уменьшает `‖F‖`, иначе дробится пополам (до `max_backtrack` раз). Исключения НЕ
+глушатся: вырожденный якобиан пробрасывается наружу как `SingularException`.
+"""
+function newton_solve(F::Function, J::Function, u0::AbstractVector{T};
+                      max_iter::Integer = 100,
+                      tol::Real = 1e-10,
+                      tol_step::Real = 1e-12,
+                      max_backtrack::Integer = 20) where T <: Real
+
+    u = collect(T, u0)
+    residuals = Float64[norm(F(u))]
+
+    residuals[1] < tol && return u, :converged, 0, residuals
+
+    for iter in 1:max_iter
+        Fu = F(u)
+        r = norm(Fu)
+
+        du = -(J(u) \ Fu)
+
+        # Демпфирование: первый alpha, который уменьшает невязку.
+        alpha = one(T)
+        u_new = u + alpha .* du
+        for _ in 1:max_backtrack
+            norm(F(u_new)) < r && break
+            alpha /= 2
+            u_new = u + alpha .* du
         end
-        
-        try
-            Ju = jac(u)
-            
-            # Решаем систему J*dx = -F
-            dx = Ju \ (-Fx)
-            
-            # Обновляем решение
-            u .+= dx
-            
-            push!(history, copy(u))
-            
-            # Проверка сходимости по изменению решения
-            if norm(dx) < tol_e * max(1.0, norm(u))
-                return x, iter, history, residuals
-            end
-            
-        catch e
-        end
+
+        u = u_new
+        push!(residuals, norm(F(u)))
+
+        residuals[end] < tol && return u, :converged, iter, residuals
+        alpha * norm(du) < tol_step && return u, :stalled, iter, residuals
     end
-    @warn "Метод не сошёлся"
 
-    return u
+    return u, :max_iter, max_iter, residuals
 end
 
-function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Function) where T<: Real
-    @assert size(sol, 1) == size(u0, 1)
-    @assert size(sol, 1) == size(func(u0),1)
-    sol[:, 1] = u0
-    
-    for i in 2:size(sol, 2)
-        sol[:, i] = newton_step(func, jac, sol[:, i-1])
+"""
+    newton_step(func, jac, u_cur; kwargs...) -> (u, status, iterations, residuals)
+
+Статический шаг Ньютона для системы Flexia: `func`/`jac` — `sys.rhs` и её
+якобиан на полном векторе состояния, последняя компонента которого — время.
+Время фиксируется на значении `u_cur[end]` и в число неизвестных не входит
+(см. комментарий выше); фактическое решение — [`newton_solve`](@ref).
+
+Возвращает полный вектор состояния (со слотом времени на месте `u_cur[end]`)
+и статус сходимости.
+"""
+function newton_step(func::Function, jac::Function, u_cur::AbstractVector{T};
+                     max_iter::Integer = 100,
+                     tol::Real = 1e-10,
+                     tol_step::Real = 1e-12,
+                     max_backtrack::Integer = 20) where T <: Real
+
+    full = collect(T, u_cur)
+    n = length(full)
+    @assert n >= 2 "в состоянии должны быть неизвестные и слот времени"
+    t0 = full[end]
+    m = n - 1
+
+    F = (u) -> func(vcat(u, t0))[1:m]
+    J = (u) -> jac(vcat(u, t0))[1:m, 1:m]
+
+    u, status, iters, residuals = newton_solve(F, J, @view(full[1:m]);
+        max_iter = max_iter, tol = tol, tol_step = tol_step,
+        max_backtrack = max_backtrack)
+
+    return vcat(u, t0), status, iters, residuals
+end
+
+"""
+    static_solver!(sol, u0, func, jac; kwargs...) -> NamedTuple
+
+Статический расчёт: находит равновесие `F(u) = 0` из начального приближения
+`u0` и записывает его **во все столбцы** `sol`.
+
+Матрица из многих столбцов оставлена для совместимости со старыми вызовами
+(`sol[:, end]` — ответ). Раньше число столбцов означало число шагов
+релаксации, и точность зависела от него; теперь статическое решение одно и
+ищется до сходимости, а число столбцов на результат не влияет.
+
+Возвращает `(status, iterations, residual)`; `status = :converged` означает,
+что невязка дошла до `tol`.
+"""
+function static_solver!(sol::AbstractMatrix{T}, u0::AbstractVector{T},
+                        func::Function, jac::Function;
+                        max_iter::Integer = 100,
+                        tol::Real = 1e-10,
+                        tol_step::Real = 1e-12,
+                        max_backtrack::Integer = 20) where T <: Real
+
+    @assert size(sol, 1) == length(u0) "размерность sol и u0 не совпадают"
+    @assert size(sol, 1) == length(func(u0)) "размерность sol и RHS не совпадают"
+    @assert size(sol, 2) >= 1 "нужен хотя бы один столбец"
+
+    u, status, iters, residuals = newton_step(func, jac, u0;
+        max_iter = max_iter, tol = tol, tol_step = tol_step,
+        max_backtrack = max_backtrack)
+
+    for i in 1:size(sol, 2)
+        sol[:, i] = u
     end
 
+    if status !== :converged
+        @warn "static_solver!: статический расчёт не сошёлся" status = status iterations = iters residual = residuals[end]
+    end
+
+    return (status = status, iterations = iters, residual = residuals[end])
 end
 
 #
