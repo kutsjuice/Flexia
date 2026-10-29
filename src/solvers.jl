@@ -88,29 +88,41 @@ function norm(A::AbstractMatrix, norm_type::Symbol=:frobenius)
 end
 
 # ===========================================================================
-# Статика: решение F(u) = 0 методом Ньютона
+# Статика: равновесие F(u) = 0
 # ===========================================================================
 #
 # ПРО СЛОТ ВРЕМЕНИ. `number_of_dofs(sys) = last_lm_dof + 1`: последняя
 # компонента состояния — время, и `sys.rhs` возвращает в этой строке константу
-# `ret[end] = 1.0`. В статике время не неизвестное, а ПАРАМЕТР, поэтому оно
-# исключается из решаемой системы: `newton_step` отрезает последнюю компоненту,
-# подставляет её значение как параметр и решает систему размерности n−1.
+# `ret[end] = 1.0`. В статике время не неизвестное, а ПАРАМЕТР: оно вырезается
+# из решаемой системы (размерность n−1) и берётся либо из `u0[end]`, либо из
+# списка `times` — это псевдовремя нагрузки, аналог Load Step в ANSYS Static
+# Structural.
 #
-# Раньше решалась полная система n×n, а её якобиан структурно вырожден
-# (нулевая строка времени) — `J \ (-F)` бросал `SingularException`, исключение
-# глушил пустой `catch`, и решатель молча возвращал начальное приближение.
+# Полную систему n×n решать нельзя: её якобиан структурно вырожден (нулевая
+# строка времени), `J \ (-F)` бросает `SingularException`. Раньше это
+# исключение глушил пустой `catch`, и решатель молча возвращал начальное
+# приближение — то есть был no-op.
+#
+# ДВА РЕЖИМА (см. `static_solver!`): один подшаг (по умолчанию, на выходе
+# матрица-столбец) и путь по псевдовремени (несколько столбцов = наборы
+# результатов, годятся для анимации нагружения).
+#
+# СОЛВЕР ПОДКЛЮЧАЕМЫЙ. Контракт:
+#     solver(F, J, u0; solver_options...) -> (u, status, iterations, residuals)
+# Стандартный — `_newton_solve` (без внешних зависимостей). Другой, например
+# из NLsolve.jl, подключается ключом `solver`: библиотека от него не зависит.
 #
 # Уравнения статики (абсолютные координаты, Лагранж I рода):
 #     Q(q) − Φ_qᵀ λ = 0,    Φ(q) = 0,
 # а строки `rhs[vel] = ...` при обращении в ноль сами дают v = 0.
 
 """
-    newton_solve(F, J, u0; max_iter, tol, tol_step, max_backtrack)
+    _newton_solve(F, J, u0; max_iter, tol, tol_step, max_backtrack)
         -> (u, status, iterations, residuals)
 
-Метод Ньютона для `F(u) = 0` в чистом виде (без слота времени): `u0` — полный
-вектор неизвестных, `F` и `J` — невязка и её якобиан той же размерности.
+Стандартный солвер статики Flexia: метод Ньютона для `F(u) = 0` в чистом виде
+(без слота времени): `u0` — полный вектор неизвестных, `F` и `J` — невязка и
+её якобиан той же размерности.
 
 Статус:
 
@@ -121,8 +133,12 @@ end
 Шаг демпфируется по невязке: полный шаг Ньютона принимается, только если он
 уменьшает `‖F‖`, иначе дробится пополам (до `max_backtrack` раз). Исключения НЕ
 глушатся: вырожденный якобиан пробрасывается наружу как `SingularException`.
+
+Внешний солвер (например, из NLsolve.jl) должен иметь ту же сигнатуру и
+возвращать ту же четвёрку — он подключается ключом `solver` в
+[`static_solver!`](@ref).
 """
-function newton_solve(F::Function, J::Function, u0::AbstractVector{T};
+function _newton_solve(F::Function, J::Function, u0::AbstractVector{T};
                       max_iter::Integer = 100,
                       tol::Real = 1e-10,
                       tol_step::Real = 1e-12,
@@ -135,100 +151,143 @@ function newton_solve(F::Function, J::Function, u0::AbstractVector{T};
 
     for iter in 1:max_iter
         Fu = F(u)
-        r = norm(Fu)
-
+    
         du = -(J(u) \ Fu)
 
         # Демпфирование: первый alpha, который уменьшает невязку.
-        alpha = one(T)
-        u_new = u + alpha .* du
-        for _ in 1:max_backtrack
-            norm(F(u_new)) < r && break
-            alpha /= 2
-            u_new = u + alpha .* du
-        end
-
+        u_new = u + du
         u = u_new
         push!(residuals, norm(F(u)))
-
         residuals[end] < tol && return u, :converged, iter, residuals
-        alpha * norm(du) < tol_step && return u, :stalled, iter, residuals
+        norm(du) < tol_step && return u, :stalled, iter, residuals
     end
 
     return u, :max_iter, max_iter, residuals
 end
 
 """
-    newton_step(func, jac, u_cur; kwargs...) -> (u, status, iterations, residuals)
+    static_solver!(sol, u0, func, jac; times, solver, solver_options,
+                   cutback, min_step, max_cutbacks) -> Vector{NamedTuple}
 
-Статический шаг Ньютона для системы Flexia: `func`/`jac` — `sys.rhs` и её
-якобиан на полном векторе состояния, последняя компонента которого — время.
-Время фиксируется на значении `u_cur[end]` и в число неизвестных не входит
-(см. комментарий выше); фактическое решение — [`newton_solve`](@ref).
+Статический расчёт: равновесие `F(u) = 0`, где `func`/`jac` — `sys.rhs` и её
+якобиан на полном векторе состояния (последняя компонента — время).
 
-Возвращает полный вектор состояния (со слотом времени на месте `u_cur[end]`)
-и статус сходимости.
-"""
-function newton_step(func::Function, jac::Function, u_cur::AbstractVector{T};
-                     max_iter::Integer = 100,
-                     tol::Real = 1e-10,
-                     tol_step::Real = 1e-12,
-                     max_backtrack::Integer = 20) where T <: Real
+Время — не неизвестное, а параметр: оно вырезается из решаемой системы и
+берётся из `u0[end]` либо из списка `times` (см. комментарий выше).
 
-    full = collect(T, u_cur)
-    n = length(full)
-    @assert n >= 2 "в состоянии должны быть неизвестные и слот времени"
-    t0 = full[end]
-    m = n - 1
+Режимы:
 
-    F = (u) -> func(vcat(u, t0))[1:m]
-    J = (u) -> jac(vcat(u, t0))[1:m, 1:m]
+  * `times = nothing` (по умолчанию) — ОДНА решённая подзадача при
+    `t = u0[end]`: на выходе матрица-столбец. Точность определяется
+    сходимостью солвера, а не числом столбцов `sol`.
+  * `times = [t₁, t₂, …]` — путь по псевдовремени (аналог Load Step /
+    Substeps в ANSYS Static Structural): на каждом `t_k` решается своё
+    равновесие, тёплый старт от предыдущего. Столбец `k` — набор результатов
+    при `t_k` (в строке `end` лежит само `t_k`), поэтому матрицу можно
+    анимировать. Именно так задаётся ramp нагрузки: `force = t -> F_max*t/T`.
 
-    u, status, iters, residuals = newton_solve(F, J, @view(full[1:m]);
-        max_iter = max_iter, tol = tol, tol_step = tol_step,
-        max_backtrack = max_backtrack)
+`sol`: первые `length(times)` столбцов — результаты подшагов; если столбцов
+больше, хвост заполняется последним кадром (`sol[:, end]` — ответ); если
+столбцов меньше, чем времён, — `ArgumentError`.
 
-    return vcat(u, t0), status, iters, residuals
-end
+Подключаемый солвер: `solver(F, J, u0; solver_options...) -> (u, status,
+iterations, residuals)`; по умолчанию [`_newton_solve`](@ref). Параметры
+солвера передаются в `solver_options`, например
+`(max_iter = 50, tol = 1e-12)`.
 
-"""
-    static_solver!(sol, u0, func, jac; kwargs...) -> NamedTuple
+`cutback < 1` включает автоматическое дробление подшага (ANSYS «automatic time
+stepping»): если к очередному `t` солвер не сошёлся, интервал делится — в
+очередь вставляется промежуточный момент `t + dt·cutback`, и он тоже
+становится кадром (кадров может оказаться больше, чем `length(times)`; за
+размером `sol` следит вызывающий). Дробление прекращается, когда шаг уходит
+ниже `min_step` или когда неудач подряд больше `max_cutbacks` — тогда `@warn`
+и остановка.
 
-Статический расчёт: находит равновесие `F(u) = 0` из начального приближения
-`u0` и записывает его **во все столбцы** `sol`.
-
-Матрица из многих столбцов оставлена для совместимости со старыми вызовами
-(`sol[:, end]` — ответ). Раньше число столбцов означало число шагов
-релаксации, и точность зависела от него; теперь статическое решение одно и
-ищется до сходимости, а число столбцов на результат не влияет.
-
-Возвращает `(status, iterations, residual)`; `status = :converged` означает,
-что невязка дошла до `tol`.
+Возвращает журнал по кадрам:
+`(frame, time, status, iterations, residual, step)`.
 """
 function static_solver!(sol::AbstractMatrix{T}, u0::AbstractVector{T},
                         func::Function, jac::Function;
-                        max_iter::Integer = 100,
-                        tol::Real = 1e-10,
-                        tol_step::Real = 1e-12,
-                        max_backtrack::Integer = 20) where T <: Real
+                        times = nothing,
+                        solver::Function = _newton_solve,
+                        solver_options::NamedTuple = NamedTuple(),
+                        cutback::Real = 1.0,
+                        min_step::Real = 1e-4,
+                        max_cutbacks::Integer = 20) where T <: Real
 
-    @assert size(sol, 1) == length(u0) "размерность sol и u0 не совпадают"
+    n = length(u0)
+    @assert n >= 2 "в состоянии должны быть неизвестные и слот времени"
+    @assert size(sol, 1) == n "размерность sol и u0 не совпадают"
     @assert size(sol, 1) == length(func(u0)) "размерность sol и RHS не совпадают"
-    @assert size(sol, 2) >= 1 "нужен хотя бы один столбец"
+    @assert 0 < cutback <= 1 "cutback должен лежать в (0, 1]"
 
-    u, status, iters, residuals = newton_step(func, jac, u0;
-        max_iter = max_iter, tol = tol, tol_step = tol_step,
-        max_backtrack = max_backtrack)
+    m = n - 1
+    queue = Float64.(times === nothing ? [u0[end]] : times)
+    @assert !isempty(queue) "список времён пуст"
+    @assert length(queue) == 1 || all(diff(queue) .> 0) "times должны возрастать"
+    @assert all(tt -> tt >= u0[end] - 10 * eps(Float64), queue) "times должны быть не раньше u0[end]: псевдовремя идёт только вперёд"
+    @assert size(sol, 2) >= length(queue) "в sol меньше столбцов, чем времён в times"
 
-    for i in 1:size(sol, 2)
-        sol[:, i] = u
+    u = collect(T, u0)
+    log = NamedTuple[]
+    frame = 1
+    sol[:, frame] = u0
+    t = u0[end]
+    cutbacks = 0
+
+    while !isempty(queue)
+        t_target = first(queue)
+        if t_target < t - 10 * eps(Float64)
+            popfirst!(queue)          # цель уже пройдена после дробления
+            continue
+        end
+        dt = t_target - t
+
+        # Время — параметр: подставляем t_target и решаем систему n−1.
+        F = (x) -> func(vcat(x, t_target))[1:m]
+        J = (x) -> jac(vcat(x, t_target))[1:m, 1:m]
+        u_new, status, iters, residuals =
+            solver(F, J, copy(sol[1:m, frame]); solver_options...)
+
+        if status === :converged
+            if frame + 1 > size(sol, 2)
+                @warn "static_solver!: кадров больше, чем столбцов sol" frames = frame + 1 time = t_target
+                break
+            end
+            frame += 1
+            u[1:m] = u_new
+            u[end] = t_target
+            sol[:, frame] = u
+            push!(log, (frame = frame, time = t_target, status = status,
+                        iterations = iters, residual = residuals[end], step = dt))
+            t = t_target
+            popfirst!(queue)
+            cutbacks = 0
+            continue
+        end
+
+        # Не сошлось: дробим подшаг (ANSYS automatic time stepping).
+        if cutback >= 1 || cutbacks >= max_cutbacks || dt * cutback < min_step
+            @warn "static_solver!: подшаг не пройден" t = t t_target = t_target status = status iterations = iters cutbacks = cutbacks
+            break
+        end
+        cutbacks += 1
+        pushfirst!(queue, t + dt * cutback)
     end
 
-    if status !== :converged
-        @warn "static_solver!: статический расчёт не сошёлся" status = status iterations = iters residual = residuals[end]
+    if frame >= 1
+        # Хвост — последним кадром, чтобы sol[:, end] всегда был ответом.
+        for i in (frame + 1):size(sol, 2)
+            sol[:, i] = sol[:, frame]
+        end
+    else
+        for i in 1:size(sol, 2)
+            sol[:, i] = u0
+        end
+        @warn "static_solver!: ни один подшаг не сошёлся, в sol — начальное приближение"
     end
 
-    return (status = status, iterations = iters, residual = residuals[end])
+    return log
 end
 
 #

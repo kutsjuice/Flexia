@@ -43,7 +43,7 @@ export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body
 export BodyTimeVariableForce, set_force!, set_position!
 
 # solve
-export cros!, static_solver!, newton_step, newton_solve, simulate, find_natural_freqs
+export cros!, static_solver!, simulate, find_natural_freqs
 
 # Actuators
 export settarget!
