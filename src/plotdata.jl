@@ -43,6 +43,7 @@ visual_extent(body::Body2D) = visual_extent(visual(body))
 visual_extent(v::BarVisual) = v.length
 visual_extent(v::RectVisual) = max(v.width, v.height)
 visual_extent(v::CircleVisual) = 2 * v.radius
+visual_extent(v::Link2DVisual) = v.length
 visual_extent(v::MeshVisual) = _bbox_extent(v.points)
 visual_extent(::NoVisual) = 1.0
 visual_extent(::AbstractVisual) = 1.0
@@ -344,47 +345,56 @@ end
 """
     linear_spring_points(sys, spring, state) -> Vector{Point2f}
 
-Зигзаг линейной пружины между телами ползуна.
+Зигзаг линейной пружины между точками стыка ползуна.
+
+Концы пружины — точки `body1_position` / `body2_position`, пересчитанные в
+глобальную систему **с учётом поворота тел** (раньше локальные координаты
+прибавлялись без поворота, и при повёрнутом ползуне пружина рисовалась не на
+месте). Зигзаг откладывается по нормали к оси пружины, амплитуда
+`coil_radius / 2`, поэтому полная высота зигзага равна `coil_radius` и её можно
+подобрать под толщину звена.
 """
 function linear_spring_points(sys::MBSystem2D, spring::LinearSpring, state::AbstractVector{Float64})
-    bd1 = spring.joint.body1
-    pos_dofs1 = get_body_position_dofs(sys, bd1)
-    _xi1, _yi1, _θi1 = state[pos_dofs1]
+    j = spring.joint
 
-    _xi1 += spring.joint.body1_position[1]
-    _yi1 += spring.joint.body1_position[2]
+    contact_point(body, local_pos) = begin
+        pos_dofs = get_body_position_dofs(sys, body)
+        _x, _y, _θ = state[pos_dofs]
+        (x = _x + local_pos[1] * cos(_θ) - local_pos[2] * sin(_θ),
+         y = _y + local_pos[1] * sin(_θ) + local_pos[2] * cos(_θ))
+    end
 
-    bd2 = spring.joint.body2
-    pos_dofs2 = get_body_position_dofs(sys, bd2)
-    _xi2, _yi2, _θi2 = state[pos_dofs2]
-
-    _xi2 += spring.joint.body2_position[1]
-    _yi2 += spring.joint.body2_position[2]
+    p1 = contact_point(j.body1, j.body1_position)
+    p2 = contact_point(j.body2, j.body2_position)
 
     v = visual(spring)
-    t_spring = v.coil_radius / 2
-    N = v.n_coils
-    dx = (_xi2 - _xi1) / (N - 2)
-    dy = (_yi2 - _yi1) / (N - 2)
-    xs = [_xi1; dx / 2; ones(N - 3) * dx; dx / 2]
-    ys = [_yi1; dy / 2; ones(N - 3) * dy; dy / 2]
+    amplitude = v.coil_radius / 2      # полная высота зигзага = coil_radius
+    N = max(v.n_coils, 4)
 
-    x_range = cumsum(xs)
-    y_range = cumsum(ys)
+    dx = p2.x - p1.x
+    dy = p2.y - p1.y
+    len = hypot(dx, dy)
+    if len < eps(Float64) || amplitude <= 0
+        return [Point2f(p1.x, p1.y), Point2f(p2.x, p2.y)]
+    end
+
+    ux, uy = dx / len, dy / len
+    nx, ny = -uy, ux                    # нормаль к оси пружины
+
+    # Осевой шаг между соседними точками зигзага. Концевые участки идут от оси
+    # к первому «гребню», то есть по ширине проходят только половину амплитуды,
+    # поэтому по длине им нужно полшага — иначе их наклон вдвое меньше, чем у
+    # внутренних участков, и пружина выглядит «с отогнутыми концами».
+    Δs = 1.0 / (N - 2)
 
     points = Vector{Point2f}(undef, N)
-    for j in 1:N
-        if (j == 1)
-            x = _xi1
-            y = _yi1
-        elseif (j == N)
-            x = _xi2
-            y = _yi2
-        else
-            x = x_range[j]
-            y = y_range[j] + t_spring * (-1)^j
-        end
-        points[j] = Point2f(x, y)
+    points[1] = Point2f(p1.x, p1.y)
+    points[N] = Point2f(p2.x, p2.y)
+    for k in 2:(N - 1)
+        s = Δs / 2 + (k - 2) * Δs       # полшага до первого гребня, далее полный шаг
+        sign = isodd(k) ? 1.0 : -1.0
+        points[k] = Point2f(p1.x + s * dx + sign * amplitude * nx,
+                            p1.y + s * dy + sign * amplitude * ny)
     end
     return points
 end
