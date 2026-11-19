@@ -34,6 +34,8 @@ a_target(t) = -A * Ω^2 * sin(Ω * t)
 # физическую силу λ, связь актуатора нужно задавать на уровне скоростей
 # (index-1), а не положений.
 λ_analytic(t, angle, mass) = mass * a_target(t) - mass * g * sin(angle)
+# What CROS actually reports for a position-level constraint (see note above)
+λ_cros(t, angle, mass) = -mass * a_target(t) + mass * g * sin(angle)
 
 
 # ---------------------------------------------------------------------------
