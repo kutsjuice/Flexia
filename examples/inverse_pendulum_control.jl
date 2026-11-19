@@ -91,7 +91,9 @@ sys.prestep = (state) -> begin
     # err = ŷ - y
     # u = K * (ŷ - y)
     # u = y[1] + 0.005 * err[1]
-    settarget!(slider_actuator,  slider_x + sin(t - π/2) + sin(π/2))
+    # Position target plus its analytic derivative: the actuator stores both,
+    # otherwise ∂f/∂t in the jacobian disagrees with the target itself.
+    settarget!(slider_actuator, slider_x + sin(t - π/2) + sin(π/2), cos(t - π/2))
 end
 
 crank_θ = π/2 + 0.0001
