@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using StaticArrays
 
@@ -224,6 +224,9 @@ time_span = 0:0.01:5
 sol = simulate(sys, initial_state, time_span)
 
 # Animate
-animate(sys, sol, time_span, "out/parmech.mp4"; framerate= floor(Int, 1.0 /step(time_span)), limits=(-4, 5, -2, 2))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/parmech.mp4", 1:5:length(time_span); framerate = (floor(Int, 1.0 /step(time_span))) / 5) do t
+    p.time = t
+end
 
 

@@ -1,0 +1,1808 @@
+module Flexia
+# using Pkg; Pkg.activate(".")
+using StaticArrays
+using Makie
+using LinearAlgebra
+using ForwardDiff
+# export MBSystem
+# export Body2D
+
+
+
+export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D, AbstractSensor2D
+
+abstract type AbstractBody2D end
+abstract type AbstractConnector2D end
+abstract type AbstractForce2D end
+abstract type AbstractJoint2D <: AbstractConnector2D end
+abstract type AbstractActuator2D <: AbstractConnector2D end
+abstract type AbstractPositionActuator2D <: AbstractActuator2D end
+abstract type AbstractSensor2D end
+abstract type AbstractPositionSensor <: AbstractSensor2D end
+abstract type AbstractVelocitySensor <: AbstractSensor2D end
+abstract type AbstractAccelerationSensor <: AbstractSensor2D end
+
+
+abstract type AbstractAxis end
+struct XAxis <: AbstractAxis end
+struct YAxis <: AbstractAxis end
+
+export Body2D
+export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, LinearSpring
+export PositionMotor2D, PositionLinearActuator2D
+export MBSystem2D
+
+# connectors
+export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!
+# bodies
+export bodies, number_of_bodies, connectors
+
+export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment, get_spring_energy, number_of_generalized_coordinates, get_body_generalized_dofs
+
+# forces
+export BodyTimeVariableForce, set_force!, set_position!
+
+# solve
+export cros!, static_solver!, simulate, find_natural_freqs
+
+# Actuators
+export settarget!
+
+# Sensors
+export FramePositionSensor, FrameGlobalVelocitySensor, FrameLocalVelocitySensor, FrameLocalAccelerationSensor
+
+# system
+export add!, assemble!, get_mass_matrix
+export set_initial_position!, set_initial_velocity!
+
+# visualization
+export animate, draw_static
+
+# utils
+export set_initial_state_value!, set_pos_state_value! 
+
+export test_func
+
+
+test_func() = 1
+
+mutable struct MBSystem2D
+    bodies::Vector{AbstractBody2D}
+    # joints::Vector{AbstractJoint2D}
+    connectors::Vector{AbstractConnector2D}
+    forces::Vector{AbstractForce2D}
+    sensors::Vector{AbstractSensor2D}
+    bodiesdofs::Vector{Int64}
+    lmdofs::Vector{Int64}
+    assembled::Bool
+    rhs::Function
+    jacobian::Function
+    prestep::Function
+    measure!::Function
+    kinematic_constrains!::Function
+    targets::Vector{Float64}
+    mass::Matrix{Float64}
+    
+
+    function MBSystem2D()
+        bodies = Vector{AbstractBody2D}([])
+        connectors = Vector{AbstractJoint2D}([])
+        forces = Vector{AbstractForce2D}([])
+        sensors = Vector{AbstractSensor2D}([])
+        bodiesdofs = Vector{Int64}([])
+        lmdofs = Vector{Int64}([])
+        assembeld = false
+        default_rhs = (x) -> nothing
+        default_jacobian = (x) -> nothing
+        default_prestep = (x) -> nothing
+        default_measure = (measurements, state) -> nothing
+        default_kinematic_constrains = (residual, q) -> nothing
+        targets = Vector{Float64}([])
+        mass = Matrix{Float64}([;;])
+        return new(
+            bodies,
+            connectors, 
+            forces,
+            sensors,
+            bodiesdofs, 
+            lmdofs,
+            assembeld,
+            default_rhs, 
+            default_jacobian,
+            default_prestep, 
+            default_measure,
+            default_kinematic_constrains, 
+            targets, 
+            mass)
+    end
+end
+
+get_mass_matrix(sys::MBSystem2D) = sys.mass
+number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
+bodies(sys::MBSystem2D) = sys.bodies
+joints(sys::MBSystem2D) = sys.joints
+connectors(sys::MBSystem2D) = sys.connectors
+
+get_targets(sys::MBSystem2D) = sys.targets
+
+function update_targets!(sys::MBSystem2D)
+    
+    for connector in sys.connectors
+        propagate_targets!(sys, connector)
+    end
+end
+
+function last_body_dof(sys::MBSystem2D)
+    if (isempty(sys.bodiesdofs))
+        return 0
+    end
+    return (sys.bodiesdofs)[end]
+end
+function last_lm_dof(sys::MBSystem2D)
+    if (isempty(sys.lmdofs))
+        return last_body_dof(sys)
+    else
+        return sys.lmdofs[end]
+    end
+end
+
+number_of_dofs(sys) = last_lm_dof(sys) + 1
+number_of_generalized_coordinates(sys) = length(sys.bodies) * 3
+
+function assemble!(sys)
+    state_length = number_of_dofs(sys) 
+    sys.mass = zeros(state_length, state_length)
+
+    for body in sys.bodies
+
+        last_dof = sys.bodiesdofs[body.index]
+
+        position_dofs = [
+            last_dof - 5,
+            last_dof - 4,
+            last_dof - 3,
+        ]
+
+        velocity_dofs = [
+            last_dof - 2,
+            last_dof - 1,
+            last_dof,
+        ]
+
+        sys.mass[position_dofs, position_dofs] = I(3)
+        sys.mass[velocity_dofs, velocity_dofs] = Diagonal([body.mass, body.mass, body.inertia])
+    end  
+    sys.mass[end, end] = 1.0
+    sys.targets = zeros(number_of_dofs(sys))
+    update_targets!(sys)
+    
+    sys.rhs = (state) -> begin
+        ret = similar(state)
+        fill!(ret, zero(state[1]))
+        for body in sys.bodies
+            add_to_rhs!(ret, state, sys, body)
+        end
+        for connector in connectors(sys)
+            add_to_rhs!(ret, state, sys, connector)
+        end
+        for force in sys.forces
+            add_to_rhs!(ret, state, sys, force)
+        end
+        ret -= get_targets(sys)
+        ret[end] = 1.0
+        return ret
+    end
+
+    sys.jacobian = (state) -> ForwardDiff.jacobian(sys.rhs, state)
+    sys.kinematic_constrains! = (residual, generalized_coordinates) -> begin
+        for connector in connectors(sys)
+            compute_kinematic_residual!(residual, generalized_coordinates, sys, connector)
+        end
+    end
+    lbd = last_body_dof(sys)
+    de_ = 1:lbd;
+    mass_de_factorization = lu(sys.mass[de_, de_])
+    sys.measure! = (measurements::Vector{Float64}, state::Vector{Float64}) -> begin
+        current_rhs = sys.rhs(state)
+        dstate = similar(state)
+        fill!(dstate, zero(state[1]))
+
+        dstate[de_] = mass_de_factorization \ current_rhs[de_]
+        
+        for s_id in eachindex(sys.sensors)
+            measurements[s_id] = measure(state, dstate, sys, sys.sensors[s_id])
+        end
+        return nothing
+    end
+
+    sys.assembled = true
+end
+
+function set_initial_position!(
+    initial::Vector{Float64}, sys::MBSystem2D, 
+    body::BT, values::SVector{3, Float64}) where BT <: AbstractBody2D
+    dofs = get_body_position_dofs(sys, body)
+    initial[dofs] .= values
+end
+
+function set_initial_velocity!(
+    initial::Vector{Float64}, sys::MBSystem2D, 
+    body::BT, values::SVector{3, Float64}) where BT <: AbstractBody2D
+    dofs = get_body_velocity_dofs(sys, body)
+    initial[dofs] .= values
+end
+
+function init_measurement(sys::MBSystem2D, state::Matrix{Float64})
+    meas_len = length(sensors);
+    return Matrix{Float64}(undef, meas_len, size(state, 2);)
+end
+
+
+function cros_step(func::Function,jac::Function, mass::Matrix{T}, time_step::T, u_cur::Vector{T})::Vector{T} where T <: Real
+    ζ = (mass - (1+im)/2 * time_step * jac(u_cur))\func(u_cur);
+
+    return u_cur + time_step * real.(ζ)
+end
+
+function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, func::Function, jac::Function, time_step::T) where T<: Real
+    @assert size(sol, 1) == size(u0, 1)
+    @assert size(sol, 1) == size(func(u0),1)
+    sol[:, 1] = u0
+    for i in 2:size(sol, 2)
+        sol[:, i] = cros_step(func, jac, mass, time_step, sol[:, i-1])
+    end
+end
+
+function cros!(sol::Matrix{T}, u0::Vector{T}, mass::Matrix{T}, sys::MBSystem2D, time_step::T) where T<:Real
+    @assert size(sol, 1) == size(u0, 1)
+    @assert size(sol, 1) == size(sys.rhs(u0), 1)
+    sol[:, 1] = u0
+    for i in 2:size(sol, 2)
+        #cros_step(sys.func, sys.jac, mass, time_step, sol[:, i-1])
+        u_cur = sol[:, i-1]
+        sys.prestep(u_cur)
+        update_targets!(sys)
+        f_i = sys.rhs(u_cur)
+        ζ = (mass - (1 + im) / 2 * time_step * sys.jacobian(u_cur)) \ f_i
+        sol[:, i] = u_cur + time_step * real.(ζ);
+    end
+end
+
+function simulate(sys::MBSystem2D, initial::Vector{Float64}, time_span)
+
+    sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
+    mass = sys.mass
+    cros!(sol, initial, mass, sys, step(time_span))
+    return sol;
+end
+
+function vector_norm(x::AbstractVector, p::Real=2)
+    if p == 1
+        return sum(abs, x)
+    elseif p == 2
+        return sqrt(sum(abs2, x))
+    elseif p == Inf
+        return maximum(abs, x)
+    elseif p == -Inf
+        return minimum(abs, x)
+    elseif p > 0
+        return (sum(abs(x).^p))^(1/p)
+    else
+        throw(ArgumentError("Параметр p должен быть положительным или Inf"))
+    end
+end
+
+function matrix_norm(A::AbstractMatrix, norm_type::Symbol=:frobenius)
+    if norm_type === :one
+        # 1-норма матрицы (максимальная сумма по столбцам)
+        return maximum(sum(abs, A, dims=1)[:])
+    elseif norm_type === :inf
+        # ∞-норма матрицы (максимальная сумма по строкам)
+        return maximum(sum(abs, A, dims=2)[:])
+    elseif norm_type === :frobenius
+        # Фробениусова норма
+        return sqrt(sum(abs2, A))
+    elseif norm_type === :two
+        # 2-норма матрицы (спектральная норма)
+        return svd(A).S[1]  # Наибольшее сингулярное значение
+    elseif norm_type === :max
+        # Максимальная абсолютная величина элемента
+        return maximum(abs, A)
+    elseif norm_type === :nuclear
+        # Ядерная норма (сумма сингулярных значений)
+        return sum(svd(A).S)
+    else
+        throw(ArgumentError("Неизвестный тип нормы: $norm_type. Допустимые значения: :one, :two, :inf, :frobenius, :max, :nuclear"))
+    end
+end
+
+function norm(A::AbstractVector, p::Real=2)
+    return vector_norm(A, p)
+end
+
+function norm(A::AbstractMatrix, norm_type::Symbol=:frobenius)
+    return matrix_norm(A, norm_type)
+end
+
+function newton_step(func::Function, jac::Function, u_cur::Vector{T}, max_iter = 1000, tol_e = 1e-2) where T<: Real
+
+    u = copy(u_cur)
+    n = length(u)
+    
+    history = [copy(u)]
+    residuals = [norm(func(u))]
+
+    for iter in max_iter
+     Fx = func(u)
+        current_residual = norm(Fx)
+        push!(residuals, current_residual)
+        
+        # Проверка сходимости
+        if current_residual < tol_e
+            return u
+        end
+        
+        try
+            Ju = jac(u)
+            
+            # Решаем систему J*dx = -F
+            dx = Ju \ (-Fx)
+            
+            # Обновляем решение
+            u .+= dx
+            
+            push!(history, copy(u))
+            
+            # Проверка сходимости по изменению решения
+            if norm(dx) < tol_e * max(1.0, norm(u))
+                return x, iter, history, residuals
+            end
+            
+        catch e
+        end
+    end
+    @warn "Метод не сошёлся"
+
+    return u
+end
+
+function static_solver!(sol::Matrix{T}, u0::Vector{T}, func::Function, jac::Function) where T<: Real
+    @assert size(sol, 1) == size(u0, 1)
+    @assert size(sol, 1) == size(func(u0),1)
+    sol[:, 1] = u0
+    
+    for i in 2:size(sol, 2)
+        sol[:, i] = newton_step(func, jac, sol[:, i-1])
+    end
+
+end
+
+#
+
+function find_natural_freqs(sys::MBSystem2D, position)
+
+    bodies_in_order = sys.bodies            # берём из sys, чтобы точно знать порядок
+    nb   = last_body_dof(sys)               # = 6 * число тел
+    nλ   = last_lm_dof(sys) - nb
+    ntot = nb + nλ
+
+    pos_idx = Int[]
+    vel_idx = Int[]
+    for bd in bodies_in_order
+        ix, iy, it = get_body_position_dofs(sys, bd)
+        append!(pos_idx, (ix, iy, it))
+        vx, vy, wt = get_body_velocity_dofs(sys, bd)
+        append!(vel_idx, (vx, vy, wt))
+    end
+    λ_idx = (nb+1):ntot
+
+    npos = length(pos_idx)
+
+    func = sys.rhs
+
+    jacoby = (x) -> ForwardDiff.jacobian(func, x)
+
+
+    J = jacoby(position)
+
+    E = Flexia.get_mass_matrix(sys)
+
+    # Блоки якобиана силовой части
+    mK = -J[vel_idx, pos_idx]   # = -K_eff / m (включая геом. члены от λ)
+    mM = E[vel_idx, vel_idx]
+
+    # Матрица связей (однозначно)
+    C = J[λ_idx, pos_idx]
+
+    F_qr = qr(Matrix(C'))
+
+    Qfull = F_qr.Q * Matrix(I, npos, npos)    # принудительно расширяем до 24×24
+    r = rank(C)
+    V_n = Qfull[:, r+1:end]
+
+
+    M̃ = V_n' * mM * V_n
+    K̃ = V_n' * mK    * V_n
+
+    # Симметризуем
+    M̃_sym = Symmetric((M̃ + M̃') / 2)
+    K̃_sym = Symmetric((K̃ + K̃') / 2)
+
+    eig = eigen(Matrix(K̃_sym), Matrix(M̃_sym))
+    ω² = real.(eig.values)
+    order = sortperm(ω²)
+    ω²    = ω²[order]
+    return sqrt.(ω²) / (2π)
+end
+# include("markers.jl")
+mutable struct Body2D <: AbstractBody2D
+    mass::Float64
+    inertia::Float64
+
+    forces::Vector{Function}
+    index::Int64
+    length::Float64
+
+    function Body2D(mass, inertia; length=1.0)
+        return new(mass, inertia, [
+                (x, t) -> 0,
+                (x, t) -> 0,
+                (x, t) -> 0
+            ], -1, length)
+    end
+end
+get_index(body::Body2D) = body.index
+number_of_dofs(::Body2D) = 3
+# get_lenght(body::Body2D)
+
+function add!(sys::MBSystem2D, body::Body2D)
+    push!(sys.bodies, body)
+    # sys.bodiesnum += 1
+    bodydofs = 2 * number_of_dofs(body)
+    lbd = last_body_dof(sys)
+    push!(sys.bodiesdofs, lbd + bodydofs)
+    body.index = length(sys.bodies)
+end
+
+function get_body_position_dofs(sys::MBSystem2D, body::Body2D)
+    bid = get_index(body)
+    return SA[
+        sys.bodiesdofs[bid]-5,
+        sys.bodiesdofs[bid]-4,
+        sys.bodiesdofs[bid]-3,
+    ]
+
+end
+function get_body_velocity_dofs(sys::MBSystem2D, body::Body2D)
+    bid = get_index(body)
+    return SA[
+        sys.bodiesdofs[bid]-2,
+        sys.bodiesdofs[bid]-1,
+        sys.bodiesdofs[bid]-0,
+    ]
+end
+
+function get_body_generalized_dofs(sys::MBSystem2D, body::Body2D)
+    bid = get_index(body)
+    lg_dof = Int(sys.bodiesdofs[bid] ÷ 2)
+    return SA[
+        lg_dof - 2,
+        lg_dof - 1,
+        lg_dof - 0,
+    ]
+end
+
+function add_to_rhs!(rhs, state, sys, body)
+    last_dof = sys.bodiesdofs[body.index]
+
+    position_dofs = [
+        last_dof - 5,
+        last_dof - 4,
+        last_dof - 3,
+    ]
+
+    velocity_dofs = [
+        last_dof - 2,
+        last_dof - 1,
+        last_dof,
+    ]
+    # assemble velocities
+    rhs[position_dofs[1]] = state[velocity_dofs[1]]
+    rhs[position_dofs[2]] = state[velocity_dofs[2]]
+    rhs[position_dofs[3]] = state[velocity_dofs[3]]
+
+    rhs[velocity_dofs[1]] += body.forces[1](state[[position_dofs; velocity_dofs]], state[end])
+    rhs[velocity_dofs[2]] += body.forces[2](state[[position_dofs; velocity_dofs]], state[end])
+    rhs[velocity_dofs[3]] += body.forces[3](state[[position_dofs; velocity_dofs]], state[end])
+end
+
+function get_boundary_points(sys::MBSystem2D, body::Body2D, dofs::AbstractVector{Float64})::Tuple{Point2f, Point2f}
+    pos_inds = get_body_position_dofs(sys, body)
+    x, y, θ = dofs[pos_inds]
+
+    x1 = x - body.length/2 * cos(θ)
+    x2 = x + body.length/2 * cos(θ)
+    y1 = y - body.length/2 * sin(θ)
+    y2 = y + body.length/2 * sin(θ)
+
+    return Point2f(x1, y1), Point2f(x2, y2)
+end
+
+function setid!(conn::AbstractConnector2D, index)
+    conn.index = index
+end
+
+function add!(sys::MBSystem2D, connector::CT) where CT<:AbstractConnector2D
+    push!(sys.connectors, connector)
+    # sys.connectorsnum += 1;
+    last_connector_dof = last_lm_dof(sys) + number_of_dofs(connector)
+    push!(sys.lmdofs, last_connector_dof)
+    setid!(connector, length(sys.connectors))
+end
+
+function propagate_targets!(sys::MBSystem2D, connector::T) where T<:AbstractConnector2D
+    return nothing
+end
+
+function compute_kinematic_residual!(
+    residual::Vector{Float64}, 
+    generalized_coordinates::Vector{Float64}, 
+    sys::MBSystem2D, 
+    connector::AbstractConnector2D)
+    return nothing
+end
+
+mutable struct FixedJoint <: AbstractJoint2D
+    body::Body2D
+    pos::SVector{2,Float64}
+    θ::Float64
+    index::Int64
+
+    function FixedJoint(body::Body2D)
+        return new(body, [0, 0], 0, -1)
+    end
+end
+
+function setposition!(joint::FixedJoint, pos)
+    joint.pos = SA[pos[1], pos[2]]
+    return nothing
+end
+
+function setrotation!(joint::FixedJoint, θ)
+    joint.θ = θ
+    return nothing
+end
+
+number_of_dofs(::FixedJoint) = 3
+
+
+function get_lms(sys::MBSystem2D, joint::FixedJoint)
+    last_lm = sys.lmdofs[joint.index]
+    return SA[
+        last_lm-2,
+        last_lm-1,
+        last_lm-0,
+    ]
+end
+
+function get_fixed_point(sys::MBSystem2D, joint::FixedJoint, state::AbstractVector{Float64})
+
+    bd = joint.body
+    pos_dofs = get_body_position_dofs(sys, bd)
+
+    _xi = state[pos_dofs[1]]
+    _yi = state[pos_dofs[2]]
+
+    return Point2f(_xi, _yi)
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::FixedJoint)
+    body = joint.body
+    last_body_dof = sys.bodiesdofs[body.index]
+
+    position_dofs = [
+        last_body_dof - 5,
+        last_body_dof - 4,
+        last_body_dof - 3,
+    ]
+
+    velocity_dofs = [
+        last_body_dof - 2,
+        last_body_dof - 1,
+        last_body_dof,
+    ]
+
+    joint_dofs = get_lms(sys, joint)
+
+    rhs[velocity_dofs[1]] += state[joint_dofs[1]]
+    rhs[velocity_dofs[2]] += state[joint_dofs[2]]
+    rhs[velocity_dofs[3]] += state[joint_dofs[3]]
+
+    rhs[joint_dofs[1]] = state[position_dofs[1]] - joint.pos[1]
+    rhs[joint_dofs[2]] = state[position_dofs[2]] - joint.pos[2]
+    rhs[joint_dofs[3]] = state[position_dofs[3]] - joint.θ
+end
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::FixedJoint)
+    body = joint.body
+
+    generalized_dofs = get_body_generalized_dofs(sys, body)
+
+    joint_dofs = get_lms(sys, joint) .- last_body_dof(sys)
+
+    residual[joint_dofs[1]] = coordinates[generalized_dofs[1]] - joint.pos[1]
+    residual[joint_dofs[2]] = coordinates[generalized_dofs[2]] - joint.pos[2]
+    residual[joint_dofs[3]] = coordinates[generalized_dofs[3]] - joint.θ
+    return nothing
+end
+
+mutable struct HingeJoint <: AbstractJoint2D
+    body1::Body2D
+    body1_hinge_point::SVector{2,Float64}
+    body2::Body2D
+    body2_hinge_point::SVector{2,Float64}
+    index::Int64
+
+    function HingeJoint(bd1::Body2D, bd2::Body2D)
+        return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0], -1)
+    end
+end
+
+number_of_dofs(::HingeJoint) = 2
+function setid!(jnt::T, index) where T<:AbstractJoint2D
+    jnt.index = index
+end
+function set_position_on_first_body!(joint::HingeJoint, pos::SVector{2,Float64})
+    joint.body1_hinge_point = pos
+    return nothing
+end
+
+function set_position_on_second_body!(joint::HingeJoint, pos::SVector{2,Float64})
+    joint.body2_hinge_point = pos
+    return nothing
+end
+
+function get_lms(sys::MBSystem2D, joint::HingeJoint)
+    last_lm = sys.lmdofs[joint.index]
+    return SA[
+        last_lm-1,
+        last_lm-0,
+    ]
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
+
+    _xi = state[bd1_p_dofs[1]]
+    _yi = state[bd1_p_dofs[2]]
+    _θi = state[bd1_p_dofs[3]]
+
+    # vxi = state[bd1_v_dofs[1]]
+    # vyi = state[bd1_v_dofs[2]]
+    # _ωi = state[bd1_v_dofs[3]]
+
+    _xj = state[bd2_p_dofs[1]]
+    _yj = state[bd2_p_dofs[2]]
+    _θj = state[bd2_p_dofs[3]]
+
+    # vxj = state[bd2_v_dofs[1]]
+    # vyj = state[bd2_v_dofs[2]]
+    # _ωj = state[bd2_v_dofs[3]]
+
+    lms = get_lms(sys, joint)
+    λ1 = state[lms[1]]
+    λ2 = state[lms[2]]
+
+    xci = joint.body1_hinge_point[1]
+    yci = joint.body1_hinge_point[2]
+    xcj = joint.body2_hinge_point[1]
+    ycj = joint.body2_hinge_point[2]
+
+    rhs[bd1_v_dofs[1]] += λ1
+    rhs[bd1_v_dofs[2]] += λ2
+    rhs[bd1_v_dofs[3]] += (-xci * sin(_θi) - yci * cos(_θi)) * λ1 +
+                          (xci * cos(_θi) - yci * sin(_θi)) * λ2
+
+    rhs[bd2_v_dofs[1]] += -λ1
+    rhs[bd2_v_dofs[2]] += -λ2
+    rhs[bd2_v_dofs[3]] += (xcj * sin(_θj) + ycj * cos(_θj)) * λ1 +
+                          (-xcj * cos(_θj) + ycj * sin(_θj)) * λ2
+
+    rhs[lms[1]] = (_xi + xci * cos(_θi) - yci * sin(_θi)) -
+                  (_xj + xcj * cos(_θj) - ycj * sin(_θj))
+    rhs[lms[2]] = (_yi + xci * sin(_θi) + yci * cos(_θi)) -
+                  (_yj + xcj * sin(_θj) + ycj * cos(_θj))
+
+
+end
+
+
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::HingeJoint)
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
+    bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
+
+    joint_dofs = get_lms(sys, joint) .- last_body_dof(sys)
+
+    _xi = coordinates[bd1_g_dofs[1]]
+    _yi = coordinates[bd1_g_dofs[2]]
+    _θi = coordinates[bd1_g_dofs[3]]
+
+    _xj = coordinates[bd2_g_dofs[1]]
+    _yj = coordinates[bd2_g_dofs[2]]
+    _θj = coordinates[bd2_g_dofs[3]]
+
+    xci = joint.body1_hinge_point[1]
+    yci = joint.body1_hinge_point[2]
+    xcj = joint.body2_hinge_point[1]
+    ycj = joint.body2_hinge_point[2]
+
+    residual[joint_dofs[1]] = (_xi + xci * cos(_θi) - yci * sin(_θi)) - 
+                         (_xj + xcj * cos(_θj) - ycj * sin(_θj))
+    residual[joint_dofs[2]] = (_yi + xci * sin(_θi) + yci * cos(_θi)) -
+                         (_yj + xcj * sin(_θj) + ycj * cos(_θj))
+
+
+    return nothing;
+end
+
+function get_hinge_point(system::MBSystem2D, joint::HingeJoint, state::AbstractVector{Float64})
+    bd = joint.body1
+    pos_dofs = get_body_position_dofs(system, bd)
+    _xi = state[pos_dofs[1]]
+    _yi = state[pos_dofs[2]]
+    _θi = state[pos_dofs[3]]
+
+    xci = joint.body1_hinge_point[1]
+    yci = joint.body1_hinge_point[2]
+
+    return Point2f(
+        _xi + cos(_θi) * xci - sin(_θi) * yci,
+        _yi + sin(_θi) * xci + cos(_θi) * yci
+    )
+end
+
+mutable struct SliderJoint <: AbstractJoint2D
+    body1::Body2D
+    body1_position::SVector{2,Float64}
+    body1_direction::SVector{2,Float64}
+    body2::Body2D
+    body2_position::SVector{2,Float64}
+    body2_direction::SVector{2,Float64}
+    alpha1::Float64
+    alpha2::Float64
+    index::Int64
+
+
+    function SliderJoint(bd1::Body2D, bd2::Body2D)
+        α1 = 0;
+        α2 = 0;
+        return new(bd1, SA[0.0, 0.0], SA[1.0, 0.0], bd2, SA[0.0, 0.0], SA[1.0, 0.0], α1, α2, -1)
+    end
+end
+
+number_of_dofs(::SliderJoint) = 2
+
+function get_lms(sys::MBSystem2D, joint::SliderJoint)
+    last_lm = sys.lmdofs[joint.index]
+    return SA[
+        last_lm-1,
+        last_lm-0,
+    ]
+end
+
+function set_position_on_first_body!(joint::SliderJoint, pos::SVector{2,Float64})
+    joint.body1_position = pos
+    return nothing
+end
+
+function set_position_on_second_body!(joint::SliderJoint, pos::SVector{2,Float64})
+    joint.body2_position = pos
+    return nothing
+end
+
+function set_direction_on_first_body!(joint::SliderJoint, dir::SVector{2,Float64})
+    joint.alpha1 = atan(dir[2], dir[1])
+    joint.body1_direction = dir
+    return nothing
+end
+
+function set_direction_on_second_body!(joint::SliderJoint, dir::SVector{2,Float64})
+    joint.alpha2 = atan(dir[2], dir[1])
+    joint.body2_direction = dir
+    return nothing
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::SliderJoint)
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
+
+    _xi = state[bd1_p_dofs[1]]
+    _yi = state[bd1_p_dofs[2]]
+    _θi = state[bd1_p_dofs[3]]
+
+    # vxi = state[bd1_v_dofs[1]]
+    # vyi = state[bd1_v_dofs[2]]
+    # ωi = state[bd1_v_dofs[3]]
+
+    _xj = state[bd2_p_dofs[1]]
+    _yj = state[bd2_p_dofs[2]]
+    _θj = state[bd2_p_dofs[3]]
+
+    # vxj = state[bd2_v_dofs[1]]
+    # vyj = state[bd2_v_dofs[2]]
+    # ωj = state[bd2_v_dofs[3]]
+
+    lms = get_lms(sys, joint)
+    λ1 = state[lms[1]]
+    λ2 = state[lms[2]]
+
+    xci = joint.body1_position[1]
+    yci = joint.body1_position[2]
+    xdi = joint.body1_direction[1]
+    ydi = joint.body1_direction[2]
+
+    xcj = joint.body2_position[1]
+    ycj = joint.body2_position[2]
+    xdj = joint.body2_direction[1]
+    ydj = joint.body2_direction[2]
+
+    αi = joint.alpha1
+    αj = joint.alpha2
+    
+    # Constraint equations for slider joint:
+    # 1. Perpendicular distance between points is zero
+    # 2. Rotation difference (directions aligned)
+
+    # Position of slider points in global coordinates
+    xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
+    ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
+
+    xpj = _xj + xcj * cos(_θj) - ycj * sin(_θj)
+    ypj = _yj + xcj * sin(_θj) + ycj * cos(_θj)
+
+
+    # normal to direction in terms of first body in global CS
+    G_xni = -xdi*sin(_θi) - ydi*cos(_θi)
+    G_yni =  xdi*cos(_θi) - ydi*sin(_θi)
+
+    # Constraint 1: perpendicular distance
+    rhs[lms[1]] = (xpj - xpi) * G_xni + (ypj - ypi) * G_yni
+
+    # Constraint 2: direction alignment (rotation difference)
+    # dx_gj * dy_gi - dy_gj * dx_gi = 0 (cross product)
+    rhs[lms[2]] = _θj + αj - (_θi + αi)
+
+    # Velocity constraints
+    # For constraint 1: d/dt of the perpendicular distance
+    rhs[bd1_v_dofs[1]] += λ1 * G_xni 
+    rhs[bd1_v_dofs[2]] += λ1 * G_yni
+    rhs[bd1_v_dofs[3]] += λ1 * ((_yi - ypj) * G_xni + (xpj - _xi) * G_yni)
+
+    rhs[bd2_v_dofs[1]] += -λ1 * G_xni
+    rhs[bd2_v_dofs[2]] += -λ1 * G_yni
+    rhs[bd2_v_dofs[3]] += -λ1 * ((ypj - _yj ) * G_xni + (_xj - xpj) * G_yni)
+
+    # For constraint 2: d/dt of direction alignment
+    rhs[bd1_v_dofs[3]] += -λ2 
+    rhs[bd2_v_dofs[3]] += λ2
+end
+
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, joint::SliderJoint)
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
+    bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
+
+    _xi = coordinates[bd1_g_dofs[1]]
+    _yi = coordinates[bd1_g_dofs[2]]
+    _θi = coordinates[bd1_g_dofs[3]]
+
+    _xj = coordinates[bd2_g_dofs[1]]
+    _yj = coordinates[bd2_g_dofs[2]]
+    _θj = coordinates[bd2_g_dofs[3]]
+
+
+    xci = joint.body1_position[1]
+    yci = joint.body1_position[2]
+    xdi = joint.body1_direction[1]
+    ydi = joint.body1_direction[2]
+
+    xcj = joint.body2_position[1]
+    ycj = joint.body2_position[2]
+
+    αi = joint.alpha1
+    αj = joint.alpha2
+    
+    # Position of slider points in global coordinates
+    xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
+    ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
+
+    xpj = _xj + xcj * cos(_θj) - ycj * sin(_θj)
+    ypj = _yj + xcj * sin(_θj) + ycj * cos(_θj)
+
+
+    # normal to direction in terms of first body in global CS
+    G_xni = -xdi*sin(_θi) - ydi*cos(_θi)
+    G_yni =  xdi*cos(_θi) - ydi*sin(_θi)
+
+
+    joint_dofs = get_lms(sys, joint) .- last_body_dof(sys)
+    
+    # Constraint 1: perpendicular distance
+    residual[joint_dofs[1]] = (xpj - xpi) * G_xni + (ypj - ypi) * G_yni
+
+    # Constraint 2: direction alignment (rotation difference)
+    # dx_gj * dy_gi - dy_gj * dx_gi = 0 (cross product)
+    residual[joint_dofs[2]] = _θj + αj - (_θi + αi)
+end
+mutable struct TorsionalSpring <: AbstractForce2D
+    hinge::HingeJoint
+    stiffness::Float64
+    rest_angle::Float64
+    damping::Float64
+    vis_r::Float64
+    
+    function TorsionalSpring(hinge::HingeJoint, stiffness::Float64, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+        return new(hinge, stiffness, rest_angle, damping, vis_r)
+    end
+
+    # function TorsionalSpring(body1::Body2D, body2::Body2D, stiffness::Float64=1.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+    #     return new(body1, body2, stiffness, rest_angle, damping, vis_r)
+    # end
+end
+function TorsionalSpring(hinge::HingeJoint; stiffness::Float64=0.0, rest_angle::Float64=0.0, damping::Float64=0.0, vis_r =0.3)
+    return TorsionalSpring(hinge, stiffness, rest_angle, damping, vis_r)
+end
+number_of_dofs(::TorsionalSpring) = 0  # пружина не добавляет лагранжевых множителей
+
+function add!(sys::MBSystem2D, spring::TorsionalSpring)
+    push!(sys.forces, spring)
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::TorsionalSpring)
+    
+
+    bd1 = spring.hinge.body1
+    bd2 = spring.hinge.body2
+    
+    # Получаем индексы DOF
+    bd1_pos_dofs = get_body_position_dofs(sys, bd1)
+    bd1_vel_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_pos_dofs = get_body_position_dofs(sys, bd2)
+    bd2_vel_dofs = get_body_velocity_dofs(sys, bd2)
+    
+    # Текущие углы и угловые скорости
+    θ1 = state[bd1_pos_dofs[3]]
+    θ2 = state[bd2_pos_dofs[3]]
+    ω1 = state[bd1_vel_dofs[3]]
+    ω2 = state[bd2_vel_dofs[3]]
+    
+    # Относительное смещение и скорость
+    Δθ = θ1 - θ2 - spring.rest_angle
+    Δω = ω1 - ω2
+    
+    # Полный момент (пружина + демпфер)
+    τ = spring.stiffness * Δθ + spring.damping * Δω #+ spring.stiffness * Δθ^3
+    
+    # Добавляем в угловые ускорения
+    rhs[bd1_vel_dofs[3]] += -τ 
+    rhs[bd2_vel_dofs[3]] += τ
+end
+# Вспомогательная функция для расчета момента пружины
+function get_spring_moment(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
+    Δθ1 = θ1 - spring.rest_angle
+    Δθ2 = θ2 - spring.rest_angle
+    return spring.stiffness * (Δθ1 - Δθ2)
+end
+
+# Функция для получения энергии пружины
+function get_spring_energy(spring::TorsionalSpring, θ1::Float64, θ2::Float64)
+    Δθ1 = θ1 - spring.rest_angle
+    Δθ2 = θ2 - spring.rest_angle
+    Δθ_rel = Δθ1 - Δθ2
+    return 0.5 * spring.stiffness * Δθ_rel^2
+end
+
+mutable struct LinearSpring <: AbstractForce2D
+    joint::SliderJoint
+    stiffness::Float64
+    x_dist::Float64
+    damping::Float64
+    vis_r::Float64
+    vis_N::Int
+    
+    function LinearSpring(joint::SliderJoint, stiffness::Float64, x_dist::Float64=0.0, damping::Float64=0.0, vis_r =0.3, vis_N = 4)
+        return new(joint, stiffness, x_dist, damping, vis_r, vis_N)
+    end
+end
+
+function LinearSpring(joint::SliderJoint; stiffness::Float64=1.0, x_dist::Float64=0.0, damping::Float64=0.0, vis_r =0.3, vis_N = 4)
+    return LinearSpring(joint, stiffness, x_dist, damping, vis_r, vis_N)
+end
+
+number_of_dofs(::LinearSpring) = 0  # пружина не добавляет лагранжевых множителей
+
+function add!(sys::MBSystem2D, spring::LinearSpring)
+    push!(sys.forces, spring)
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, spring::LinearSpring)
+
+
+    joint = spring.joint
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
+
+    _xi = state[bd1_p_dofs[1]]
+    _yi = state[bd1_p_dofs[2]]
+    _θi = state[bd1_p_dofs[3]]
+
+    _xj = state[bd2_p_dofs[1]]
+    _yj = state[bd2_p_dofs[2]]
+    _θj = state[bd2_p_dofs[3]]
+
+
+    vxi = state[bd1_p_dofs[1]]
+    vyi = state[bd1_p_dofs[2]]
+
+    vxj = state[bd2_p_dofs[1]]
+    vyj = state[bd2_p_dofs[2]]
+
+
+    xci = joint.body1_position[1]
+    yci = joint.body1_position[2]
+    xdi = joint.body1_direction[1]
+    ydi = joint.body1_direction[2]
+
+    xcj = joint.body2_position[1]
+    ycj = joint.body2_position[2]
+
+    
+    xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
+    ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
+
+    xpj = _xj + xcj * cos(_θj) - ycj * sin(_θj)
+    ypj = _yj + xcj * sin(_θj) + ycj * cos(_θj)
+
+    # direction in terms of first body in global CS
+    N_xni = xdi*cos(_θi) - ydi*sin(_θi)
+    N_yni = xdi*sin(_θi) + ydi*cos(_θi)
+
+    Δx = (xpj - xpi) * N_xni + (ypj - ypi) * N_yni - spring.x_dist
+    Δv = (vxj - vxi) * N_xni + (vyj - vyi) * N_yni
+
+    F = spring.stiffness * Δx #- spring.damping * Δv #+ spring.stiffness * Δθ^3
+    Fx = F * N_xni
+    Fy = F * N_yni
+
+    rhs[bd1_v_dofs[1]] += Fx
+    rhs[bd2_v_dofs[1]] += -Fx
+
+    rhs[bd1_v_dofs[2]] += Fy
+    rhs[bd2_v_dofs[2]] += -Fy
+end
+
+
+mutable struct BodyTimeVariableForce <: AbstractForce2D
+    body::Body2D
+    pos::SVector{2, Float64}
+    dir::SVector{2, Float64}
+    force::Function
+    fx::Function
+    fy::Function
+    mt::Function
+    
+    function BodyTimeVariableForce(body::Body2D; 
+        position::SVector{2,Float64} = SA_F64[0, 0], 
+        direction::SVector{2,Float64} = SA_F64[1, 0], 
+        force::Function = (t) -> 0
+        )
+        d = normalize(direction)
+        p = position
+        fx = (t) -> force(t) * d[1]
+        fy = (t) -> force(t) * d[2]
+        mt = (t) -> force(t) * ( - d[1] * p[2] + d[2] * p[1] )
+        return new(body, position, direction, force, fx, fy, mt)
+    end
+end
+
+function set_force!(force::BodyTimeVariableForce, func::Function, dir::SVector{2, Float64}=force.dir)
+    p = force.position
+    d = normalize(dir)
+    force.fx = (t) -> func(t) * d[1]
+    force.fy = (t) -> func(t) * d[2]
+    force.mt = (t) -> func(t) * ( - d[1] * p[2] + d[2] * p[1] )
+    return nothing
+end
+function set_position!(force::BodyTimeVariableForce, pos::SVector{2, Float64})
+    p = pos
+    d = force.dir
+    func =  force.force
+    force.fx = (t) -> func(t) * d[1]
+    force.fy = (t) -> func(t) * d[2]
+    force.mt = (t) -> func(t) * ( - d[1] * p[2] + d[2] * p[1] )
+    return nothing
+end
+
+function add!(sys::MBSystem2D, force::BodyTimeVariableForce)
+    push!(sys.forces, force)
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, force::BodyTimeVariableForce)
+    bd = force.body
+    bd_v_dofs = get_body_velocity_dofs(sys, bd)
+
+    rhs[bd_v_dofs[1]] += force.fx(state[end])
+    rhs[bd_v_dofs[2]] += force.fy(state[end])
+    rhs[bd_v_dofs[3]] += force.mt(state[end])
+end
+
+
+mutable struct PositionMotor2D <: AbstractPositionActuator2D
+    joint::HingeJoint
+    target_angle::Float64
+    index::Int64
+
+    function PositionMotor2D(joint::HingeJoint, target_angle::Float64)
+        return new(joint, target_angle, -1)
+    end
+end
+
+
+
+function settarget!(act::PositionMotor2D, angle::Float64)
+    act.target_angle = angle
+    return nothing
+end
+
+number_of_dofs(::PositionMotor2D) = 1
+
+function get_lms(sys::MBSystem2D, act::PositionMotor2D)
+    
+    last_lm = sys.lmdofs[act.index]
+    return SA[last_lm]
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionMotor2D)
+    joint = act.joint
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd1_v_dofs = get_body_velocity_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+    bd2_v_dofs = get_body_velocity_dofs(sys, bd2)
+
+    θ1 = state[bd1_p_dofs[3]]
+    θ2 = state[bd2_p_dofs[3]]
+
+    ω1 = state[bd1_v_dofs[3]]
+    ω2 = state[bd2_v_dofs[3]]
+
+    lms = get_lms(sys, act)
+    λ = state[lms[1]]
+
+
+    # Constraint: θ2 - θ1 - target = 0
+    rhs[lms[1]] = θ2 - θ1
+
+    rhs[bd1_p_dofs[3]] -= λ
+    rhs[bd2_p_dofs[3]] += λ
+end
+
+function propagate_targets!(sys::MBSystem2D, act::PositionMotor2D)
+    lms = get_lms(sys, act)
+    sys.targets[lms[1]] = act.target_angle
+    return nothing
+end
+
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, act::PositionMotor2D)
+    joint = act.joint
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
+    bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
+
+    joint_dofs = get_lms(sys, act) .- last_body_dof(sys)
+
+    θ1 = coordinates[bd1_g_dofs[3]]
+    θ2 = coordinates[bd2_g_dofs[3]]
+
+    residual[joint_dofs[1]] = θ2 - θ1
+
+    return nothing
+end
+
+mutable struct PositionLinearActuator2D <: AbstractPositionActuator2D
+    joint::SliderJoint
+    target_position::Float64
+    index::Int64
+
+    function PositionLinearActuator2D(joint::SliderJoint, target_angle::Float64)
+        return new(joint, target_angle, -1)
+    end
+end
+
+
+
+function settarget!(act::PositionLinearActuator2D, position::Float64)
+    act.target_position = position
+    return nothing
+end
+
+number_of_dofs(::PositionLinearActuator2D) = 1
+
+function get_lms(sys::MBSystem2D, act::PositionLinearActuator2D)
+    
+    last_lm = sys.lmdofs[act.index]
+    return SA[last_lm]
+end
+
+
+function propagate_targets!(sys::MBSystem2D, act::PositionLinearActuator2D)
+    lms = get_lms(sys, act)
+    sys.targets[lms[1]] = act.target_position
+    return nothing
+end
+
+function add_to_rhs!(rhs, state, sys::MBSystem2D, act::PositionLinearActuator2D)
+    joint = act.joint
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_p_dofs = get_body_position_dofs(sys, bd1)
+    bd2_p_dofs = get_body_position_dofs(sys, bd2)
+
+    _xi = state[bd1_p_dofs[1]]
+    _yi = state[bd1_p_dofs[2]]
+    _θi = state[bd1_p_dofs[3]]
+
+    _xj = state[bd2_p_dofs[1]]
+    _yj = state[bd2_p_dofs[2]]
+    _θj = state[bd2_p_dofs[3]]
+
+    xci = joint.body1_position[1]
+    yci = joint.body1_position[2]
+    xdi = joint.body1_direction[1]
+    ydi = joint.body1_direction[2]
+
+    xcj = joint.body2_position[1]
+    ycj = joint.body2_position[2]
+
+    αi = joint.alpha1
+    αj = joint.alpha2
+    
+    xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
+    ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
+
+    xpj = _xj + xcj * cos(_θj) - ycj * sin(_θj)
+    ypj = _yj + xcj * sin(_θj) + ycj * cos(_θj)
+
+    # direction in terms of first body in global CS
+    N_xni = xdi*cos(_θi) - ydi*sin(_θi)
+    N_yni = xdi*sin(_θi) + ydi*cos(_θi)
+
+    lms = get_lms(sys, act)
+    λ = state[lms[1]]
+
+    rhs[lms[1]] = (xpj-xpi) * N_xni + (ypj-ypi) * N_yni
+
+    rhs[bd1_p_dofs[1]] += λ * (-N_xni)
+    rhs[bd1_p_dofs[2]] += λ * (-N_yni)
+    rhs[bd1_p_dofs[3]] += λ * ((ypj - _yi)*(N_xni) - (xpj - _xi) * N_yni)
+    
+    rhs[bd2_p_dofs[1]] += λ * (N_xni)
+    rhs[bd2_p_dofs[2]] += λ * (N_yni)
+    rhs[bd2_p_dofs[3]] += λ * ((_yj - ypj)*N_xni + (_xj - xpj)*N_yni)
+end
+
+function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vector{Float64}, sys::MBSystem2D, act::PositionLinearActuator2D)
+    joint = act.joint
+    bd1 = joint.body1
+    bd2 = joint.body2
+
+    bd1_g_dofs = get_body_generalized_dofs(sys, bd1)
+    bd2_g_dofs = get_body_generalized_dofs(sys, bd2)
+
+    joint_dofs = get_lms(sys, act) .- last_body_dof(sys)
+
+    _xi = coordinates[bd1_g_dofs[1]]
+    _yi = coordinates[bd1_g_dofs[2]]
+    _θi = coordinates[bd1_g_dofs[3]]
+
+    _xj = coordinates[bd2_g_dofs[1]]
+    _yj = coordinates[bd2_g_dofs[2]]
+    _θj = coordinates[bd2_g_dofs[3]]
+
+    xci = joint.body1_position[1]
+    yci = joint.body1_position[2]
+    xdi = joint.body1_direction[1]
+    ydi = joint.body1_direction[2]
+
+    xcj = joint.body2_position[1]
+    ycj = joint.body2_position[2]
+
+    xpi = _xi + xci * cos(_θi) - yci * sin(_θi)
+    ypi = _yi + xci * sin(_θi) + yci * cos(_θi)
+
+    xpj = _xj + xcj * cos(_θj) - ycj * sin(_θj)
+    ypj = _yj + xcj * sin(_θj) + ycj * cos(_θj)
+
+    # direction in terms of first body in global CS
+    N_xni = xdi*cos(_θi) - ydi*sin(_θi)
+    N_yni = xdi*sin(_θi) + ydi*cos(_θi)
+
+    residual[joint_dofs[1]] = (xpj-xpi) * N_xni + (ypj-ypi) * N_yni
+
+    return nothing
+end
+
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::AbstractSensor2D)::Float64
+    return NaN64
+end
+
+function add!(sys::MBSystem2D, sensor::S) where S <: AbstractSensor2D
+    push!(sys.sensors, sensor)
+    return nothing
+end
+
+mutable struct FramePositionSensor{A <: AbstractAxis} <: AbstractPositionSensor
+    body::Body2D
+    position::SVector{2, Float64}
+    axis::A
+end
+function FramePositionSensor(;body::Body2D, position::SVector{2, Float64}, axis::Union{Int64, Symbol})
+    if axis == 1 || :x || axis == :X
+        return FramePositionSensor(body, position, XAxis())
+    elseif axis == 2 || :y || axis == :Y
+        return FramePositionSensor(body, position, YAxis())
+    else
+        throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
+    end
+end
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FramePositionSensor{XAxis})::Float64
+    body = sensor.body;
+    dofs = get_body_position_dofs(sys, body);
+    x_, y_, r_ = state[dofs];
+    return first(SA_F64[cos(r_) -sin(r_)] * sensor.position) + x_;
+end
+
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FramePositionSensor{YAxis})::Float64
+    body = sensor.body;
+    dofs = get_body_position_dofs(sys, body);
+    x_, y_, r_ = state[dofs];
+    return first(SA_F64[sin(r_) cos(r_)] * sensor.position) + y_;
+end
+mutable struct FrameGlobalVelocitySensor{A <: AbstractAxis} <: AbstractSensor2D
+    body::Body2D
+    position::SVector{2, Float64}
+    axis::A
+end
+function FrameGlobalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, axis::Union{Int64, Symbol})
+    if axis == 1 || :x || axis == :X
+        return FrameGlobalVelocitySensor(body, position, XAxis())
+    elseif axis == 2 || :y || axis == :Y
+        return FrameGlobalVelocitySensor(body, position, YAxis())
+    else
+        throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
+    end
+end
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameGlobalVelocitySensor{XAxis})::Float64
+    body = sensor.body;
+    pos_dofs = get_body_position_dofs(sys, body);
+    vel_dofs = get_body_velocity_dofs(sys, body);
+    x_, y_, r_ = state[pos_dofs];
+    vx_, vy_, vr_ = state[vel_dofs];
+    p_x, p_y = sensor.position;
+
+    return vx_ - vr_ * (sin(r_) * p_x + cos(r_) * p_y);
+end
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameGlobalVelocitySensor{YAxis})::Float64
+    body = sensor.body;
+    pos_dofs = get_body_position_dofs(sys, body);
+    vel_dofs = get_body_velocity_dofs(sys, body);
+    x_, y_, r_ = state[pos_dofs];
+    vx_, vy_, vr_ = state[vel_dofs];
+    p_x, p_y = sensor.position;
+    return vy_ + vr_ * (cos(r_) * p_x - sin(r_) * p_y);
+end
+
+function add!(sys::MBSystem2D, sensor::FrameGlobalVelocitySensor)
+    push!(sys.sensors, sensor)
+    return nothing
+end
+
+
+mutable struct FrameLocalVelocitySensor{A<:AbstractAxis} <: AbstractSensor2D
+    body::Body2D
+    position::SVector{2, Float64}
+    rot::Float64
+    axis::A    
+end
+
+function FrameLocalVelocitySensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Union{Int64,Symbol})
+    if axis == 1 || :x || axis == :X
+        return FrameLocalVelocitySensor(body, position, rot, XAxis())
+    elseif axis == 2 | :y || axis == :Y
+        return FrameLocalVelocitySensor(body, position, rot, YAxis())
+    else
+        throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
+    end
+end
+
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameLocalVelocitySensor{XAxis})::Float64
+    body = sensor.body;
+    pos_dofs = get_body_position_dofs(sys, body);
+    vel_dofs = get_body_velocity_dofs(sys, body);
+    x_, y_, r_ = state[pos_dofs];
+    vx_, vy_, vr_ = state[vel_dofs];
+    s_x, s_y = sensor.position;
+    s_r = sensor.rot;
+    sin_α, cos_α = sincos(s_r);
+    sin_θ, cos_θ = sincos(r_);
+
+    return (vx_ * cos_θ + vy_ * sin_θ + vr_ * s_y) * cos_α + (-vx_ * sin_θ + vy_ * cos_θ + vr_ * s_x) * sin_α 
+end
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameLocalVelocitySensor{YAxis})::Float64
+    body = sensor.body;
+    pos_dofs = get_body_position_dofs(sys, body);
+    vel_dofs = get_body_velocity_dofs(sys, body);
+    x_, y_, r_ = state[pos_dofs];
+    vx_, vy_, vr_ = state[vel_dofs];
+    s_x, s_y = sensor.position;
+    s_r = sensor.rot;
+    sin_α, cos_α = sincos(s_r);
+    sin_θ, cos_θ = sincos(r_);
+
+    return -(vx_ * cos_θ + vy_ * sin_θ - vr_ * s_y) * sin_α + (-vx_ * sin_θ + vy_ * cos_θ + vr_ * s_x) * cos_α
+end
+
+mutable struct FrameLocalAccelerationSensor{A<:AbstractAxis} <: AbstractSensor2D
+    body::Body2D
+    position::SVector{2, Float64}
+    rot::Float64
+    axis::A    
+end
+
+function FrameLocalAccelerationSensor(;body::Body2D, position::SVector{2, Float64}, rot::Float64=0.0, axis::Union{Int64, Symbol})
+    if axis == 1 || :x || axis == :X
+        return FrameLocalAccelerationSensor(body, position, rot, XAxis())
+    elseif axis == 2 || :y || axis == :Y
+        return FrameLocalAccelerationSensor(body, position, rot, YAxis())
+    else
+        throw(ArgumentError("Axis must be either 1 (for X) or  2 (for Y) "))
+    end
+end
+
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameLocalAccelerationSensor{XAxis})::Float64
+    body = sensor.body
+    pos_dofs = get_body_position_dofs(sys, body)
+    vel_dofs = get_body_velocity_dofs(sys, body)
+    
+    θ = state[pos_dofs[3]]
+    ω = state[vel_dofs[3]]
+    
+    ax_cm = dstate[vel_dofs[1]]
+    ay_cm = dstate[vel_dofs[2]]
+    α_ang = dstate[vel_dofs[3]]
+    
+    sx, sy = sensor.position[1], sensor.position[2]
+    
+    s_θ, c_θ = sincos(θ)
+    a_body_x =  ax_cm * c_θ + ay_cm * s_θ - α_ang * sy - (ω^2) * sx
+    a_body_y = -ax_cm * s_θ + ay_cm * c_θ + α_ang * sx - (ω^2) * sy
+    
+    s_α, c_α = sincos(sensor.rot)
+    return a_body_x * c_α + a_body_y * s_α
+end
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameLocalAccelerationSensor{YAxis})::Float64
+    body = sensor.body
+    pos_dofs = get_body_position_dofs(sys, body)
+    vel_dofs = get_body_velocity_dofs(sys, body)
+    
+    θ = state[pos_dofs[3]]
+    ω = state[vel_dofs[3]]
+    
+    ax_cm = dstate[vel_dofs[1]]
+    ay_cm = dstate[vel_dofs[2]]
+    α_ang = dstate[vel_dofs[3]]
+    
+    sx, sy = sensor.position[1], sensor.position[2]
+    
+    s_θ, c_θ = sincos(θ)
+    a_body_x =  ax_cm * c_θ + ay_cm * s_θ - α_ang * sy - (ω*ω) * sx
+    a_body_y = -ax_cm * s_θ + ay_cm * c_θ + α_ang * sx - (ω*ω) * sy
+    
+    s_α, c_α = sincos(sensor.rot)
+    return -a_body_x * s_α + a_body_y * c_α
+end
+
+function Makie.lift(system, solution, body::Body2D, i::Observable)
+    return lift(i) do value
+        points = Vector{Point2f}(undef, 2)
+        points[1:2] .= get_boundary_points(system, body, view(solution, :, value))
+        return points
+    end
+end
+function Makie.lift(system, solution, joint::AbstractJoint2D, i::Observable)
+end
+
+
+function Makie.lift(system, solution, joint::HingeJoint, i::Observable)
+    p =  lift(i) do value
+        point = get_hinge_point(system, joint, view(solution, :, value)) 
+        return point;
+    end
+    return p;
+end
+function get_torsionalSpring_point(system::MBSystem2D, spring::Union{TorsionalSpring,LinearSpring}, state::AbstractVector{Float64})
+    bd1 = spring.hinge.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi1 = state[pos_dofs1[1]]
+    _yi1 = state[pos_dofs1[2]]
+    _θi1 = state[pos_dofs1[3]]
+
+    bd2 = spring.hinge.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _xi2 = state[pos_dofs2[1]]
+    _yi2 = state[pos_dofs2[2]]
+    _θi2 = state[pos_dofs2[3]]
+    R = SA_F64[
+        cos(_θi1) -sin(_θi1);
+        sin(_θi1) cos(_θi1)
+    ]
+    v = R * spring.hinge.body1_hinge_point
+    _xi = _xi1 + v[1]
+    _yi = _yi1 + v[2]
+
+    return Point2f(_xi ,_yi)
+end
+
+function get_Spring_point(system::MBSystem2D, spring::LinearSpring, state::AbstractVector{Float64})
+    bd1 = spring.joint.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi1 = state[pos_dofs1[1]]
+    _yi1 = state[pos_dofs1[2]]
+    _θi1 = state[pos_dofs1[3]]
+
+    bd2 = spring.joint.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _xi2 = state[pos_dofs2[1]]
+    _yi2 = state[pos_dofs2[2]]
+    _θi2 = state[pos_dofs2[3]]
+
+    _xi = (_yi1 - _yi2 + tan(_θi2) * _xi2 - tan(_θi1) * _xi1) / (tan(_θi2) - tan(_θi1))
+    _yi = tan(_θi2) * (_xi - _xi2) + _yi2
+
+    return Point2f(_xi ,_yi)
+end
+
+function Makie.lift(system, solution, spring::LinearSpring, i::Observable)
+    p = lift(i) do value
+        point = get_Spring_point(system, spring, view(solution, :, value))
+        bd1 = spring.joint.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = spring.joint.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        t_spring = spring.vis_r / 2
+        N = spring.vis_N
+        x_range = LinRange(_xi1, _xi2, N)
+        y_range = LinRange(_yi1, _yi2, N)
+        points = Vector{Point2f}(undef, N)
+        for j in 1:N
+            if (j == 1)
+                x = _xi1
+                y = _yi1
+            elseif (j == N)
+                x = _xi2
+                y = _yi2
+            else
+                x = x_range[j]
+                y = y_range[j] + t_spring * (-1)^j
+            end
+            points[j] = Point2f(x, y)
+        end
+        return points;
+    end
+    return p
+end
+
+function Makie.lift(system, solution, spring::TorsionalSpring, i::Observable)
+    p = lift(i) do value
+        point = get_torsionalSpring_point(system, spring, view(solution, :, value)) 
+        bd1 = spring.hinge.body1
+        pos_dofs1 = get_body_position_dofs(system, bd1)
+        _xi1, _yi1, _θi1 = view(solution, :, value)[pos_dofs1]
+
+        bd2 = spring.hinge.body2
+        pos_dofs2 = get_body_position_dofs(system, bd2)
+        _xi2, _yi2, _θi2 = view(solution, :, value)[pos_dofs2]
+
+        start_angel = _θi1 + π
+        end_angel = _θi2 + 4*π
+
+        r0 = spring.vis_r/2
+        r1 = spring.vis_r
+        N = 100
+
+        t = LinRange(start_angel, end_angel, N)
+        R = LinRange(r0, r1, N)
+        x0 = point[1]
+        y0 = point[2]
+
+        points = Vector{Point2f}(undef, N)
+        for j in 1:N
+            x = R[j] * cos(t[j]) + x0  
+            y = R[j] * sin(t[j]) + y0
+            points[j] = Point2f(x,y)
+        end
+        return points;
+    end
+    return p
+end
+
+function draw!(ax, joint::AbstractConnector2D, system::MBSystem2D, solution, iter::Observable)
+end
+function draw!(ax, joint::HingeJoint, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    scatter!(ax, hinge_point);
+end
+
+function draw!(ax, joint::TorsionalSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
+end
+
+function draw!(ax, joint::LinearSpring, system::MBSystem2D, solution, iter::Observable)
+    hinge_point = lift(system, solution, joint, iter);
+    lines!(ax, hinge_point);
+end
+function draw!(ax, force::AbstractForce2D, system::MBSystem2D, solution, iter::Observable)
+end
+
+function draw!(ax, force::BodyTimeVariableForce, system::MBSystem2D, solution, iter::Observable )
+    p = lift(iter) do value
+        bd = force.body;
+        bd_dofs = get_body_position_dofs(system, bd)
+        xb, yb, θb = solution[bd_dofs, value]
+        rot = [
+            cos(θb) -sin(θb);
+            sin(θb) cos(θb);
+        ]
+        point = Point2d([xb, yb] + rot * force.pos) 
+        return point
+    end
+
+    d = lift(iter) do value
+        bd = force.body;
+        bd_dofs = get_body_position_dofs(system, bd)
+
+        xb, yb, θb = solution[bd_dofs, value]
+        t = solution[end, value]
+        rot = [
+            cos(θb) -sin(θb);
+            sin(θb) cos(θb);
+        ]
+        
+        dir = Point2d(rot * [force.fx(t), force.fy(t)] ) 
+        return dir
+    end
+
+    arrows2d!(ax, p, d; lengthscale = 0.01)
+end
+
+# function draw!(ax, joint::FixedJoint, system::MBSystem2D, solution, iter::Observable)
+#     fixed_point = lift(system, solution, joint, iter);
+#     lines!(ax, fixed_point);
+# end
+
+
+function animate(sys::MBSystem2D, sol, time_span, filename; framerate=60, limits = (-1, 1, 1, 1))
+    fig = Figure()
+    iter = Observable(1)
+    ax = Axis(fig[1, 1], aspect = DataAspect())
+
+    for body in bodies(sys)
+        bar = lift(sys, sol, body, iter)
+        lines!(ax, bar)
+    end
+
+    for connector in connectors(sys)
+        draw!(ax, connector, sys, sol, iter)
+    end
+    for force in sys.forces
+        draw!(ax, force, sys, sol, iter)
+    end
+
+    limits!(ax, limits...)
+
+    record(fig, filename, 1:5:length(time_span);
+        framerate=framerate / 5) do t
+        iter[] = t
+    end
+end
+
+
+function draw_static(sys::MBSystem2D, sol;  limits = (-1, 1, -1, 1))
+    fig = Figure()
+    iter = Observable(1)
+    ax = Axis(fig[1, 1], aspect = DataAspect())
+
+    for body in bodies(sys)
+        bar = lift(sys, sol, body, iter)
+        lines!(ax, bar)
+    end
+
+    for connector in connectors(sys)
+        draw!(ax, connector, sys, sol, iter)
+    end
+    for force in sys.forces
+        draw!(ax, force, sys, sol, iter)
+    end
+
+    limits!(ax, limits...)
+
+    return fig;
+end
+# This file contains different useful function
+
+function set_initial_state_value!(state, sys, body, values)
+    dofs = get_body_position_dofs(sys, body)
+    state[dofs] .= values
+end
+
+function set_pos_state_value!(state, sys, body, values)
+    dofs = get_body_generalized_dofs(sys, body)
+    state[dofs] .= values
+end
+
+function getdofs(sys::MBSystem2D, body::Body2D)
+    if (body.index == -1)
+        return 0:0
+    elseif (body.index == 1)
+        return 1:sys.bodiesdofs[1]
+    else
+        return (sys.bodiesdofs[body.index-1]+1):sys.bodiesdofs[body.index]
+    end
+end
+
+
+end
+
+
+
+"""
+# end # module Flexia
+
+"""

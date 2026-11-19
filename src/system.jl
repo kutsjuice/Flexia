@@ -1,13 +1,16 @@
 mutable struct MBSystem2D
     bodies::Vector{AbstractBody2D}
+    # joints::Vector{AbstractJoint2D}
     connectors::Vector{AbstractConnector2D}
     forces::Vector{AbstractForce2D}
+    sensors::Vector{AbstractSensor2D}
     bodiesdofs::Vector{Int64}
     lmdofs::Vector{Int64}
     assembled::Bool
     rhs::Function
     jacobian::Function
     prestep::Function
+    measure!::Function
     kinematic_constrains!::Function
     targets::Vector{Float64}
     mass::Matrix{Float64}
@@ -17,12 +20,14 @@ mutable struct MBSystem2D
         bodies = Vector{AbstractBody2D}([])
         connectors = Vector{AbstractJoint2D}([])
         forces = Vector{AbstractForce2D}([])
+        sensors = Vector{AbstractSensor2D}([])
         bodiesdofs = Vector{Int64}([])
         lmdofs = Vector{Int64}([])
         assembeld = false
         default_rhs = (x) -> nothing
         default_jacobian = (x) -> nothing
         default_prestep = (x) -> nothing
+        default_measure = (measurements, state) -> nothing
         default_kinematic_constrains = (residual, q) -> nothing
         targets = Vector{Float64}([])
         mass = Matrix{Float64}([;;])
@@ -30,19 +35,24 @@ mutable struct MBSystem2D
             bodies,
             connectors, 
             forces,
+            sensors,
             bodiesdofs, 
             lmdofs,
             assembeld,
             default_rhs, 
             default_jacobian,
             default_prestep, 
-            default_kinematic_constrains)
+            default_measure,
+            default_kinematic_constrains, 
+            targets, 
+            mass)
     end
 end
 
 get_mass_matrix(sys::MBSystem2D) = sys.mass
 number_of_bodies(sys::MBSystem2D) = length(sys.bodies)
 bodies(sys::MBSystem2D) = sys.bodies
+joints(sys::MBSystem2D) = sys.joints
 connectors(sys::MBSystem2D) = sys.connectors
 
 get_targets(sys::MBSystem2D) = sys.targets
@@ -69,6 +79,7 @@ function last_lm_dof(sys::MBSystem2D)
 end
 
 number_of_dofs(sys) = last_lm_dof(sys) + 1
+number_of_generalized_coordinates(sys) = length(sys.bodies) * 3
 
 function assemble!(sys)
     state_length = number_of_dofs(sys) 
@@ -120,6 +131,21 @@ function assemble!(sys)
             compute_kinematic_residual!(residual, generalized_coordinates, sys, connector)
         end
     end
+    lbd = last_body_dof(sys)
+    de_ = 1:lbd;
+    mass_de_factorization = lu(sys.mass[de_, de_])
+    sys.measure! = (measurements::Vector{Float64}, state::Vector{Float64}) -> begin
+        current_rhs = sys.rhs(state)
+        dstate = similar(state)
+        fill!(dstate, zero(state[1]))
+
+        dstate[de_] = mass_de_factorization \ current_rhs[de_]
+        
+        for s_id in eachindex(sys.sensors)
+            measurements[s_id] = measure(state, dstate, sys, sys.sensors[s_id])
+        end
+        return nothing
+    end
 
     sys.assembled = true
 end
@@ -136,4 +162,18 @@ function set_initial_velocity!(
     body::BT, values::SVector{3, Float64}) where BT <: AbstractBody2D
     dofs = get_body_velocity_dofs(sys, body)
     initial[dofs] .= values
+end
+
+function init_measurement(sys::MBSystem2D, state::Matrix{Float64})
+    meas_len = length(sensors);
+    return Matrix{Float64}(undef, meas_len, size(state, 2);)
+end
+
+
+
+
+function update_act_jacobian!(sys::MBSystem2D, jac::Matrix{Float64})
+    for connector in connectors(sys)
+        update_jacobian!(sys, jac, connector)
+    end
 end

@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 using StaticArrays
 
@@ -31,9 +31,9 @@ set_direction_on_second_body!(slider_joint, SA[1.0, 0.0])
 
 hinge_joint = HingeJoint(slider, crank)
 set_position_on_first_body!(hinge_joint, SA[0.0, 0.0])
-set_position_on_second_body!(hinge_joint, SA[-crank.length/2, 0.0])
+set_position_on_second_body!(hinge_joint, SA[-L/2, 0.0])
 
-slider_actuator = PositionLinearActuator2D(slider_joint, 0.0)
+slider_actuator = PositionLinearActuator2D(slider_joint, 0.0, 0.0)
 
 spring_damper = TorsionalSpring(hinge_joint; stiffness=0.0, damping=0.1, vis_r=0.1)
 
@@ -48,8 +48,8 @@ add!(sys, spring_damper)
 initial_state = zeros(number_of_dofs(sys))
 
 crank_θ = π/2
-crank_x = -1 + crank.length/2 * cos(crank_θ)
-crank_y = crank.length/2 * sin(crank_θ)
+crank_x = -1 + L/2 * cos(crank_θ)
+crank_y = L/2 * sin(crank_θ)
 set_initial_position!(initial_state, sys, crank, SA_F64[crank_x, crank_y, crank_θ])
 
 slider_x = -1
@@ -91,7 +91,9 @@ sys.prestep = (state) -> begin
     # err = ŷ - y
     # u = K * (ŷ - y)
     # u = y[1] + 0.005 * err[1]
-    settarget!(slider_actuator,  slider_x + sin(t - π/2) + sin(π/2))
+    # Position target plus its analytic derivative: the actuator stores both,
+    # otherwise ∂f/∂t in the jacobian disagrees with the target itself.
+    settarget!(slider_actuator, slider_x + sin(t - π/2) + sin(π/2), cos(t - π/2))
 end
 
 crank_θ = π/2 + 0.0001
@@ -102,7 +104,10 @@ time_span = 0:0.0025:10
 ratio = 1
 sol = simulate(sys, initial_state, time_span)
 
-animate(sys, sol, ratio*time_span, "out/inverted_pendulum.mp4"; framerate=floor(Int64, 1.0/(ratio * step(time_span))), limits=(-2, 2, -2, 2))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/inverted_pendulum.mp4", 1:5:length(ratio*time_span); framerate = (floor(Int64, 1.0/(ratio * step(time_span)))) / 5) do t
+    p.time = t
+end
 
 ##
 for_spy(mat) = reverse(mat', dims=2)

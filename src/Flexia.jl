@@ -7,36 +7,9 @@ using ForwardDiff
 # export MBSystem
 # export Body2D
 
-export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D
-
-export Body2D
-export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring
-export PositionMotor2D, PositionLinearActuator2D
-export MBSystem2D
-
-# connectors
-export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!
-# bodies
-
-export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment
-
-# solve
-export cros!, static_solver!, simulate
-
-# Actuators
-export settarget!
-
-# system
-export add!, assemble!, get_mass_matrix
-export set_initial_position!, set_initial_velocity!
-
-# visualization
-export animate
-
-export test_func
 
 
-test_func() = 1
+export AbstractBody2D, AbstractConnector2D, AbstractActuator2D, AbstractJoint2D, AbstractPositionActuator2D, AbstractSensor2D
 
 abstract type AbstractBody2D end
 abstract type AbstractConnector2D end
@@ -44,16 +17,82 @@ abstract type AbstractForce2D end
 abstract type AbstractJoint2D <: AbstractConnector2D end
 abstract type AbstractActuator2D <: AbstractConnector2D end
 abstract type AbstractPositionActuator2D <: AbstractActuator2D end
+abstract type AbstractSensor2D end
+abstract type AbstractPositionSensor <: AbstractSensor2D end
+abstract type AbstractVelocitySensor <: AbstractSensor2D end
+abstract type AbstractAccelerationSensor <: AbstractSensor2D end
+
+
+abstract type AbstractAxis end
+struct XAxis <: AbstractAxis end
+struct YAxis <: AbstractAxis end
+
+export Body2D
+export FixedJoint, HingeJoint, SliderJoint, TorsionalSpring, LinearSpring
+export PositionMotor2D, PositionLinearActuator2D
+export MBSystem2D
+
+# connectors
+export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!, set_visualization!
+# bodies
+export bodies, number_of_bodies, connectors
+
+export get_body_position_dofs, get_body_velocity_dofs, number_of_dofs, last_body_dof, last_lm_dof, get_boundary_points, get_lms, get_spring_moment, get_spring_energy, number_of_generalized_coordinates, get_body_generalized_dofs
+
+# forces
+export BodyTimeVariableForce, set_force!, set_position!
+
+# solve
+export cros!, static_solver!, simulate, find_natural_freqs
+
+# Actuators
+export settarget!
+
+# Sensors
+export FramePositionSensor, FrameGlobalVelocitySensor, FrameLocalVelocitySensor, FrameLocalAccelerationSensor
+
+# system
+export add!, assemble!, get_mass_matrix
+export set_initial_position!, set_initial_velocity!
+
+# визуализация: визуальные компаньоны + рецепты Makie
+# (бэкенд выбирает пользователь: GLMakie / CairoMakie / WGLMakie)
+export AbstractVisual, NoVisual, Attachment, VisualStyle
+export AbstractBodyVisual, AbstractConnectorVisual, AbstractForceVisual
+export BarVisual, RectVisual, CircleVisual, MeshVisual, Link2DVisual
+export HingeVisual, FixedVisual, SliderVisual
+export LinearSpringVisual, TorsionalSpringVisual, ArrowVisual
+export visual, set_visualization!, resolve_style
+export systemplot, systemplot!, systemfigure
+export trajectory_limits
+export bodyplot, bodyplot!, hingeplot, fixedplot, sliderplot
+export linearspringplot, torsionalspringplot, arrowplot
+
+# utils
+export set_initial_state_value!, set_pos_state_value! 
+
+export test_func
+
+
+test_func() = 1
 
 include("system.jl")
 include("solvers.jl")
 # include("markers.jl")
+# visuals.jl идёт до математических типов: они используют AbstractVisual
+# в аннотации поля-компаньона.
+include("visuals.jl")
 include("bodies.jl")
 include("connectors.jl")
 include("joints.jl")
 include("forces.jl")
 include("actuators.jl")
-include("visualize.jl")
+include("sensors.jl")
+# plotdata.jl — чистая геометрия, диспетчеризуется по компаньонам
+include("plotdata.jl")
+# recipes.jl — рецепты Makie (зависит только от Makie, не от бэкенда)
+include("recipes.jl")
+include("utils.jl")
 
 function getdofs(sys::MBSystem2D, body::Body2D)
     if (body.index == -1)

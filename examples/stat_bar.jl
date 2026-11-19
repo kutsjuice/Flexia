@@ -1,6 +1,6 @@
-using Pkg; Pkg.activate("./examples")
+using Pkg; Pkg.activate(@__DIR__)
 using Flexia
-using GLMakie
+using CairoMakie
 using ForwardDiff
 
 using StaticArrays
@@ -85,7 +85,10 @@ time_span = range(time_start, time_end, time_step)
 sol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 # cros!(sol, initial, mass, func, jacoby, step(time_span))
 static_solver!( sol , initial, func, jacoby)
-animate(sys, sol, time_span, "out/stat_bar13.mp4"; framerate = floor(Int64, 1.0/step(time_span)), limits = (-5,5, -5, 5))
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/stat_bar13.mp4", 1:5:length(time_span); framerate = (floor(Int64, 1.0/step(time_span))) / 5) do t
+    p.time = t
+end
 #
 R1 = get_lms(sys, jnt1)
 R2 = get_lms(sys, jnt2)
@@ -161,7 +164,10 @@ sol2 = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))
 
 cros!(sol2, initial2, mass, func, jacoby, step(time_span))
 
-animate(sys, sol2, time_span, "out/dyn_bar13.mp4"; framerate = 30, limits = (-5,5, -5, 5))
+fig, ax, p = systemfigure(sys, sol2)
+record(fig, "out/dyn_bar13.mp4", 1:5:length(time_span); framerate = (30) / 5) do t
+    p.time = t
+end
 
 lms111 = sol2[R1[1], time_step]
 lms122 = sol2[R1[2], time_step]

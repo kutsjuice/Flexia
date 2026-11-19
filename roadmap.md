@@ -6,11 +6,16 @@
    3. Implement Slider Joint (✔)
    4. Make Module (✔) and split into scripts (✔)
    5. Add tests (3%)
-   6. Visualization (GLMakie):
+   6. Visualization on Makie recipes (backend-independent):
       1. Bodies as rods (✔)
       2. Hinges as sircles (✔)
-      3. Sliders as rectangles ( )
-      4. Fixed as dash lines ( )
+      3. Sliders as rectangles (✔)
+      4. Fixed as dash lines (✔)
+      5. Визуальные компаньоны, вынос графики из математических типов (✔)
+      6. Тела не только «палка»: прямоугольник, круг, 2D-меш (✔)
+      7. Рецепты Makie, бэкенд подключается независимо (✔)
+      8. Автолимиты по траектории (✔)
+      9. Раскраска по напряжениям через `VisualStyle(color = f)` (заложено, не реализовано)
    7. Add dissipation to the joints - ( )
 2. 3D problems
    1. 3D body

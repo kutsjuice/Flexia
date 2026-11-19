@@ -21,3 +21,7 @@ function compute_kinematic_residual!(
     connector::AbstractConnector2D)
     return nothing
 end
+
+function update_jacobian!(sys::MBSystem2D, jac::Matrix{Float64}, connector::AbstractConnector2D)
+    return nothing;
+end
