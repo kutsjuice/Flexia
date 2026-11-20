@@ -1,0 +1,155 @@
+# Сборка и публикация документации
+
+Это руководство — проект Quarto (тип `book`). Один и тот же исходный текст
+собирается в три формата:
+
+- **HTML** — многостраничный сайт для GitHub Pages;
+- **DOCX** — один файл Word;
+- **PDF** — один файл через LaTeX (`xelatex`).
+
+## Что нужно установить
+
+- **Quarto** 1.4 или новее (проверено на 1.7.32);
+- **TeX** с `xelatex` — MiKTeX или TeX Live (нужен только для PDF);
+- **шрифты с кириллицей**. В `_quarto.yml` заданы `Times New Roman` (текст),
+  `Arial` (заголовки) и `Consolas` (код) — они есть в Windows. На Linux/macOS
+  замените их, например, на `DejaVu Serif`, `DejaVu Sans` и
+  `DejaVu Sans Mono`.
+
+::: {.callout-warning}
+## Кириллица в PDF
+Если шрифт не содержит кириллицы, в PDF пропадут русские буквы — обычно
+сначала это видно на титульной странице (остаются только латинские
+фрагменты). Проверяйте `mainfont`, `sansfont` и `monofont` в `_quarto.yml`.
+:::
+
+## Команды
+
+Из корня клона:
+
+```powershell
+quarto render docs                 # all three formats
+quarto render docs --to html       # HTML site only
+quarto render docs --to docx       # DOCX only
+quarto render docs --to pdf        # PDF only
+quarto preview docs                # live preview of the site
+```
+
+Результат складывается в `docs/_book/`:
+
+| Файл | Что это |
+| --- | --- |
+| `docs/_book/index.html` | точка входа HTML-сайта |
+| `docs/_book/Flexia-manual.pdf` | PDF |
+| `docs/_book/Flexia-manual.docx` | DOCX |
+
+Имя PDF и DOCX задаётся полем `book.output-file` в `_quarto.yml`. Каталог
+`_book` в git не попадает.
+
+## Устройство проекта
+
+```
+docs/
+  _quarto.yml          конфигурация книги и форматов
+  index.qmd            введение
+  installation.qmd     установка и первый запуск
+  model.qmd            уравнения и вектор состояния
+  bodies.qmd           тела
+  joints.qmd           связи
+  forces.qmd           силы
+  actuators.qmd        приводы
+  sensors.qmd          датчики
+  solving.qmd          динамика, статика, частоты
+  visualization.qmd    визуализация
+  examples.qmd         каталог примеров
+  api.qmd              справочник API
+  troubleshooting.qmd  ограничения (приложение)
+  publishing.qmd       эта глава (приложение)
+  deploy-pages.ps1     публикация в ветку pages
+  figures/             рисунки и make_figures.jl
+  _book/               результат сборки (не в git)
+```
+
+`execute.enabled: false` в `_quarto.yml` означает, что код в примерах при
+сборке не исполняется: документация статическая и собирается без Julia.
+
+## Публикация в ветку `pages`
+
+Собранный сайт публикуется в ветку `pages` репозитория. Скрипт:
+
+```powershell
+.\docs\deploy-pages.ps1
+```
+
+Параметры:
+
+| Параметр | По умолчанию | Назначение |
+| --- | --- | --- |
+| `-SkipRender` | выкл. | не пересобирать, опубликовать уже готовый `_book` |
+| `-Remote` | `origin` | имя git-remote |
+| `-Branch` | `pages` | ветка публикации |
+| `-Message` | дата и время | сообщение коммита |
+| `-NoPush` | выкл. | собрать ветку локально, но не пушить |
+
+Что делает скрипт:
+
+1. проверяет наличие `quarto` и собирает книгу (если не указан
+   `-SkipRender`);
+2. проверяет, что `index.html`, `Flexia-manual.pdf` и `Flexia-manual.docx`
+   на месте;
+3. клонирует репозиторий во временный каталог, чтобы не трогать рабочую
+   копию;
+4. переключается на ветку `pages` (если её нет — создаёт сиротскую ветку),
+   очищает её и копирует туда содержимое `_book`;
+5. добавляет `.nojekyll` (чтобы GitHub Pages не обрабатывал сайт Jekyll);
+6. коммитит и пушит ветку в `origin`;
+7. удаляет временный каталог.
+
+Ветка `pages` — сгенерированная: не редактируйте её руками, изменения
+потеряются при следующей публикации.
+
+### Настройка GitHub Pages
+
+В репозитории: **Settings > Pages > Build and deployment**:
+
+- Source: **Deploy from a branch**;
+- Branch: **`pages`**, folder **`/` (root)**.
+
+После первого пуша GitHub Pages соберёт сайт за минуту-другую. Адрес для
+репозитория `kutsjuice/Flexia`:
+
+<https://kutsjuice.github.io/Flexia/>
+
+### Публикация без PowerShell
+
+Те же шаги вручную (Linux/macOS или любой терминал):
+
+```bash
+repo=$(pwd)
+quarto render docs
+tmp=$(mktemp -d)
+git clone "$repo" "$tmp"
+cd "$tmp"
+git checkout --orphan pages
+git rm -rf .
+cp -R "$repo/docs/_book/." .
+touch .nojekyll
+git add -A
+git commit -m "docs: publish compiled manual"
+git push origin pages
+```
+
+Если ветка `pages` уже существует, вместо `--orphan` используйте
+`git fetch origin pages && git checkout -B pages FETCH_HEAD` и не удаляйте
+историю: тогда пуш пройдёт без силы.
+
+## Если сборка падает
+
+- **`quarto` не найден** — добавьте каталог `bin` Quarto в `PATH`.
+- **PDF: `xelatex` не найден** — установите MiKTeX/TeX Live и проверьте
+  `xelatex --version`.
+- **PDF: пропала кириллица** — шрифт без кириллицы; см. предупреждение выше.
+- **DOCX/PDF не пересобрались** — проверьте, что `_book` не открыт в другой
+  программе.
+- **Пуш отклонён** — проверьте доступ к remote (`git ls-remote origin`) и
+  права на ветку `pages`; ветка `master` защищена, но `pages` — нет.

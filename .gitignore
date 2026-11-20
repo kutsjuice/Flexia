@@ -5,3 +5,7 @@ out/*
 */*/.quarto/
 */*/*_files/
 *.html
+
+# Compiled documentation (published to the "pages" branch)
+docs/_book/
+docs/.quarto/

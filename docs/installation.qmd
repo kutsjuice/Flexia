@@ -1,0 +1,170 @@
+# Установка и первый запуск
+
+## Требования
+
+- **Julia.** Пакет рассчитан на Julia 1.10 и новее; проверялся на 1.12.4.
+  Окружение примеров использует секцию `[sources]` в `Project.toml`, поэтому
+  для запуска `examples/` нужна Julia 1.11 или новее.
+- **Зависимости пакета** (`StaticArrays`, `Makie`, `LinearAlgebra`,
+  `ForwardDiff`) ставятся автоматически и перечислены в `Project.toml`.
+- **Бэкенд Makie** для отрисовки выбирается пользователем: `CairoMakie`
+  (без дисплея), `GLMakie` (интерактивное окно), `WGLMakie` (браузер).
+- **Quarto и LaTeX** нужны только для сборки этого руководства, а не для
+  работы с библиотекой.
+
+## Подключение пакета
+
+Пакет не публикуется в общем реестре, поэтому его подключают из локального
+клона репозитория:
+
+```julia
+using Pkg
+Pkg.develop(path = "C:/dev/Flexia")   # package directory with Project.toml
+```
+
+Дальше пакет доступен по имени:
+
+```julia
+using Flexia
+```
+
+Если пакет опубликован в вашем реестре, вместо `develop` можно использовать
+`Pkg.add("Flexia")`.
+
+## Окружение примеров
+
+Сценарии из `examples/` работают в отдельном окружении, в котором
+`Flexia` подключена по относительному пути:
+
+```powershell
+# from the repository root
+julia --project=examples -e 'using Pkg; Pkg.instantiate()'
+julia --project=examples examples/pendulum.jl
+```
+
+Сценарии сами активируют каталог `examples/`, но файлы результата пишут
+относительно текущего каталога, поэтому запускать их удобнее из корня клона:
+видео окажутся в `out/`.
+
+## Бэкенд визуализации
+
+Пакет зависит только от ядра `Makie`, поэтому бэкенд подключается в скрипте
+пользователя:
+
+```julia
+using Flexia
+using CairoMakie        # headless: files, server, CI
+# using GLMakie         # interactive window
+# using WGLMakie        # browser / WebGL
+```
+
+Устанавливается бэкенд в то окружение, откуда запускается скрипт:
+
+```julia
+using Pkg
+Pkg.add("CairoMakie")   # or "GLMakie", or "WGLMakie"
+```
+
+`CairoMakie` и `GLMakie` при первом запуске компилируются несколько минут —
+это нормально. В окружении без дисплея `GLMakie` не работает; для сервера,
+CI и записи файлов используйте `CairoMakie`.
+
+## Первый расчёт
+
+Ниже — полный сценарий: маятник на шарнире, гравитация, запись видео.
+Сохраните его в файл, например `first_run.jl`, и запустите
+`julia --project=. first_run.jl` из окружения, где подключены `Flexia`,
+`CairoMakie` и `StaticArrays`.
+
+```julia
+using Flexia
+using CairoMakie
+using StaticArrays
+
+const g = 9.81
+
+# 1. Bodies: a heavy ground body and a 1 m link.
+ground = Body2D(1.0e6, 1.0e6; length = 0.01)
+link   = Body2D(1.0, 1.0; length = 1.0)
+
+# 2. Forces: gravity acts on the link (slots are [Fx, Fy, Mz]).
+link.forces[2] = (state, t) -> -link.mass * g
+
+# 3. Ground joint and hinge. Attach points are in body-local coordinates.
+fix = FixedJoint(ground)
+setposition!(fix, SA[0.0, 0.0])
+setrotation!(fix, 0.0)
+
+hinge = HingeJoint(ground, link)
+set_position_on_first_body!(hinge, SA[0.0, 0.0])
+set_position_on_second_body!(hinge, SA[-0.5, 0.0])
+
+# 4. System: bodies first, then connectors, then assemble.
+sys = MBSystem2D()
+add!(sys, ground)
+add!(sys, link)
+add!(sys, fix)
+add!(sys, hinge)
+assemble!(sys)
+
+# 5. Initial state: the link is horizontal, to the right of the hinge.
+initial = zeros(number_of_dofs(sys))
+set_initial_position!(initial, sys, link, SA[0.5, 0.0, 0.0])
+
+# 6. Solve and animate.
+sol = simulate(sys, initial, 0:0.001:10.0)
+mkpath("out")
+fig, ax, p = systemfigure(sys, sol)
+record(fig, "out/first_run.mp4", 1:5:size(sol, 2); framerate = 30) do t
+    p.time = t
+end
+```
+
+Что важно в этом сценарии:
+
+- `add!` назначает сущности индекс в системе; до `assemble!` система не готова
+  к расчёту.
+- `assemble!` возвращает `nothing`; проверять результат в `if` не нужно и
+  нельзя — `if (!assemble!(sys))` сработает всегда.
+- Начальное состояние должно удовлетворять уравнениям связей. Если поставить
+  тело в несовместимое положение, решатель начнёт с переходного процесса.
+- Матрица `sol` имеет размер `number_of_dofs(sys) × length(time_span)`;
+  `sol[:, k]` — вектор состояния в момент `time_span[k]`.
+- `record` ожидает целочисленный `framerate`; шаг по кадрам задаётся первым
+  аргументом-диапазоном.
+
+Статичный кадр вместо видео:
+
+```julia
+p.time = 500
+save("out/frame.png", fig)
+```
+
+Проверка результата без картинок:
+
+```julia
+size(sol)                                  # (number of dof, number of frames)
+θ_idx = get_body_position_dofs(sys, link)[3]
+sol[θ_idx, end]                            # link angle at the end of the run
+```
+
+## Проверка установки
+
+```julia
+using Pkg
+Pkg.test()        # run the test suite
+```
+
+Тесты геометрии и визуальных компаньонов проходят без установленного бэкенда;
+рендер проверяется headless на `CairoMakie`.
+
+## Частые ошибки установки
+
+- **`UndefVarError: Figure not defined`** — не загружен бэкенд Makie.
+  Добавьте `using CairoMakie` (или `GLMakie`) до вызова `systemfigure`.
+- **`GLMakie` падает без дисплея** — используйте `CairoMakie` для файлов и
+  серверов.
+- **Долгая первая сборка** — Makie компилируется долго; последующие запуски
+  быстрее.
+- **Несовместимые версии Makie** — держите `Flexia` и бэкенд в одном
+  окружении и не смешивайте версии из разных проектов.

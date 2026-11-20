@@ -1,0 +1,242 @@
+# Визуализация
+
+Визуализация построена на **рецептах Makie**. Пакет зависит только от `Makie`
+core, поэтому бэкенд подключается независимо — выберите его в своём скрипте:
+
+```julia
+using Flexia
+using CairoMakie        # headless: files, server, CI
+# using GLMakie         # interactive window
+# using WGLMakie        # browser / WebGL (video recording is limited)
+```
+
+Полный цикл — построить сцену, перейти на кадр, записать анимацию:
+
+```julia
+fig, ax, p = systemfigure(sys, sol)      # limits are computed over the trajectory
+save("frame.png", fig)
+
+record(fig, "out.mp4", 1:5:size(sol, 2); framerate = 40) do t
+    p.time = t                           # the scene is not rebuilt
+end
+```
+
+Если нужна своя ось:
+
+```julia
+fig = Figure()
+ax = Axis(fig[1, 1], aspect = DataAspect())
+p = systemplot!(ax, sys, sol; show_forces = false)
+```
+
+Интерактивно (GLMakie) — тот же объект графика:
+
+```julia
+slider = Slider(fig[1, 2], range = 1:size(sol, 2))
+on(slider.value) do t
+    p.time = t
+end
+```
+
+## Визуальные компаньоны
+
+То, **как** выглядит сущность, вынесено из математических типов в отдельные
+объекты-компаньоны. Тело — не обязательно «палка»:
+
+```julia
+bd = Body2D(1.0, 1.0; length = 0.5)                        # BarVisual, as before
+bd = Body2D(1.0, 1.0; visual = RectVisual(width = 0.4, height = 0.3))
+bd = Body2D(1.0, 1.0; visual = CircleVisual(radius = 0.25))
+bd = Body2D(1.0, 1.0; visual = MeshVisual(points = contour))
+bd = Body2D(1.0, 1.0; visual = Link2DVisual(length = 1.0, width = 0.25))
+
+set_visualization!(bd, CircleVisual(radius = 0.1))          # replace at runtime
+```
+
+`Link2DVisual` — звено со скруглёнными концами: объединение прямоугольника
+`length × width` и двух кружков радиуса `width / 2` с центрами в `±length / 2`.
+Центры скруглений совпадают с концами `BarVisual` той же длины, то есть с
+типовыми точками крепления шарниров, поэтому такая форма ложится на механизм
+без подгонки. Габарит по длине при этом `length + width`.
+
+Готовый пример: `examples/crankshaft_link2d.jl` (копия `crankshaft.jl` с
+кривошипом и шатуном в виде `Link2DVisual`).
+
+Компаньон описывает только то, что не меняется во времени: форму, размеры,
+прикрепление (смещение и доворот в локальной системе тела) и стиль. Всё, что
+зависит от кадра, берётся из решения.
+
+![Пять форм тела: `BarVisual`, `RectVisual`, `CircleVisual`, `Link2DVisual` и `MeshVisual`.](figures/body-visuals.png){#fig-body-visuals width=100%}
+
+### Таблица компаньонов
+
+| Компаньон | Для какой сущности | Основные поля |
+| --- | --- | --- |
+| `BarVisual` | тело | `length`, `width` |
+| `RectVisual` | тело | `width`, `height` |
+| `CircleVisual` | тело | `radius` |
+| `MeshVisual` | тело | `points`, `closed`, `filled` |
+| `Link2DVisual` | тело | `length`, `width` |
+| `HingeVisual` | шарнир | `markersize`, `marker` |
+| `FixedVisual` | заделка | `hatch_length`, `hatch_height_ratio`, `hatch_step_ratio` |
+| `SliderVisual` | ползун | `axis_length`, `slider_length`, `slider_width`, `prism_style` |
+| `LinearSpringVisual` | линейная пружина | `coil_radius`, `n_coils` |
+| `TorsionalSpringVisual` | крутильная пружина | `coil_radius`, `n_points` |
+| `ArrowVisual` | внешняя сила | `scale`, `head_size` |
+| `NoVisual` | любая | сущность не рисуется |
+
+У всех компаньонов есть поля `attachment::Attachment` и `style::VisualStyle`.
+`Attachment` задаёт, где фигура прикреплена к телу:
+
+```julia
+Attachment(offset = SA[0.0, -0.25], angle = π / 2)
+```
+
+- `offset` — смещение в локальной системе тела;
+- `angle` — доворот фигуры относительно тела.
+
+### Стиль
+
+`color = nothing` (по умолчанию) означает «взять цвет из палитры Makie» —
+разные сущности получают разные цвета. Явный цвет слота палитры не
+расходует:
+
+```julia
+set_visualization!(bd, CircleVisual(radius = 0.1,
+                                    style = VisualStyle(color = :red, linewidth = 3)))
+```
+
+Цвет может быть функцией от состояния — заложено для раскраски по
+напряжениям:
+
+```julia
+style = VisualStyle(color = (sys, sol, t, entity) -> stress(entity) > 100 ? :red : :blue)
+```
+
+`VisualStyle` также содержит `strokecolor`, `alpha`, `linestyle`, `visible`,
+`zorder` и `label`. Значения `nothing` означают «взять из темы Makie».
+
+### Не всё должно рисоваться
+
+У датчиков, приводов и прочих сущностей компаньона нет — они молча
+пропускаются. Это легальный случай, а не ошибка:
+
+```julia
+visual(sensor) isa NoVisual     # => true, nothing to draw
+```
+
+Спрятать отдельный экземпляр, не меняя тип: `VisualStyle(visible = false)`.
+
+### `MeshVisual` — произвольный контур
+
+```julia
+contour = [Point2f(0.0, 0.0), Point2f(1.0, 0.0), Point2f(1.0, 0.3), Point2f(0.0, 0.3)]
+bd = Body2D(1.0, 0.1; visual = MeshVisual(points = contour))
+```
+
+- точки задаются в локальной системе тела;
+- `closed` замыкает контур, `filled` включает заливку (`poly!`) вместо
+  контура (`lines!`);
+- цвет контура или заливки можно задать функцией через `style.color` — это
+  точка расширения для раскраски по напряжениям.
+
+## Своя форма тела
+
+Новый тип компаньона плюс два метода — без правок математики и существующих
+рецептов:
+
+```julia
+struct HexVisual <: AbstractBodyVisual
+    radius::Float64
+end
+
+function Flexia.body_contour(x, y, θ, v::HexVisual)
+    att = Attachment()
+    points = Point2f[]
+    for a in range(0, 2π; length = 7)
+        p = Point2f(v.radius * cos(a), v.radius * sin(a))
+        push!(points, Flexia.to_global(x, y, θ, att, p))
+    end
+    return points
+end
+
+function Flexia._draw_body!(p::Flexia.BodyPlot, v::HexVisual)
+    pts = Makie.lift(p.time) do t
+        Flexia.body_contour(p.system[], p.body[], view(p.solution[], :, t))
+    end
+    Makie.lines!(p, pts)
+    return p
+end
+```
+
+Первый метод задаёт геометрию контура (он же используется для автолимитов и
+тестов), второй — собственно отрисовку в рецепте тела. Оба метода —
+внутренние точки расширения: их имена могут измениться в следующих версиях.
+
+## Порядок отрисовки
+
+`VisualStyle(zorder = ...)`; при равных значениях порядок — как при
+добавлении: тела, соединения, силы. Сортировка устойчивая, поэтому одинаковые
+`zorder` не перемешиваются.
+
+## Пределы и кадры
+
+`systemfigure` по умолчанию берёт границы по всей траектории:
+
+```julia
+fig, ax, p = systemfigure(sys, sol)                    # limits = :auto
+fig, ax, p = systemfigure(sys, sol; limits = nothing)  # keep Makie limits
+fig, ax, p = systemfigure(sys, sol; limits = (0, 2, -1, 1))
+```
+
+Автограницы считает `trajectory_limits(sys, sol; margin = 0.05, stride = 1)`:
+один раз по всей траектории, поэтому при записи видео картинка не «дрожит».
+Считаются только тела — стрелки сил могут выходить за отступ.
+
+Отдельные части сцены можно отключить:
+
+```julia
+p = systemplot!(ax, sys, sol; show_bodies = true,
+                show_connectors = true, show_forces = false)
+```
+
+### Запись видео и кадров
+
+```julia
+record(fig, "out/run.mp4", 1:5:size(sol, 2); framerate = 30) do t
+    p.time = t
+end
+```
+
+- `p.time` — номер кадра, целое число от `1` до `size(sol, 2)`;
+- диапазон `1:5:...` задаёт прореживание кадров;
+- `framerate` должен быть целым — иначе Makie выводит предупреждение;
+- `record` создаёт каталог? Нет: каталог для файла должен существовать
+  (`mkpath("out")`);
+- для статичного кадра используйте `save("out/frame.png", fig)`.
+
+`WGLMakie` умеет показывать сцену в браузере, но запись видео в нём
+ограничена — для файлов берите `CairoMakie` или `GLMakie`.
+
+## Структура визуализации
+
+| Файл | Содержимое |
+| --- | --- |
+| `src/visuals.jl` | типы компаньонов, `Attachment`, `VisualStyle`, доступ `visual` |
+| `src/plotdata.jl` | чистая геометрия по состоянию — без Makie-графиков, тестируется без бэкенда |
+| `src/recipes.jl` | рецепты Makie; зависимость только от `Makie`, не от бэкенда |
+
+В `src/plotdata.jl` живут чистые функции геометрии: `body_contour`,
+`fixed_joint_hatch_points`, `slider_axis_points`, `slider_prism_points`,
+`linear_spring_points`, `torsional_spring_points`, `force_anchor` и
+`trajectory_limits`. Они принимают систему и вектор состояния и возвращают
+точки — их можно тестировать и использовать без Makie.
+
+## Тесты визуализации
+
+Тесты геометрии и компаньонов работают без установленного бэкенда; рендер
+проверяется headless на `CairoMakie`:
+
+```julia
+using Pkg; Pkg.test()
+```

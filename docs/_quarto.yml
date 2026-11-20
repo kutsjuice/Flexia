@@ -1,0 +1,69 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "Flexia: руководство пользователя"
+  subtitle: "Плоская динамика многотельных систем на Julia"
+  author: "Flexia contributors"
+  date: today
+  output-file: "Flexia-manual"
+  chapters:
+    - index.qmd
+    - installation.qmd
+    - model.qmd
+    - bodies.qmd
+    - joints.qmd
+    - forces.qmd
+    - actuators.qmd
+    - sensors.qmd
+    - solving.qmd
+    - visualization.qmd
+    - examples.qmd
+    - api.qmd
+  appendices:
+    - troubleshooting.qmd
+    - publishing.qmd
+  downloads: [pdf, docx]
+  page-footer:
+    left: "Flexia — руководство пользователя"
+    right: "Собрано в Quarto"
+
+lang: ru
+
+# Документация статическая: код в примерах не исполняется при сборке.
+execute:
+  enabled: false
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-copy: true
+    code-overflow: wrap
+    link-external-newwindow: true
+    fig-cap-location: bottom
+    number-sections: false
+  docx:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-cap-location: bottom
+  pdf:
+    pdf-engine: xelatex
+    documentclass: scrreprt
+    papersize: a4
+    mainfont: "Times New Roman"
+    sansfont: "Arial"
+    monofont: "Consolas"
+    geometry:
+      - top=22mm
+      - bottom=22mm
+      - left=22mm
+      - right=22mm
+    colorlinks: true
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    fig-cap-location: bottom

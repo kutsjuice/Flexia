@@ -1,0 +1,137 @@
+# Справочник API
+
+Ниже — экспортируемые имена, сгруппированные по назначению. Полные сигнатуры
+с описанием аргументов — в docstring'ах исходников (`src/*.jl`).
+
+## Типы и конструкторы
+
+| Имя | Конструктор |
+| --- | --- |
+| `MBSystem2D` | `MBSystem2D()` |
+| `Body2D` | `Body2D(mass, inertia; length = 1.0, visual = BarVisual(...))` |
+| `FixedJoint` | `FixedJoint(body; visual = FixedVisual())` |
+| `HingeJoint` | `HingeJoint(body1, body2; visual = HingeVisual())` |
+| `SliderJoint` | `SliderJoint(body1, body2; vis_axis_length = 2.0, vis_slider_length = 0.5, vis_slider_width = 0.2, visual = SliderVisual(...))` |
+| `TorsionalSpring` | `TorsionalSpring(hinge, stiffness, rest_angle = 0.0, damping = 0.0, vis_r = 0.3)` или `TorsionalSpring(hinge; stiffness, rest_angle, damping, vis_r)` |
+| `LinearSpring` | `LinearSpring(joint, stiffness, x_dist = 0.0, damping = 0.0, vis_r = 0.3, vis_N = 4)` или `LinearSpring(joint; stiffness, x_dist, damping, vis_r, vis_N)` |
+| `BodyTimeVariableForce` | `BodyTimeVariableForce(body; position, direction, force, visual)` |
+| `PositionMotor2D` | `PositionMotor2D(hinge, target_angle, current_velocity)` |
+| `PositionLinearActuator2D` | `PositionLinearActuator2D(slider, target_position, current_velocity)` |
+| `FramePositionSensor` | `FramePositionSensor(body = ..., position = ..., axis = :x)` |
+| `FrameGlobalVelocitySensor` | `FrameGlobalVelocitySensor(body = ..., position = ..., axis = :x)` |
+| `FrameLocalVelocitySensor` | `FrameLocalVelocitySensor(body = ..., position = ..., rot = 0.0, axis = :x)` |
+| `FrameLocalAccelerationSensor` | `FrameLocalAccelerationSensor(body = ..., position = ..., rot = 0.0, axis = :x)` |
+
+Абстрактные типы для расширения: `AbstractBody2D`, `AbstractConnector2D`,
+`AbstractJoint2D`, `AbstractActuator2D`, `AbstractPositionActuator2D`,
+`AbstractSensor2D`. Типы `AbstractForce2D`, `AbstractPositionSensor`,
+`AbstractVelocitySensor` и `AbstractAccelerationSensor` объявлены в модуле, но
+не экспортируются.
+
+## Система
+
+| Функция | Назначение |
+| --- | --- |
+| `add!(sys, entity)` | добавить тело, связь, силу, привод или датчик |
+| `assemble!(sys)` | собрать матрицу масс, правую часть, якобиан, слоты уставок |
+| `bodies(sys)` | вектор тел |
+| `connectors(sys)` | вектор коннекторов (связи и приводы) |
+| `number_of_bodies(sys)` | число тел |
+| `number_of_dofs(sys)` | полная длина вектора состояния |
+| `last_body_dof(sys)` | последний индекс dof тел |
+| `last_lm_dof(sys)` | последний индекс блока `λ` |
+| `number_of_generalized_coordinates(sys)` | `3 × число тел` |
+| `get_mass_matrix(sys)` | матрица масс `sys.mass` |
+| `get_body_position_dofs(sys, body)` | индексы `(x, y, θ)` |
+| `get_body_velocity_dofs(sys, body)` | индексы `(vx, vy, ω)` |
+| `get_body_generalized_dofs(sys, body)` | индексы тела в упакованном векторе координат |
+| `get_lms(sys, connector)` | индексы `λ` коннектора |
+| `get_boundary_points(sys, body, state)` | две крайние точки контура тела |
+| `set_initial_position!(initial, sys, body, SVector{3})` | записать позицию в начальное состояние |
+| `set_initial_velocity!(initial, sys, body, SVector{3})` | записать скорости в начальное состояние |
+| `set_initial_state_value!(state, sys, body, values)` | записать `(x, y, θ)` в полный вектор состояния |
+| `set_pos_state_value!(state, sys, body, values)` | записать `(x, y, θ)` в упакованный вектор координат |
+| `get_spring_moment(spring, θ1, θ2)` | момент крутильной пружины |
+| `get_spring_energy(spring, θ1, θ2)` | энергия крутильной пружины |
+
+## Связи, приводы и силы
+
+| Функция | Назначение |
+| --- | --- |
+| `setposition!(joint::FixedJoint, pos)` | абсолютная точка заделки |
+| `setrotation!(joint::FixedJoint, θ)` | абсолютный угол заделки |
+| `set_position_on_first_body!(joint, SVector{2})` | точка крепления на первом теле |
+| `set_position_on_second_body!(joint, SVector{2})` | точка крепления на втором теле |
+| `set_direction_on_first_body!(joint, SVector{2})` | направление оси на первом теле |
+| `set_direction_on_second_body!(joint, SVector{2})` | направление на втором теле |
+| `settarget!(act, value, rate)` | новая цель привода и её производная |
+| `set_force!(force::BodyTimeVariableForce, func, dir = force.dir)` | функция силы |
+| `set_position!(force::BodyTimeVariableForce, pos)` | точка приложения силы |
+
+## Расчёт
+
+| Функция | Назначение |
+| --- | --- |
+| `simulate(sys, initial, time_span)` | динамика методом CROS; возвращает матрицу решения |
+| `cros!(sol, u0, mass, sys, h)` | один прогон CROS с обработкой `prestep`, уставок и приводов |
+| `cros!(sol, u0, mass, func, jac, h)` | низкоуровневый CROS по готовым `func` и `jac` |
+| `static_solver!(sol, u0, func, jac; ...)` | статика; см. главу «Расчёт» |
+| `find_natural_freqs(sys, state)` | собственные частоты в Гц |
+
+## Визуализация
+
+| Функция | Назначение |
+| --- | --- |
+| `systemfigure(sys, sol; limits = :auto)` | `Figure` с осью в `DataAspect` и готовым графиком |
+| `systemplot(sys, sol)` | рецепт всей системы, возвращает `(fig, ax, plot)` |
+| `systemplot!(ax, sys, sol; show_bodies, show_connectors, show_forces)` | добавить систему в существующую ось |
+| `trajectory_limits(sys, sol; margin, stride)` | габарит траектории `(xmin, xmax, ymin, ymax)` |
+| `bodyplot(sys, sol, body)` | рецепт одного тела |
+| `hingeplot(sys, sol, joint)` | рецепт шарнира |
+| `fixedplot(sys, sol, joint)` | рецепт заделки |
+| `sliderplot(sys, sol, joint)` | рецепт ползуна |
+| `linearspringplot(sys, sol, spring)` | рецепт линейной пружины |
+| `torsionalspringplot(sys, sol, spring)` | рецепт крутильной пружины |
+| `arrowplot(sys, sol, force)` | рецепт вектора силы |
+| `visual(entity)` | визуальный компаньон сущности |
+| `set_visualization!(entity, visual)` | назначить компаньон |
+| `resolve_style(value, sys, sol, t, entity)` | разрешить константу или функцию стиля |
+
+Компаньоны: `NoVisual`, `AbstractVisual`, `AbstractBodyVisual`,
+`AbstractConnectorVisual`, `AbstractForceVisual`, `Attachment`, `VisualStyle`,
+`BarVisual`, `RectVisual`, `CircleVisual`, `MeshVisual`, `Link2DVisual`,
+`HingeVisual`, `FixedVisual`, `SliderVisual`, `LinearSpringVisual`,
+`TorsionalSpringVisual`, `ArrowVisual`.
+
+## Внутренние точки расширения
+
+Эти имена не входят в публичный контракт, но используются при добавлении
+новых сущностей и форм:
+
+- `add_to_rhs!(rhs, state, sys, entity)` — вклад сущности в правую часть;
+- `number_of_dofs(::T)` — число `λ` сущности;
+- `get_lms(sys, entity)` — индексы `λ`;
+- `compute_kinematic_residual!(residual, coordinates, sys, entity)` — остаток
+  кинематики;
+- `propagate_targets!(sys, actuator)` — перенос уставки в `sys.targets`;
+- `update_jacobian!(sys, jac, actuator)` — вклад привода в якобиан;
+- `body_contour(sys, body, state)`, `to_global(x, y, θ, att, p)` — геометрия;
+- `fixed_joint_hatch_points`, `slider_axis_points`, `slider_prism_points`,
+  `linear_spring_points`, `torsional_spring_points`, `force_anchor` —
+  геометрия отрисовки;
+- `_draw_body!(plot, visual)` — отрисовка тела в рецепте.
+
+## Обозначения полей системы
+
+`MBSystem2D` — изменяемая структура. Полезные поля после `assemble!`:
+
+| Поле | Содержимое |
+| --- | --- |
+| `bodies`, `connectors`, `forces`, `sensors` | добавленные сущности |
+| `bodiesdofs`, `lmdofs` | границы блоков dof |
+| `mass` | матрица масс |
+| `rhs`, `jacobian` | правая часть и её якобиан |
+| `prestep` | функция, вызываемая перед шагом |
+| `targets` | уставки приводов |
+| `measure!` | функция снятия измерений |
+| `assembled` | признак собранной системы |
