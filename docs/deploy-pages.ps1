@@ -120,8 +120,13 @@ try {
 
     Invoke-Git -Path $TempDir -Arguments @("remote", "set-url", "origin", $OriginUrl)
 
-    & git -C $TempDir fetch --quiet origin $Branch 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $remoteBranch = & git -C $TempDir ls-remote --heads origin $Branch
+    if ($LASTEXITCODE -ne 0) {
+        throw "cannot reach remote '$Remote' ($OriginUrl)"
+    }
+
+    if ($remoteBranch) {
+        Invoke-Git -Path $TempDir -Arguments @("fetch", "--quiet", "origin", $Branch)
         Invoke-Git -Path $TempDir -Arguments @("checkout", "--quiet", "-B", $Branch, "FETCH_HEAD")
     }
     else {
