@@ -1,0 +1,948 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Flexia: руководство пользователя",
+    "section": "",
+    "text": "Введение\nFlexia — библиотека на Julia для расчёта динамики плоских многотельных механизмов. Механизм собирается из тел и связей: твёрдые стержни, шарниры, ползуны, заделки, пружины, внешние силы, датчики и позиционные приводы. Уравнения движения интегрируются напрямую по абсолютным координатам, а визуализация строится на рецептах Makie.",
+    "crumbs": [
+      "Введение"
+    ]
+  },
+  {
+    "objectID": "index.html#что-умеет-библиотека",
+    "href": "index.html#что-умеет-библиотека",
+    "title": "Flexia: руководство пользователя",
+    "section": "Что умеет библиотека",
+    "text": "Что умеет библиотека\n\nДинамика. Интегрирование индексированной DAE методом CROS (комплексный Rosenbrock, L-устойчивый) с шагом, который задаёт пользователь.\nСтатика. Равновесие F(u) = 0 методом Ньютона, включая путь по псевдовремени (нагружение шагами) и автоматическое дробление шага.\nСобственные частоты. Линеаризация в положении равновесия и решение обобщённой задачи на собственные значения.\nСвязи. Заделка (FixedJoint), шарнир (HingeJoint), ползун (SliderJoint).\nСилы. Гравитация и произвольные силы через слоты тела, крутильные и линейные пружины, внешняя сила, зависящая от времени.\nПриводы. Позиционный моментный привод на шарнире и позиционный линейный привод на ползуне.\nДатчики. Положение, скорость и ускорение точки, закреплённой на теле.\nВизуализация. Компаньоны-описания внешнего вида, рецепты Makie и готовые systemfigure / systemplot!.",
+    "crumbs": [
+      "Введение"
+    ]
+  },
+  {
+    "objectID": "index.html#что-пока-не-реализовано",
+    "href": "index.html#что-пока-не-реализовано",
+    "title": "Flexia: руководство пользователя",
+    "section": "Что пока не реализовано",
+    "text": "Что пока не реализовано\n\nТолько плоскость (2D). Трёхмерные тела, шаровые шарниры и пространственные силы в текущей версии отсутствуют.\nНет контакта, трения и ограничений на ход (joint limits).\nНет аналитического якобиана: якобиан правой части считается плотным автоматическим дифференцированием ForwardDiff.\nАдаптивного шага по времени нет: шаг интегрирования выбирает пользователь.\nНет ограничений на силу и момент приводов: привод задаёт движение, а не предельное усилие.",
+    "crumbs": [
+      "Введение"
+    ]
+  },
+  {
+    "objectID": "index.html#как-читать-руководство",
+    "href": "index.html#как-читать-руководство",
+    "title": "Flexia: руководство пользователя",
+    "section": "Как читать руководство",
+    "text": "Как читать руководство\n\n\n\n\n\n\n\nГлава\nО чём\n\n\n\n\nУстановка и первый запуск\nподключение пакета, окружение примеров, бэкенды Makie, первый расчёт\n\n\nКак устроена модель\nуравнения, вектор состояния, матрица масс, жизненный цикл системы\n\n\nТела\nBody2D, силы на теле, инерция\n\n\nСоединения\nзаделка, шарнир, ползун, реакции связей\n\n\nСилы\nгравитация, пружины, внешняя сила\n\n\nПриводы\nмоментный и линейный позиционные приводы\n\n\nДатчики\nчетыре типа датчиков и снятие измерений\n\n\nРасчёт\nCROS, статика, собственные частоты, постобработка\n\n\nВизуализация\nкомпаньоны, рецепты Makie, анимация\n\n\nПримеры\nкаталог сценариев из examples/\n\n\nСправочник API\nсгруппированные сигнатуры экспортируемых функций\n\n\n\nПриложения:\n\nОграничения и частые проблемы — известные особенности текущей версии.\nСборка и публикация документации — как пересобрать это руководство и опубликовать его в ветку pages.",
+    "crumbs": [
+      "Введение"
+    ]
+  },
+  {
+    "objectID": "index.html#соглашения",
+    "href": "index.html#соглашения",
+    "title": "Flexia: руководство пользователя",
+    "section": "Соглашения",
+    "text": "Соглашения\n\nЕдиницы — СИ: метры, килограммы, секунды, ньютоны, ньютон-метры, радианы. Углы в формулах и в векторе состояния — в радианах.\nУглы отсчитываются против часовой стрелки; гравитация направлена по -y.\nКоординаты точек крепления связей и координаты точек на теле задаются в локальной системе этого тела; положение и угол тела в состоянии — абсолютные.\nКод, идентификаторы и сообщения коммитов в проекте — на английском; это руководство — на русском.",
+    "crumbs": [
+      "Введение"
+    ]
+  },
+  {
+    "objectID": "index.html#где-взять-код",
+    "href": "index.html#где-взять-код",
+    "title": "Flexia: руководство пользователя",
+    "section": "Где взять код",
+    "text": "Где взять код\nРепозиторий: https://github.com/kutsjuice/Flexia. Клон репозитория содержит src/ (исходники пакета), examples/ (готовые сценарии), test/, theory/ и research/. Это руководство лежит в каталоге docs/ того же репозитория и собирается Quarto.",
+    "crumbs": [
+      "Введение"
+    ]
+  },
+  {
+    "objectID": "installation.html",
+    "href": "installation.html",
+    "title": "Установка и первый запуск",
+    "section": "",
+    "text": "Требования",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#требования",
+    "href": "installation.html#требования",
+    "title": "Установка и первый запуск",
+    "section": "",
+    "text": "Julia. Пакет рассчитан на Julia 1.10 и новее; проверялся на 1.12.4. Окружение примеров использует секцию [sources] в Project.toml, поэтому для запуска examples/ нужна Julia 1.11 или новее.\nЗависимости пакета (StaticArrays, Makie, LinearAlgebra, ForwardDiff) ставятся автоматически и перечислены в Project.toml.\nБэкенд Makie для отрисовки выбирается пользователем: CairoMakie (без дисплея), GLMakie (интерактивное окно), WGLMakie (браузер).\nQuarto и LaTeX нужны только для сборки этого руководства, а не для работы с библиотекой.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#подключение-пакета",
+    "href": "installation.html#подключение-пакета",
+    "title": "Установка и первый запуск",
+    "section": "Подключение пакета",
+    "text": "Подключение пакета\nПакет не публикуется в общем реестре, поэтому его подключают из локального клона репозитория:\nusing Pkg\nPkg.develop(path = \"C:/dev/Flexia\")   # package directory with Project.toml\nДальше пакет доступен по имени:\nusing Flexia\nЕсли пакет опубликован в вашем реестре, вместо develop можно использовать Pkg.add(\"Flexia\").",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#окружение-примеров",
+    "href": "installation.html#окружение-примеров",
+    "title": "Установка и первый запуск",
+    "section": "Окружение примеров",
+    "text": "Окружение примеров\nСценарии из examples/ работают в отдельном окружении, в котором Flexia подключена по относительному пути:\n# from the repository root\njulia --project=examples -e 'using Pkg; Pkg.instantiate()'\njulia --project=examples examples/pendulum.jl\nСценарии сами активируют каталог examples/, но файлы результата пишут относительно текущего каталога, поэтому запускать их удобнее из корня клона: видео окажутся в out/.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#бэкенд-визуализации",
+    "href": "installation.html#бэкенд-визуализации",
+    "title": "Установка и первый запуск",
+    "section": "Бэкенд визуализации",
+    "text": "Бэкенд визуализации\nПакет зависит только от ядра Makie, поэтому бэкенд подключается в скрипте пользователя:\nusing Flexia\nusing CairoMakie        # headless: files, server, CI\n# using GLMakie         # interactive window\n# using WGLMakie        # browser / WebGL\nУстанавливается бэкенд в то окружение, откуда запускается скрипт:\nusing Pkg\nPkg.add(\"CairoMakie\")   # or \"GLMakie\", or \"WGLMakie\"\nCairoMakie и GLMakie при первом запуске компилируются несколько минут — это нормально. В окружении без дисплея GLMakie не работает; для сервера, CI и записи файлов используйте CairoMakie.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#первый-расчёт",
+    "href": "installation.html#первый-расчёт",
+    "title": "Установка и первый запуск",
+    "section": "Первый расчёт",
+    "text": "Первый расчёт\nНиже — полный сценарий: маятник на шарнире, гравитация, запись видео. Сохраните его в файл, например first_run.jl, и запустите julia --project=. first_run.jl из окружения, где подключены Flexia, CairoMakie и StaticArrays.\nusing Flexia\nusing CairoMakie\nusing StaticArrays\n\nconst g = 9.81\n\n# 1. Bodies: a heavy ground body and a 1 m link.\nground = Body2D(1.0e6, 1.0e6; length = 0.01)\nlink   = Body2D(1.0, 1.0; length = 1.0)\n\n# 2. Forces: gravity acts on the link (slots are [Fx, Fy, Mz]).\nlink.forces[2] = (state, t) -&gt; -link.mass * g\n\n# 3. Ground joint and hinge. Attach points are in body-local coordinates.\nfix = FixedJoint(ground)\nsetposition!(fix, SA[0.0, 0.0])\nsetrotation!(fix, 0.0)\n\nhinge = HingeJoint(ground, link)\nset_position_on_first_body!(hinge, SA[0.0, 0.0])\nset_position_on_second_body!(hinge, SA[-0.5, 0.0])\n\n# 4. System: bodies first, then connectors, then assemble.\nsys = MBSystem2D()\nadd!(sys, ground)\nadd!(sys, link)\nadd!(sys, fix)\nadd!(sys, hinge)\nassemble!(sys)\n\n# 5. Initial state: the link is horizontal, to the right of the hinge.\ninitial = zeros(number_of_dofs(sys))\nset_initial_position!(initial, sys, link, SA[0.5, 0.0, 0.0])\n\n# 6. Solve and animate.\nsol = simulate(sys, initial, 0:0.001:10.0)\nmkpath(\"out\")\nfig, ax, p = systemfigure(sys, sol)\nrecord(fig, \"out/first_run.mp4\", 1:5:size(sol, 2); framerate = 30) do t\n    p.time = t\nend\nЧто важно в этом сценарии:\n\nadd! назначает сущности индекс в системе; до assemble! система не готова к расчёту.\nassemble! возвращает nothing; проверять результат в if не нужно и нельзя — if (!assemble!(sys)) сработает всегда.\nНачальное состояние должно удовлетворять уравнениям связей. Если поставить тело в несовместимое положение, решатель начнёт с переходного процесса.\nМатрица sol имеет размер number_of_dofs(sys) × length(time_span); sol[:, k] — вектор состояния в момент time_span[k].\nrecord ожидает целочисленный framerate; шаг по кадрам задаётся первым аргументом-диапазоном.\n\nСтатичный кадр вместо видео:\np.time = 500\nsave(\"out/frame.png\", fig)\nПроверка результата без картинок:\nsize(sol)                                  # (number of dof, number of frames)\nθ_idx = get_body_position_dofs(sys, link)[3]\nsol[θ_idx, end]                            # link angle at the end of the run",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#проверка-установки",
+    "href": "installation.html#проверка-установки",
+    "title": "Установка и первый запуск",
+    "section": "Проверка установки",
+    "text": "Проверка установки\nusing Pkg\nPkg.test()        # run the test suite\nТесты геометрии и визуальных компаньонов проходят без установленного бэкенда; рендер проверяется headless на CairoMakie.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "installation.html#частые-ошибки-установки",
+    "href": "installation.html#частые-ошибки-установки",
+    "title": "Установка и первый запуск",
+    "section": "Частые ошибки установки",
+    "text": "Частые ошибки установки\n\nUndefVarError: Figure not defined — не загружен бэкенд Makie. Добавьте using CairoMakie (или GLMakie) до вызова systemfigure.\nGLMakie падает без дисплея — используйте CairoMakie для файлов и серверов.\nДолгая первая сборка — Makie компилируется долго; последующие запуски быстрее.\nНесовместимые версии Makie — держите Flexia и бэкенд в одном окружении и не смешивайте версии из разных проектов.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Установка и первый запуск</span>"
+    ]
+  },
+  {
+    "objectID": "model.html",
+    "href": "model.html",
+    "title": "Как устроена модель",
+    "section": "",
+    "text": "Уравнения движения\nFlexia не редуцирует координаты: каждое тело описывается тремя абсолютными координатами (x, y, θ), а каждая голономная связь добавляет свой блок множителей Лагранжа λ. Система записывается как индексированная DAE:\n\\[\nM \\dot{q} = f(q) + \\Phi_q^{\\mathsf{T}} \\lambda + u_{\\text{targets}},\n\\qquad \\Phi(q) = 0 .\n\\]\nЗдесь M — матрица масс, q — координаты и скорости, f — внешние силы и кинематические соотношения q̇ = v, Φ — уравнения связей, λ — реакции связей. Такая форма даёт простую сборку: каждая связь независимо дописывает свои строки в правую часть.\nПрактические следствия:",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#уравнения-движения",
+    "href": "model.html#уравнения-движения",
+    "title": "Как устроена модель",
+    "section": "",
+    "text": "размер вектора состояния больше числа физических степеней свободы;\nматрица масс вырождена: в позициях λ стоят нули;\nжёсткость снимается интегрированием в комплексной плоскости (метод CROS, см. главу «Расчёт»).",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#вектор-состояния",
+    "href": "model.html#вектор-состояния",
+    "title": "Как устроена модель",
+    "section": "Вектор состояния",
+    "text": "Вектор состояния\nСостояние — плоский Vector{Float64} фиксированной длины. Для тела с номером i (нумерация с 1 в порядке добавления в систему):\n\n\n\n\n\n\n\n\nБлок\nИндексы\nЧто там\n\n\n\n\nПозиция тела i\n6i-5 … 6i-3\n(x, y, θ)\n\n\nСкорость тела i\n6i-2 … 6i\n(vx, vy, ω)\n\n\nМножители связи k\nподряд после тел\nnumber_of_dofs(connector) значений\n\n\nВремя\nпоследний элемент\nt, при этом rhs[end] = 1, mass[end, end] = 1\n\n\n\nИнварианты:\n\nnumber_of_dofs(sys) = last_lm_dof(sys) + 1 — полная длина состояния;\nlast_body_dof(sys) = 6 * number_of_bodies(sys);\nблок λ связи k занимает lmdofs[k] - number_of_dofs + 1 … lmdofs[k], конкретные индексы возвращает get_lms(sys, connector).\n\nПример: два тела и две связи (заделка, 3 λ, и шарнир, 2 λ) дают 12 + 5 + 1 = 18 элементов состояния.\nОтдельно от состояния существует вектор обобщённых координат: в нём упакованы только позиции тел, 3 * number_of_bodies(sys) значений. Индексы для тела i возвращает get_body_generalized_dofs; этот вектор используется при проверке кинематики связей и в set_pos_state_value!.\n\nДоступ к индексам\ni = get_body_position_dofs(sys, body)   # SVector{3,Int}: (x, y, θ)\nj = get_body_velocity_dofs(sys, body)   # SVector{3,Int}: (vx, vy, ω)\nk = get_lms(sys, joint)                 # lambda indices of this connector\nВсе три функции требуют, чтобы сущность уже была добавлена в систему (add!): до этого её индекс равен -1.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#матрица-масс",
+    "href": "model.html#матрица-масс",
+    "title": "Как устроена модель",
+    "section": "Матрица масс",
+    "text": "Матрица масс\nassemble! собирает sys.mass один раз на текущую структуру:\n\nединичный блок I(3) для позиционных dof;\nDiagonal([m, m, J]) для скоростных dof;\n1.0 в позиции слота времени;\nнули на месте λ.\n\nМатрица намеренно вырождена, поэтому обращать её нельзя. Её блок для тел используется в CROS и в расчёте ускорений датчиками.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#правая-часть",
+    "href": "model.html#правая-часть",
+    "title": "Как устроена модель",
+    "section": "Правая часть",
+    "text": "Правая часть\nsys.rhs(state) — замыкание, которое складывает вклады:\n\nтел: q̇ = v и пользовательские силы из body.forces;\nсвязей: реакции λ в скоростные dof и уравнения связей в dof λ;\nсил: моменты пружин и внешние силы;\nвычитает уставки приводов sys.targets и принудительно ставит rhs[end] = 1.0.\n\nЯкобиан sys.jacobian — плотный якобиан этой правой части, посчитанный ForwardDiff. Он пересчитывается на каждом шаге интегрирования.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#жизненный-цикл-системы",
+    "href": "model.html#жизненный-цикл-системы",
+    "title": "Как устроена модель",
+    "section": "Жизненный цикл системы",
+    "text": "Жизненный цикл системы\n# 1. Create the entities.\nbd  = Body2D(1.0, 0.1; length = 1.0)\njnt = HingeJoint(ground, bd)\n\n# 2. Add them to the system. Addition order defines numbering and indices.\nsys = MBSystem2D()\nadd!(sys, bd)\nadd!(sys, jnt)\n\n# 3. Build the mass matrix, right-hand side, Jacobian and target slots.\nassemble!(sys)\n\n# 4. Set the initial state and solve.\ninitial = zeros(number_of_dofs(sys))\nset_initial_position!(initial, sys, bd, SA[0.0, 1.0, 0.0])\nsol = simulate(sys, initial, 0:0.001:10.0)\nПорядок важен:\n\nТела добавляются до связей. add! для связи читает last_lm_dof(sys) и last_body_dof(sys), поэтому тела должны быть уже в системе.\nСвязи и силы добавляются до assemble!. После сборки структура зафиксирована; если добавить сущность позже, нужно собрать систему заново.\nassemble! ничего не возвращает. Флаг готовности лежит в sys.assembled.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#начальные-условия",
+    "href": "model.html#начальные-условия",
+    "title": "Как устроена модель",
+    "section": "Начальные условия",
+    "text": "Начальные условия\nНачальное состояние — обычный Vector{Float64} длины number_of_dofs(sys):\ninitial = zeros(number_of_dofs(sys))\nset_initial_position!(initial, sys, body, SA[x, y, θ])\nset_initial_velocity!(initial, sys, body, SA[vx, vy, ω])   # only if nonzero\nПро начальные условия стоит помнить следующее.\n\nСогласованность. Позиции должны удовлетворять уравнениям связей (совпадающие точки шарниров, ползун на своей направляющей и т. д.). Иначе первые шаги уйдут на переходный процесс, а при больших невязках расчёт может разойтись.\nМножители λ обычно нулевые. Реакции в начальном состоянии не вычисляются автоматически: если на механизм действует нагрузка, на первых шагах будет короткий переходный процесс установления λ.\nСкорости. Нулевые скорости — допустимое начальное состояние, но не равновесие: под гравитацией механизм начнёт двигаться.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#единицы-и-соглашения",
+    "href": "model.html#единицы-и-соглашения",
+    "title": "Как устроена модель",
+    "section": "Единицы и соглашения",
+    "text": "Единицы и соглашения\n\nВсе величины в СИ. Момент инерции — относительно центра масс тела.\nУглы в радианах; положительное направление — против часовой стрелки.\nКоординаты точек на теле — локальные, с началом в центре масс.\nТочки крепления связей задаются на каждом из двух тел в его локальной системе координат.\nГравитация — обычная внешняя сила: body.forces[2] = (state, t) -&gt; -m * g.\nВремя — последний элемент состояния: функции сил и уставки приводов получают его как state[end] или как аргумент t.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "model.html#точки-расширения",
+    "href": "model.html#точки-расширения",
+    "title": "Как устроена модель",
+    "section": "Точки расширения",
+    "text": "Точки расширения\nНовая сущность (например, трёхмерный шарнир или неголономная связь) требует:\n\nmutable struct от соответствующего абстрактного типа (AbstractJoint2D, AbstractForce2D, AbstractActuator2D, AbstractSensor2D) с полем index::Int64 = -1;\nnumber_of_dofs(::T) — сколько λ добавляет сущность (0 для сил);\nget_lms(sys, x) — индексы λ в векторе состояния;\nadd_to_rhs!(rhs, state, sys, x) — уравнения связи и реакции;\nдля связей — compute_kinematic_residual! (проверка кинематики);\nдля приводов — propagate_targets! и update_jacobian!;\nдля отрисовки — компаньон и метод _draw_...! (см. главу «Визуализация»);\nэкспорт имени в src/Flexia.jl после списка include.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Как устроена модель</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html",
+    "href": "bodies.html",
+    "title": "Тела",
+    "section": "",
+    "text": "Body2D\nТело — абсолютно твёрдое, плоское, с тремя степенями свободы. Конструктор:\nАргументы:\nВнутри тела хранятся:\nГеометрическая длина звена не участвует в динамике: в уравнениях движения тело — это масса и момент инерции. Длина нужна только для рисунка и для штриховки заделки. Точки крепления связей задаются отдельно и не выводятся из length автоматически.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html#body2d",
+    "href": "bodies.html#body2d",
+    "title": "Тела",
+    "section": "",
+    "text": "Body2D(mass, inertia; length = 1.0)\nBody2D(mass, inertia; visual = CircleVisual(radius = 0.2))\n\n\nmass — масса, кг;\ninertia — момент инерции относительно центра масс, кг·м²;\nlength — длина «стержня» по умолчанию, только для отрисовки;\nvisual — визуальный компаньон (см. главу «Визуализация»).\n\n\n\n\n\nПоле\nНазначение\n\n\n\n\nmass, inertia\nинерционные характеристики\n\n\nforces::Vector{Function}\nтри слота внешних сил\n\n\nindex::Int64\nномер в системе; -1 — ещё не добавлено\n\n\nvisual::AbstractVisual\nкак тело выглядит",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html#внешние-силы-на-теле",
+    "href": "bodies.html#внешние-силы-на-теле",
+    "title": "Тела",
+    "section": "Внешние силы на теле",
+    "text": "Внешние силы на теле\nforces — вектор из трёх функций: Fx(state, t), Fy(state, t), Mz(state, t). Функции получают вектор из шести значений тела\n[x, y, θ, vx, vy, ω]\nи текущее время t. Возвращаемое значение — обобщённая сила: ньютоны для Fx/Fy и ньютон-метры для Mz.\nГравитация — обычная внешняя сила:\nconst g = 9.81\nbd = Body2D(2.0, 0.5)\nbd.forces[2] = (state, t) -&gt; -bd.mass * g\nСила, зависящая от времени:\nbd.forces[1] = (state, t) -&gt; 10.0 * sin(4.0 * t)\nДля более сложных случаев (точка приложения, направление, визуальная стрелка) есть отдельный тип BodyTimeVariableForce, см. главу «Силы».\n\n\n\n\n\n\nМасса и момент инерции должны быть положительными\n\n\n\nМатрица масс содержит Diagonal([m, m, J]). Нулевые или отрицательные значения делают её вырожденной, и расчёт теряет смысл.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html#добавление-в-систему",
+    "href": "bodies.html#добавление-в-систему",
+    "title": "Тела",
+    "section": "Добавление в систему",
+    "text": "Добавление в систему\nsys = MBSystem2D()\nadd!(sys, bd)          # body.index = 1, sys.bodies = [bd]\nПосле добавления становятся доступны индексы состояния:\nget_body_position_dofs(sys, bd)   # (x, y, θ)\nget_body_velocity_dofs(sys, bd)   # (vx, vy, ω)\nПолезные запросы:\nnumber_of_bodies(sys)   # number of bodies\nbodies(sys)             # bodies vector\nПорядок добавления задаёт раскладку состояния. Если переставить тела местами, все индексы dof изменятся, поэтому в скриптах удобнее работать с объектами тел, а не с записанными вручную числами.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html#начальные-положение-и-скорость",
+    "href": "bodies.html#начальные-положение-и-скорость",
+    "title": "Тела",
+    "section": "Начальные положение и скорость",
+    "text": "Начальные положение и скорость\ninitial = zeros(number_of_dofs(sys))\nset_initial_position!(initial, sys, bd, SA[0.5, 0.0, pi / 2])\nset_initial_velocity!(initial, sys, bd, SA[1.0, 0.0, 0.0])\nУгол задаётся в радианах. Позиция — центр масс тела в абсолютной системе координат.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html#визуализация-тела",
+    "href": "bodies.html#визуализация-тела",
+    "title": "Тела",
+    "section": "Визуализация тела",
+    "text": "Визуализация тела\nФорма тела задаётся компаньоном. Длина, которая раньше была полем тела, теперь живёт в BarVisual:\nbd = Body2D(1.0, 0.1; length = 1.0)                       # BarVisual(length = 1.0)\nbd = Body2D(1.0, 0.1; visual = RectVisual(width = 0.4, height = 0.2))\nbd = Body2D(1.0, 0.1; visual = CircleVisual(radius = 0.25))\nbd = Body2D(1.0, 0.1; visual = Link2DVisual(length = 1.0, width = 0.2))\n\nset_visualization!(bd, CircleVisual(radius = 0.1))         # replace at runtime\nПодробности — в главе «Визуализация».",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "bodies.html#заделка-как-земля",
+    "href": "bodies.html#заделка-как-земля",
+    "title": "Тела",
+    "section": "Заделка как «земля»",
+    "text": "Заделка как «земля»\nОтдельного типа «земля» нет. Земля — это обычное тело, закреплённое FixedJoint:\nground = Body2D(1.0e6, 1.0e6; length = 0.01)\nadd!(sys, ground)\nadd!(sys, FixedJoint(ground))\nМассу и инерцию можно взять большими, но для закреплённого тела это не принципиально: FixedJoint удерживает его абсолютные координаты. Маленькая length нужна только для того, чтобы штриховка заделки не была огромной.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Тела</span>"
+    ]
+  },
+  {
+    "objectID": "joints.html",
+    "href": "joints.html",
+    "title": "Соединения",
+    "section": "",
+    "text": "FixedJoint — заделка\nСвязи удерживают тела друг относительно друга. В Flexia каждая связь — коннектор: она добавляет в состояние свой блок множителей λ и дописывает в правую часть уравнения связей и реакции. Коннекторами являются и приводы (см. главу «Приводы»).\nОбщие правила:\nЖёстко фиксирует тело в абсолютной системе координат: три уравнения (положение x, y и угол θ), три множителя λ.\nСвойства:\nFixedJoint — обычный способ задать «землю»: закрепить тело, к которому будут крепиться остальные.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Соединения</span>"
+    ]
+  },
+  {
+    "objectID": "joints.html#fixedjoint-заделка",
+    "href": "joints.html#fixedjoint-заделка",
+    "title": "Соединения",
+    "section": "",
+    "text": "ground = Body2D(1.0e6, 1.0e6; length = 0.01)\n\nfix = FixedJoint(ground)\nsetposition!(fix, SA[0.0, 0.0])   # absolute point\nsetrotation!(fix, 0.0)            # absolute angle, rad\n\nadd!(sys, fix)\n\n\nnumber_of_dofs(::FixedJoint) == 3;\nsetposition! и setrotation! принимают вектор и число;\nпо умолчанию рисуется штриховка заделки (FixedVisual) под звеном.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Соединения</span>"
+    ]
+  },
+  {
+    "objectID": "joints.html#hingejoint-шарнир",
+    "href": "joints.html#hingejoint-шарнир",
+    "title": "Соединения",
+    "section": "HingeJoint — шарнир",
+    "text": "HingeJoint — шарнир\nСоединяет два тела так, что две точки (по одной на каждом теле) совпадают. Вращение относительно точки свободно. Два уравнения, два множителя λ.\nhinge = HingeJoint(crank, rod)\n\n# Attach point on body 1 is the crank end; on body 2 it is the rod start.\nset_position_on_first_body!(hinge, SA[0.5, 0.0])\nset_position_on_second_body!(hinge, SA[-1.0, 0.0])\n\nadd!(sys, hinge)\nСвойства:\n\nnumber_of_dofs(::HingeJoint) == 2;\nточки крепления по умолчанию (0, 0) — начало локальной системы тела;\nв решении два λ: горизонтальная и вертикальная реакции в шарнире;\nрисуется маркером (HingeVisual).\n\nСогласованность начального состояния: глобальные координаты двух точек должны совпадать. Для шарнира это означает\n\\[\nr_1 + R(\\theta_1)\\, p_1 = r_2 + R(\\theta_2)\\, p_2 ,\n\\]\nгде r — положение центра масс, R — матрица поворота, p — локальная точка крепления. Если это не так, механизм «дёрнется» на первых шагах.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Соединения</span>"
+    ]
+  },
+  {
+    "objectID": "joints.html#sliderjoint-ползун",
+    "href": "joints.html#sliderjoint-ползун",
+    "title": "Соединения",
+    "section": "SliderJoint — ползун",
+    "text": "SliderJoint — ползун\nСоединяет два тела так, что точка второго тела может двигаться только вдоль оси, заданной на первом теле; взаимный поворот тел фиксируется. Два уравнения, два множителя λ.\ntrack    = Body2D(100.0, 10.0)                 # guide\ncarriage = Body2D(1.0, 0.1)                    # slider\n\nslider = SliderJoint(track, carriage)\nset_position_on_first_body!(slider, SA[0.0, 0.0])\nset_position_on_second_body!(slider, SA[0.0, 0.0])\nset_direction_on_first_body!(slider, SA[1.0, 0.0])\nset_direction_on_second_body!(slider, SA[1.0, 0.0])\n\nadd!(sys, slider)\nСвойства:\n\nnumber_of_dofs(::SliderJoint) == 2;\nпервое уравнение — нулевое расстояние от точки второго тела до оси первого тела (реакция — нормальная сила);\nвторое уравнение — выравнивание направлений: относительный поворот θ2 + α2 = θ1 + α1 (реакция — момент);\nнаправление оси задаётся единичным вектором в локальной системе тела; при задании ненулевого вектора alpha вычисляется как atan(dy, dx);\nползун не имеет ограничений на ход: тело может уехать вдоль оси сколько угодно, если этому не мешают другие связи;\nпо умолчанию рисуются ось на первом теле (style) и прямоугольник ползуна на втором (prism_style).\n\nНаправления на обоих телах должны быть согласованы: именно они задают начальное взаимное положение тел.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Соединения</span>"
+    ]
+  },
+  {
+    "objectID": "joints.html#λ-и-реакции-связей",
+    "href": "joints.html#λ-и-реакции-связей",
+    "title": "Соединения",
+    "section": "λ и реакции связей",
+    "text": "λ и реакции связей\nЧисла λ — не «внутренние» параметры, а реальные реакции: они входят в уравнения скоростей тел и меняются во времени. Чтобы достать реакции из решения:\nidx = get_lms(sys, hinge)          # e.g. (31, 32)\nreactions = sol[idx, :]            # 2 x number of frames\nРазмерности:\n\n\n\nСвязь\nλ\nЧто это\n\n\n\n\nFixedJoint\n3\nRx, Ry, момент заделки\n\n\nHingeJoint\n2\nRx, Ry в шарнире\n\n\nSliderJoint\n2\nнормальная реакция и момент\n\n\nPositionMotor2D\n1\nмомент привода\n\n\nPositionLinearActuator2D\n1\nсила привода\n\n\n\nЗнак λ зависит от формулировки связи; для анализа удобно сверять знак с заранее известным случаем (например, вертикальная реакция шарнира под действием гравитации). Отдельная тонкость позиционного линейного привода описана в главе «Приводы».",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Соединения</span>"
+    ]
+  },
+  {
+    "objectID": "joints.html#порядок-и-индексы",
+    "href": "joints.html#порядок-и-индексы",
+    "title": "Соединения",
+    "section": "Порядок и индексы",
+    "text": "Порядок и индексы\nadd! для коннектора делает три вещи:\n\nкладёт его в sys.connectors;\nувеличивает sys.lmdofs на number_of_dofs(connector);\nприсваивает connector.index номер в списке коннекторов.\n\nПоэтому:\n\nдобавляйте коннекторы после тел;\nесли нужны индексы λ, получайте их после add!;\nструктура системы фиксируется в assemble!; после добавления новых сущностей вызывайте assemble! заново.\n\nСписок коннекторов доступен как connectors(sys).",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Соединения</span>"
+    ]
+  },
+  {
+    "objectID": "forces.html",
+    "href": "forces.html",
+    "title": "Силы",
+    "section": "",
+    "text": "Гравитация и слоты тела\nВнешние воздействия складываются из трёх источников:\nВсе силы добавляются в систему до assemble!.\nУ каждого тела три слота: forces[1] — Fx, forces[2] — Fy, forces[3] — момент Mz. Функция получает шесть компонент тела [x, y, θ, vx, vy, ω] и время:\nСлоты — самый прямой способ задать постоянную или простую зависящую от времени нагрузку. Если нужна сила в конкретной точке или стрелка на рисунке, используйте BodyTimeVariableForce.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Силы</span>"
+    ]
+  },
+  {
+    "objectID": "forces.html#гравитация-и-слоты-тела",
+    "href": "forces.html#гравитация-и-слоты-тела",
+    "title": "Силы",
+    "section": "",
+    "text": "const g = 9.81\nbd = Body2D(2.0, 0.5)\nbd.forces[2] = (state, t) -&gt; -bd.mass * g",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Силы</span>"
+    ]
+  },
+  {
+    "objectID": "forces.html#torsionalspring-крутильная-пружина",
+    "href": "forces.html#torsionalspring-крутильная-пружина",
+    "title": "Силы",
+    "section": "TorsionalSpring — крутильная пружина",
+    "text": "TorsionalSpring — крутильная пружина\nСтавится на шарнир и создаёт момент от относительного угла и относительной угловой скорости:\n\\[\n\\tau = k\\,(\\theta_1 - \\theta_2 - \\theta_{\\text{rest}})\n       + c\\,(\\omega_1 - \\omega_2).\n\\]\nКонструктор:\nspring = TorsionalSpring(hinge, 1100.0, 0.0, 100.0)   # (k, rest, c)\nspring = TorsionalSpring(hinge; stiffness = 1100.0, rest_angle = 0.0,\n                         damping = 100.0, vis_r = 0.3)\n\nhinge — шарнир, к которому привязана пружина;\nstiffness — жёсткость, Н·м/рад;\nrest_angle — угол покоя, рад;\ndamping — коэффициент демпфирования, Н·м·с/рад;\nvis_r — радиус спирали на рисунке.\n\nДобавление и доступ к результатам:\nadd!(sys, spring)\n\nM = get_spring_moment(spring, θ1, θ2)   # k * (θ1 - θ2)\nE = get_spring_energy(spring, θ1, θ2)   # 0.5 * k * (θ1 - θ2)^2\nМомент прикладывается к телам шарнира с противоположными знаками, поэтому пара сил не создаёт внешнего момента.\n\n\n\n\n\n\nЗнак угла покоя\n\n\n\nrest_angle вычитается из разности углов в уравнении движения. При нулевом rest_angle пружина стремится выровнять углы тел, то есть свести относительный поворот к нулю. Если нужна пружина с предварительным натягом, задайте rest_angle явно — в радианах.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Силы</span>"
+    ]
+  },
+  {
+    "objectID": "forces.html#linearspring-линейная-пружина",
+    "href": "forces.html#linearspring-линейная-пружина",
+    "title": "Силы",
+    "section": "LinearSpring — линейная пружина",
+    "text": "LinearSpring — линейная пружина\nСтавится на SliderJoint и действует вдоль оси ползуна:\n\\[\nF = k\\,(\\Delta s - s_0),\n\\]\nгде Δs — текущее расстояние между точками ползуна вдоль оси, s0 — x_dist.\nspring = LinearSpring(slider, 20.0, 0.0)                  # (k, x_dist)\nspring = LinearSpring(slider; stiffness = 20.0, x_dist = 0.0,\n                      vis_r = 0.3, vis_N = 8)\n\nstiffness — жёсткость, Н/м;\nx_dist — смещение покоя, м;\nvis_r, vis_N — геометрия зигзага.\n\n\n\n\n\n\n\nДемпфирование линейной пружины пока не действует\n\n\n\nПоле damping у LinearSpring сохраняется, но в правую часть не входит: в текущей реализации учитывается только упругая часть. Не рассчитывайте на диссипацию через damping — используйте отдельную силу, зависящую от скорости.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Силы</span>"
+    ]
+  },
+  {
+    "objectID": "forces.html#bodytimevariableforce-внешняя-сила-со-стрелкой",
+    "href": "forces.html#bodytimevariableforce-внешняя-сила-со-стрелкой",
+    "title": "Силы",
+    "section": "BodyTimeVariableForce — внешняя сила со стрелкой",
+    "text": "BodyTimeVariableForce — внешняя сила со стрелкой\nСила задаётся функцией времени force(t) и прикладывается в точке position (локальные координаты тела) вдоль направления direction:\nforce = BodyTimeVariableForce(bd;\n                              position = SA[0.0, -0.5],\n                              direction = SA[1.0, 0.0],\n                              force = t -&gt; 100.0 * sin(4.0 * t))\nadd!(sys, force)\n\nнаправление нормализуется при создании;\nсила в ньютонах; момент считается как векторное произведение точки приложения на силу;\nпо умолчанию рисуется стрелкой (ArrowVisual, scale задаёт масштаб изображения).\n\nИзменение силы и точки приложения:\nset_force!(force, t -&gt; 50.0 * cos(2.0 * t), SA[0.0, 1.0])\nset_position!(force, SA[0.0, -0.4])\n\n\n\n\n\n\nПорядок изменения силы и точки приложения\n\n\n\nset_position! пересчитывает компоненты силы по сохранённой исходной функции force.force. Если вы уже вызывали set_force!, то последующий set_position! вернёт прежнюю функцию. Меняйте точку приложения до смены силы или создавайте новый объект силы.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Силы</span>"
+    ]
+  },
+  {
+    "objectID": "forces.html#сводка",
+    "href": "forces.html#сводка",
+    "title": "Силы",
+    "section": "Сводка",
+    "text": "Сводка\n\nbody.forces[i] — на теле, без λ; Fx, Fy и Mz как функции состояния и времени.\nTorsionalSpring — на шарнире, без λ; момент от относительного угла и угловой скорости.\nLinearSpring — на ползуне, без λ; сила вдоль оси ползуна.\nBodyTimeVariableForce — на теле, без λ; сила f(t) в локальной точке вдоль направления.\n\nСилы хранятся в sys.forces; список доступен по полю системы. Порядок добавления сил не влияет на индексы состояния, но влияет на порядок отрисовки при равном zorder.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Силы</span>"
+    ]
+  },
+  {
+    "objectID": "actuators.html",
+    "href": "actuators.html",
+    "title": "Приводы",
+    "section": "",
+    "text": "PositionMotor2D — моментный привод на шарнире\nПриводы — позиционные: они поддерживают заданное значение координаты (угла или расстояния), а не развивают заданную силу. Привод добавляет в систему одно уравнение связи и один множитель λ. Ограничений на момент или силу привода нет.\nОба привода — коннекторы, поэтому добавляются через add! и участвуют в assemble! наравне со связями.\nПоддерживает заданный относительный угол двух тел шарнира:\nСмена цели:\nЕсли цель зависит от времени, её нужно обновлять перед каждым шагом — для этого есть sys.prestep:\ncurrent_velocity — это производная цели по времени. Она попадает в якобиан системы и должна быть согласована с target_angle: если задать цель π * t, а скорость 0, интегрирование будет считать, что цель не меняется, и появятся ошибки слежения.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Приводы</span>"
+    ]
+  },
+  {
+    "objectID": "actuators.html#positionmotor2d-моментный-привод-на-шарнире",
+    "href": "actuators.html#positionmotor2d-моментный-привод-на-шарнире",
+    "title": "Приводы",
+    "section": "",
+    "text": "motor = PositionMotor2D(hinge, 0.0, 0.0)   # (target angle, target rate)\nadd!(sys, motor)\n\ntarget_angle — целевой относительный угол θ2 - θ1, рад;\ncurrent_velocity — скорость изменения цели, рад/с;\nnumber_of_dofs(::PositionMotor2D) == 1 — одно уравнение, один λ.\n\n\nsettarget!(motor, π / 2, 0.0)               # hold 90 degrees\n\nsys.prestep = state -&gt; begin\n    t = state[end]\n    settarget!(motor, π * t, π)             # target angle grows at pi rad/s\nend",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Приводы</span>"
+    ]
+  },
+  {
+    "objectID": "actuators.html#positionlinearactuator2d-линейный-привод-на-ползуне",
+    "href": "actuators.html#positionlinearactuator2d-линейный-привод-на-ползуне",
+    "title": "Приводы",
+    "section": "PositionLinearActuator2D — линейный привод на ползуне",
+    "text": "PositionLinearActuator2D — линейный привод на ползуне\nПоддерживает заданное положение второго тела вдоль оси первого:\nactuator = PositionLinearActuator2D(slider, 0.0, 0.0)   # (target position, target rate)\nadd!(sys, actuator)\n\ntarget_position — расстояние между точками ползуна вдоль оси, м;\ncurrent_velocity — скорость изменения цели, м/с;\nnumber_of_dofs(::PositionLinearActuator2D) == 1.\n\nsettarget!(actuator, 0.25, 0.0)             # move to 0.25 m\nПример с движущейся целью:\nconst A = 0.5\nconst Ω = 2.0\nsys.prestep = state -&gt; begin\n    t = state[end]\n    settarget!(actuator, A * sin(Ω * t), A * Ω * cos(Ω * t))\nend",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Приводы</span>"
+    ]
+  },
+  {
+    "objectID": "actuators.html#как-это-работает-внутри",
+    "href": "actuators.html#как-это-работает-внутри",
+    "title": "Приводы",
+    "section": "Как это работает внутри",
+    "text": "Как это работает внутри\n\nПривод хранит цель в своих полях; propagate_targets! переносит её в sys.targets при вызове update_targets!.\nassemble! создаёт sys.targets и заполняет его начальными значениями.\nНа каждом шаге CROS вызывает sys.prestep(state), затем update_targets!(sys), затем считает sys.rhs(state).\nsys.rhs вычитает уставки из строк λ: получается уравнение θ2 - θ1 - target = 0 (или s - target = 0 для линейного привода).\nРеакция привода — соответствующая строка λ в решении. Её можно достать через get_lms(sys, actuator).",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Приводы</span>"
+    ]
+  },
+  {
+    "objectID": "actuators.html#ограничения-и-тонкости",
+    "href": "actuators.html#ограничения-и-тонкости",
+    "title": "Приводы",
+    "section": "Ограничения и тонкости",
+    "text": "Ограничения и тонкости\n\nПозиционная связь, а не силовая. Привод удерживает координату и «подстраивает» момент/силу под нагрузку. Предела момента нет: при заклинивании нагрузки могут быть сколь угодно большими.\nМножитель λ позиционного линейного привода не равен физической силе. Формулировка связи по положению даёт множитель, в котором инерционная часть входит с другим знаком, чем в уравнении движения. Положение и скорость при этом отслеживаются точно. Для силового анализа нужна связь, заданная по скоростям (index-1); в текущей версии она не реализована. Численная иллюстрация — examples/linear_actuator.jl.\nЦель должна быть совместна с остальными связями. Если целевой угол противоречит геометрии механизма, решатель будет бороться с ограничениями.\nНачальная цель. До первого prestep действует цель, заданная в конструкторе; при старте из несогласованного состояния возможен переходный процесс.\nСкорость цели важна. settarget! требует и значение, и его производную; несогласованная производная ломает согласованность якобиана и ухудшает точность слежения.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Приводы</span>"
+    ]
+  },
+  {
+    "objectID": "sensors.html",
+    "href": "sensors.html",
+    "title": "Датчики",
+    "section": "",
+    "text": "Типы датчиков\nДатчики измеряют величины, привязанные к точке на теле: положение, скорость или ускорение. Они не добавляют уравнений в систему и не меняют динамику — это чистая постобработка. При этом ускорение требует решения уравнений движения, поэтому датчик ускорения работает только на собранной системе.\nКонструкторы принимают только именованные аргументы:",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Датчики</span>"
+    ]
+  },
+  {
+    "objectID": "sensors.html#типы-датчиков",
+    "href": "sensors.html#типы-датчиков",
+    "title": "Датчики",
+    "section": "",
+    "text": "Тип\nЧто измеряет\n\n\n\n\nFramePositionSensor\nабсолютную координату точки по оси x или y\n\n\nFrameGlobalVelocitySensor\nсоставляющую скорости точки в глобальной системе\n\n\nFrameLocalVelocitySensor\nсоставляющую скорости в повёрнутой локальной системе\n\n\nFrameLocalAccelerationSensor\nсоставляющую ускорения в повёрнутой локальной системе\n\n\n\n\nFramePositionSensor(body = bd, position = SA[0.5, 0.0], axis = :x)\nFrameGlobalVelocitySensor(body = bd, position = SA[0.5, 0.0], axis = :y)\nFrameLocalVelocitySensor(body = bd, position = SA[0.5, 0.0], rot = 0.0, axis = :x)\nFrameLocalAccelerationSensor(body = bd, position = SA[0.5, 0.0], rot = 0.0, axis = :x)\n\nbody — тело, к которому привязан датчик;\nposition — точка в локальной системе тела;\naxis — :x/:y (или 1/2), ось измерения;\nrot — дополнительный поворот локальной системы датчика, рад.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Датчики</span>"
+    ]
+  },
+  {
+    "objectID": "sensors.html#добавление-и-снятие-измерений",
+    "href": "sensors.html#добавление-и-снятие-измерений",
+    "title": "Датчики",
+    "section": "Добавление и снятие измерений",
+    "text": "Добавление и снятие измерений\ns_x = FramePositionSensor(body = bd, position = SA[0.5, 0.0], axis = :x)\ns_y = FramePositionSensor(body = bd, position = SA[0.5, 0.0], axis = :y)\n\nadd!(sys, s_x)\nadd!(sys, s_y)\nassemble!(sys)\nПорядок измерений совпадает с порядком добавления датчиков. Измерения снимаются функцией sys.measure!:\nn_sensors = length(sys.sensors)\nmeas = zeros(n_sensors, size(sol, 2))\nbuf  = zeros(n_sensors)\n\nfor k in axes(sol, 2)\n    sys.measure!(buf, sol[:, k])\n    meas[:, k] .= buf\nend\nДальше meas — обычная матрица, её можно рисовать, сохранять или анализировать:\nfig = Figure()\nax = Axis(fig[1, 1], xlabel = \"frame\", ylabel = \"x, m\")\nlines!(ax, meas[1, :])\nfig",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Датчики</span>"
+    ]
+  },
+  {
+    "objectID": "sensors.html#что-именно-считается",
+    "href": "sensors.html#что-именно-считается",
+    "title": "Датчики",
+    "section": "Что именно считается",
+    "text": "Что именно считается\n\nПоложение. Для FramePositionSensor с осью x возвращается x + p_x cos θ - p_y sin θ, то есть глобальная координата точки. Для оси y — соответственно y + p_x sin θ + p_y cos θ.\nГлобальная скорость. Скорость точки складывается из скорости центра масс и вращательной составляющей ω × p.\nЛокальная скорость. Та же скорость, но спроецированная на оси, повёрнутые на rot относительно тела.\nЛокальное ускорение. Учитываются ускорение центра масс, угловое ускорение и центростремительная составляющая ω² p. Для этого датчику нужно ускорение, которое вычисляется из уравнений движения.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Датчики</span>"
+    ]
+  },
+  {
+    "objectID": "sensors.html#ограничения",
+    "href": "sensors.html#ограничения",
+    "title": "Датчики",
+    "section": "Ограничения",
+    "text": "Ограничения\n\nДатчики не рисуются: у них нет визуального компаньона (NoVisual).\nsys.measure! требует собранной системы: он использует матрицу масс, чтобы получить ускорения. До assemble! вызов приведёт к ошибке.\nУскорение доступно только при динамическом расчёте: в статике ускорения равны нулю, и измерение теряет смысл.\nДатчик не проверяет, что точка position лежит на теле — это просто локальные координаты.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Датчики</span>"
+    ]
+  },
+  {
+    "objectID": "solving.html",
+    "href": "solving.html",
+    "title": "Расчёт",
+    "section": "",
+    "text": "Динамика: метод CROS\nДинамика решается интегрированием системы первого порядка\n\\[\nM \\dot{u} = f(u)\n\\]\nметодом CROS — комплексным методом Розенброка второго порядка с L-устойчивостью:\n\\[\n\\zeta = \\left(M - \\frac{1+i}{2} h J(u_n)\\right)^{-1} f(u_n) ,\n\\]\n\\[\nu_{n+1} = u_n + h \\,\\mathrm{Re}(\\zeta) .\n\\]\nЗдесь J — якобиан правой части, h — шаг по времени. L-устойчивость важна, потому что матрица масс вырождена: метод снимает жёсткость, связанную с множителями λ.\nБазовый запуск:\nsimulate — обёртка: она берёт sys.mass, вызывает cros! и возвращает матрицу number_of_dofs(sys) × length(time_span). Шаг берётся из диапазона step(time_span); сетка должна быть равномерной.\nНизкоуровневый вариант с явной матрицей масс:\nЕсть и совсем низкоуровневая форма, которой пользуются примеры без приводов:\nРазница существенна: форма с sys на каждом шаге вызывает sys.prestep, обновляет уставки приводов и добавляет к якобиану вклад приводов. Если в системе есть приводы, используйте simulate или форму с sys.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Расчёт</span>"
+    ]
+  },
+  {
+    "objectID": "solving.html#динамика-метод-cros",
+    "href": "solving.html#динамика-метод-cros",
+    "title": "Расчёт",
+    "section": "",
+    "text": "sol = simulate(sys, initial, 0:0.001:10.0)\n\n\nmass = get_mass_matrix(sys)\nsol = Matrix{Float64}(undef, number_of_dofs(sys), length(time_span))\ncros!(sol, initial, mass, sys, step(time_span))\n\ncros!(sol, initial, mass, sys.rhs, sys.jacobian, step(time_span))\n\n\nЧто происходит на каждом шаге\n\nВызывается sys.prestep(state) — здесь обновляют цели приводов.\nВызывается update_targets!(sys) — цели переносятся в sys.targets.\nСчитается f = sys.rhs(state).\nСчитается якобиан sys.jacobian(state) и к нему добавляется вклад приводов (update_act_jacobian!).\nРешается комплексная линейная система и берётся действительная часть приращения.\nСлот времени в конце состояния увеличивается на h, потому что rhs[end] = 1.\n\n\n\nПрактические замечания\n\nШаг выбирает пользователь. Адаптивного шага нет. Для жёстких пружин и быстрых процессов уменьшайте h.\nУстойчивость не равна точности. CROS устойчив, но при большом шаге возможна заметная численная диссипация. Сверяйте результат с аналитикой или с меньшим шагом.\nВремя — часть состояния. Оно не передаётся в функции сил отдельным аргументом, а лежит в state[end]; функции body.forces получают его как второй аргумент t.\nНачальные λ. В начальном состоянии множители обычно нулевые; на первых шагах они устанавливаются под нагрузку, поэтому в начале решения возможен короткий переходный процесс.\nСтоимость. Якобиан плотный и считается автоматическим дифференцированием; на каждом шаге решается плотная линейная система размера n. Число n растёт с числом тел и связей.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Расчёт</span>"
+    ]
+  },
+  {
+    "objectID": "solving.html#статика-static_solver",
+    "href": "solving.html#статика-static_solver",
+    "title": "Расчёт",
+    "section": "Статика: static_solver!",
+    "text": "Статика: static_solver!\nСтатика ищет равновесие F(u) = 0 при заданных силах и пружинах. Время при этом — не неизвестное, а параметр: оно вырезается из решаемой системы и берётся из u0[end] либо из списка times.\nsol = Matrix{Float64}(undef, number_of_dofs(sys), 2)\nlog = static_solver!(sol, initial, sys.rhs, sys.jacobian)\nresult = sol[:, end]        # equilibrium\n\nФормат sol\n\nsol[:, 1] — начальное приближение u0 (решатель не перезаписывает его);\nsol[:, k], k ≥ 2 — равновесия, полученные на подшагах;\nхвост заполняется последним сошедшимся кадром, поэтому sol[:, end] — это ответ при последнем времени.\n\nОтсюда важное правило: столбцов должно быть не меньше length(times) + 1 (для одного равновесия — минимум два). Если столбцов меньше, решатель предупредит и не сохранит результат.\n\n\nПуть по псевдовремени\ntimes = 0.0:0.1:1.0\nsol = Matrix{Float64}(undef, number_of_dofs(sys), length(times) + 1)\nlog = static_solver!(sol, initial, sys.rhs, sys.jacobian; times = times)\nНа каждом t решается своё равновесие, тёплый старт — с предыдущего кадра. Это аналог шагов нагружения: например, силу можно задать как force = t -&gt; F_max * t / T — тогда на кадрах будет видно, как механизм деформируется под растущей нагрузкой. Требования: times возрастают и начинаются не раньше u0[end].\n\n\nДробление шага\nstatic_solver!(sol, initial, sys.rhs, sys.jacobian;\n               times = times, cutback = 0.5, min_step = 1.0e-4)\ncutback &lt; 1 включает автоматическое дробление подшага, если солвер не сошёлся: интервал делится, промежуточный момент тоже становится кадром. Дробление прекращается при шаге меньше min_step или после max_cutbacks неудач подряд — тогда выводится предупреждение и расчёт останавливается. Кадров может оказаться больше, чем length(times); следите за размером sol.\n\n\nПодключаемый солвер\nПо умолчанию используется _newton_solve — метод Ньютона с полным шагом. Контракт внешнего солвера:\nsolver(F, J, u0; solver_options...) -&gt; (u, status, iterations, residuals)\nСтатусы: :converged, :stalled (шаг стал меньше tol_step), :max_iter. Параметры передаются через solver_options:\nstatic_solver!(sol, initial, sys.rhs, sys.jacobian;\n               solver_options = (max_iter = 50, tol = 1.0e-12))\nВырожденный якобиан не глушится: SingularException пробрасывается наружу.\n\n\nЖурнал\nФункция возвращает вектор именованных кортежей по кадрам:\n(frame, time, status, iterations, residual, step)\nЕго удобно печатать или анализировать, чтобы понять, сошёлся ли каждый подшаг.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Расчёт</span>"
+    ]
+  },
+  {
+    "objectID": "solving.html#собственные-частоты",
+    "href": "solving.html#собственные-частоты",
+    "title": "Расчёт",
+    "section": "Собственные частоты",
+    "text": "Собственные частоты\nfind_natural_freqs линеаризует систему в заданном положении, проектирует уравнения на пространство, допускаемое связями, и решает обобщённую задачу на собственные значения. Возвращаются частоты в герцах, по возрастанию:\nstatic_sol = Matrix{Float64}(undef, number_of_dofs(sys), 2)\nstatic_solver!(static_sol, initial, sys.rhs, sys.jacobian)\n\nfreqs = find_natural_freqs(sys, static_sol[:, end])\nЧто важно:\n\nсистема должна быть собрана (assemble!);\nпередаётся вектор состояния в положении равновесия, включая слот времени;\nчастоты считаются в Гц: ω / (2π);\nжёсткие степени свободы связей не попадают в ответ — они исключаются через матрицу связей;\nнулевые частоты соответствуют движениям без возвращающей силы;\nотрицательные собственные значения (неустойчивое равновесие) приводят к ошибке вычисления квадратного корня. Если нужна проверка устойчивости, считайте знаки собственных значений до извлечения корня.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Расчёт</span>"
+    ]
+  },
+  {
+    "objectID": "solving.html#постобработка",
+    "href": "solving.html#постобработка",
+    "title": "Расчёт",
+    "section": "Постобработка",
+    "text": "Постобработка\nМатрица решения — это «сырые» компоненты состояния. Типовые операции:\n# Body position and angle at frame k\ni = get_body_position_dofs(sys, body)\nx, y, θ = sol[i[1], k], sol[i[2], k], sol[i[3], k]\n\n# Body velocities\nv = get_body_velocity_dofs(sys, body)\nvx, vy, ω = sol[v[1], k], sol[v[2], k], sol[v[3], k]\n\n# Connector reactions\nr = get_lms(sys, joint)\nRx, Ry = sol[r[1], :], sol[r[2], :]\n\n# Spring moment at frame k (angles of the two bodies in the hinge)\nθ1 = sol[i[3], k]\nθ2 = sol[get_body_position_dofs(sys, other_body)[3], k]\nM = get_spring_moment(spring, θ1, θ2)\nДля сохранения результатов используйте стандартные средства Julia (DelimitedFiles, CSV, JLD2 и т. п.) — библиотека не навязывает формат.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Расчёт</span>"
+    ]
+  },
+  {
+    "objectID": "solving.html#точность-и-производительность",
+    "href": "solving.html#точность-и-производительность",
+    "title": "Расчёт",
+    "section": "Точность и производительность",
+    "text": "Точность и производительность\n\nЯкобиан считается плотным ForwardDiff; для больших механизмов это главная статья затрат.\nНет разреженности и нет аналитических производных.\nНет адаптивного шага: сетка задаётся пользователем, и именно она определяет точность и время расчёта.\nЧисло уравнений растёт с числом тел (3n координат и скоростей) и связей (λ на каждую связь). Для больших систем уменьшайте число связей и используйте простые пружины вместо лишних тел.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Расчёт</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html",
+    "href": "visualization.html",
+    "title": "Визуализация",
+    "section": "",
+    "text": "Визуальные компаньоны\nВизуализация построена на рецептах Makie. Пакет зависит только от Makie core, поэтому бэкенд подключается независимо — выберите его в своём скрипте:\nПолный цикл — построить сцену, перейти на кадр, записать анимацию:\nЕсли нужна своя ось:\nИнтерактивно (GLMakie) — тот же объект графика:\nТо, как выглядит сущность, вынесено из математических типов в отдельные объекты-компаньоны. Тело — не обязательно «палка»:\nLink2DVisual — звено со скруглёнными концами: объединение прямоугольника length × width и двух кружков радиуса width / 2 с центрами в ±length / 2. Центры скруглений совпадают с концами BarVisual той же длины, то есть с типовыми точками крепления шарниров, поэтому такая форма ложится на механизм без подгонки. Габарит по длине при этом length + width.\nГотовый пример: examples/crankshaft_link2d.jl (копия crankshaft.jl с кривошипом и шатуном в виде Link2DVisual).\nКомпаньон описывает только то, что не меняется во времени: форму, размеры, прикрепление (смещение и доворот в локальной системе тела) и стиль. Всё, что зависит от кадра, берётся из решения.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html#визуальные-компаньоны",
+    "href": "visualization.html#визуальные-компаньоны",
+    "title": "Визуализация",
+    "section": "",
+    "text": "bd = Body2D(1.0, 1.0; length = 0.5)                        # BarVisual, as before\nbd = Body2D(1.0, 1.0; visual = RectVisual(width = 0.4, height = 0.3))\nbd = Body2D(1.0, 1.0; visual = CircleVisual(radius = 0.25))\nbd = Body2D(1.0, 1.0; visual = MeshVisual(points = contour))\nbd = Body2D(1.0, 1.0; visual = Link2DVisual(length = 1.0, width = 0.25))\n\nset_visualization!(bd, CircleVisual(radius = 0.1))          # replace at runtime\n\n\n\n\n\n\n\n\n\nРисунок 9.1: Пять форм тела: BarVisual, RectVisual, CircleVisual, Link2DVisual и MeshVisual.\n\n\n\n\nТаблица компаньонов\n\n\n\n\n\n\n\n\nКомпаньон\nДля какой сущности\nОсновные поля\n\n\n\n\nBarVisual\nтело\nlength, width\n\n\nRectVisual\nтело\nwidth, height\n\n\nCircleVisual\nтело\nradius\n\n\nMeshVisual\nтело\npoints, closed, filled\n\n\nLink2DVisual\nтело\nlength, width\n\n\nHingeVisual\nшарнир\nmarkersize, marker\n\n\nFixedVisual\nзаделка\nhatch_length, hatch_height_ratio, hatch_step_ratio\n\n\nSliderVisual\nползун\naxis_length, slider_length, slider_width, prism_style\n\n\nLinearSpringVisual\nлинейная пружина\ncoil_radius, n_coils\n\n\nTorsionalSpringVisual\nкрутильная пружина\ncoil_radius, n_points\n\n\nArrowVisual\nвнешняя сила\nscale, head_size\n\n\nNoVisual\nлюбая\nсущность не рисуется\n\n\n\nУ всех компаньонов есть поля attachment::Attachment и style::VisualStyle. Attachment задаёт, где фигура прикреплена к телу:\nAttachment(offset = SA[0.0, -0.25], angle = π / 2)\n\noffset — смещение в локальной системе тела;\nangle — доворот фигуры относительно тела.\n\n\n\nСтиль\ncolor = nothing (по умолчанию) означает «взять цвет из палитры Makie» — разные сущности получают разные цвета. Явный цвет слота палитры не расходует:\nset_visualization!(bd, CircleVisual(radius = 0.1,\n                                    style = VisualStyle(color = :red, linewidth = 3)))\nЦвет может быть функцией от состояния — заложено для раскраски по напряжениям:\nstyle = VisualStyle(color = (sys, sol, t, entity) -&gt; stress(entity) &gt; 100 ? :red : :blue)\nVisualStyle также содержит strokecolor, alpha, linestyle, visible, zorder и label. Значения nothing означают «взять из темы Makie».\n\n\nНе всё должно рисоваться\nУ датчиков, приводов и прочих сущностей компаньона нет — они молча пропускаются. Это легальный случай, а не ошибка:\nvisual(sensor) isa NoVisual     # =&gt; true, nothing to draw\nСпрятать отдельный экземпляр, не меняя тип: VisualStyle(visible = false).\n\n\nMeshVisual — произвольный контур\ncontour = [Point2f(0.0, 0.0), Point2f(1.0, 0.0), Point2f(1.0, 0.3), Point2f(0.0, 0.3)]\nbd = Body2D(1.0, 0.1; visual = MeshVisual(points = contour))\n\nточки задаются в локальной системе тела;\nclosed замыкает контур, filled включает заливку (poly!) вместо контура (lines!);\nцвет контура или заливки можно задать функцией через style.color — это точка расширения для раскраски по напряжениям.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html#своя-форма-тела",
+    "href": "visualization.html#своя-форма-тела",
+    "title": "Визуализация",
+    "section": "Своя форма тела",
+    "text": "Своя форма тела\nНовый тип компаньона плюс два метода — без правок математики и существующих рецептов:\nstruct HexVisual &lt;: AbstractBodyVisual\n    radius::Float64\nend\n\nfunction Flexia.body_contour(x, y, θ, v::HexVisual)\n    att = Attachment()\n    points = Point2f[]\n    for a in range(0, 2π; length = 7)\n        p = Point2f(v.radius * cos(a), v.radius * sin(a))\n        push!(points, Flexia.to_global(x, y, θ, att, p))\n    end\n    return points\nend\n\nfunction Flexia._draw_body!(p::Flexia.BodyPlot, v::HexVisual)\n    pts = Makie.lift(p.time) do t\n        Flexia.body_contour(p.system[], p.body[], view(p.solution[], :, t))\n    end\n    Makie.lines!(p, pts)\n    return p\nend\nПервый метод задаёт геометрию контура (он же используется для автолимитов и тестов), второй — собственно отрисовку в рецепте тела. Оба метода — внутренние точки расширения: их имена могут измениться в следующих версиях.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html#порядок-отрисовки",
+    "href": "visualization.html#порядок-отрисовки",
+    "title": "Визуализация",
+    "section": "Порядок отрисовки",
+    "text": "Порядок отрисовки\nVisualStyle(zorder = ...); при равных значениях порядок — как при добавлении: тела, соединения, силы. Сортировка устойчивая, поэтому одинаковые zorder не перемешиваются.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html#пределы-и-кадры",
+    "href": "visualization.html#пределы-и-кадры",
+    "title": "Визуализация",
+    "section": "Пределы и кадры",
+    "text": "Пределы и кадры\nsystemfigure по умолчанию берёт границы по всей траектории:\nfig, ax, p = systemfigure(sys, sol)                    # limits = :auto\nfig, ax, p = systemfigure(sys, sol; limits = nothing)  # keep Makie limits\nfig, ax, p = systemfigure(sys, sol; limits = (0, 2, -1, 1))\nАвтограницы считает trajectory_limits(sys, sol; margin = 0.05, stride = 1): один раз по всей траектории, поэтому при записи видео картинка не «дрожит». Считаются только тела — стрелки сил могут выходить за отступ.\nОтдельные части сцены можно отключить:\np = systemplot!(ax, sys, sol; show_bodies = true,\n                show_connectors = true, show_forces = false)\n\nЗапись видео и кадров\nrecord(fig, \"out/run.mp4\", 1:5:size(sol, 2); framerate = 30) do t\n    p.time = t\nend\n\np.time — номер кадра, целое число от 1 до size(sol, 2);\nдиапазон 1:5:... задаёт прореживание кадров;\nframerate должен быть целым — иначе Makie выводит предупреждение;\nrecord создаёт каталог? Нет: каталог для файла должен существовать (mkpath(\"out\"));\nдля статичного кадра используйте save(\"out/frame.png\", fig).\n\nWGLMakie умеет показывать сцену в браузере, но запись видео в нём ограничена — для файлов берите CairoMakie или GLMakie.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html#структура-визуализации",
+    "href": "visualization.html#структура-визуализации",
+    "title": "Визуализация",
+    "section": "Структура визуализации",
+    "text": "Структура визуализации\n\n\n\n\n\n\n\nФайл\nСодержимое\n\n\n\n\nsrc/visuals.jl\nтипы компаньонов, Attachment, VisualStyle, доступ visual\n\n\nsrc/plotdata.jl\nчистая геометрия по состоянию — без Makie-графиков, тестируется без бэкенда\n\n\nsrc/recipes.jl\nрецепты Makie; зависимость только от Makie, не от бэкенда\n\n\n\nВ src/plotdata.jl живут чистые функции геометрии: body_contour, fixed_joint_hatch_points, slider_axis_points, slider_prism_points, linear_spring_points, torsional_spring_points, force_anchor и trajectory_limits. Они принимают систему и вектор состояния и возвращают точки — их можно тестировать и использовать без Makie.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "visualization.html#тесты-визуализации",
+    "href": "visualization.html#тесты-визуализации",
+    "title": "Визуализация",
+    "section": "Тесты визуализации",
+    "text": "Тесты визуализации\nТесты геометрии и компаньонов работают без установленного бэкенда; рендер проверяется headless на CairoMakie:\nusing Pkg; Pkg.test()",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Визуализация</span>"
+    ]
+  },
+  {
+    "objectID": "examples.html",
+    "href": "examples.html",
+    "title": "Примеры",
+    "section": "",
+    "text": "Каталог сценариев\nВ каталоге examples/ лежат готовые сценарии. Они же — лучшие шаблоны для своих задач: скопируйте ближайший по смыслу файл и поменяйте параметры.\nЗапуск из корня клона:\nКаждый сценарий активирует окружение examples/ самостоятельно, но пути результатов (out/...) считаются от текущего каталога, поэтому запускайте из корня клона. Видео попадают в out/; этот каталог игнорируется гитом.",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>Примеры</span>"
+    ]
+  },
+  {
+    "objectID": "examples.html#каталог-сценариев",
+    "href": "examples.html#каталог-сценариев",
+    "title": "Примеры",
+    "section": "",
+    "text": "Файл\nЧто показывает\n\n\n\n\nsimple_example.jl\nминимальный маятник: заделка, шарнир, гравитация, запись видео\n\n\npendulum.jl\nшестизвенный механизм с двумя заделками и тремя крутильными пружинами\n\n\ncrankshaft.jl\nкривошипно-ползунный механизм: шарниры, ползун, мотор, линейная пружина\n\n\ncrankshaft_link2d.jl\nтот же механизм, но звенья нарисованы Link2DVisual\n\n\ninclined_surface.jl\nползун на наклонной направляющей под действием гравитации\n\n\nslinear_spring_example.jl\nмасса на линейной пружине вдоль горизонтальной направляющей\n\n\nsensor_example.jl\nвсе четыре типа датчиков и графики измерений\n\n\nlinear_actuator.jl\nпозиционный линейный привод; сверка λ с аналитикой\n\n\ninverse_pendulum_control.jl\nобратный маятник на ползуне с обратной связью в prestep\n\n\nd_pend_torq.jl\nдвойной маятник с моментным приводом и реверсом цели\n\n\nstat_bar.jl\nстатика трёхзвенной цепи: реакции, моменты пружин, сохранение решения\n\n\ndiag_bars.jl\nвосьмизвенная цепь с двумя заделками и пружинами\n\n\nparmech.jl\nпараллельный механизм из кривошипов и стола\n\n\nreal_5bar.jl\nпятизвенный механизм с реальными массами и моментами инерции\n\n\nhinge_with_drift.jl\nконтур звена через MeshVisual, поведение шарнира\n\n\ntest_forward_kinematic.jl\nпрямая кинематика: kinematic_constrains! и визуализация одного состояния",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>Примеры</span>"
+    ]
+  },
+  {
+    "objectID": "examples.html#чему-учиться-в-примерах",
+    "href": "examples.html#чему-учиться-в-примерах",
+    "title": "Примеры",
+    "section": "Чему учиться в примерах",
+    "text": "Чему учиться в примерах\n\nСборка системы — simple_example.jl: тела, связи, assemble!, начальное состояние, интегрирование.\nСложные механизмы — crankshaft.jl, real_5bar.jl, parmech.jl: комбинация шарниров, ползунов, пружин и приводов.\nПриводы — linear_actuator.jl и inverse_pendulum_control.jl: prestep, согласованные цель и её производная.\nСтатика — stat_bar.jl: static_solver!, реакции через get_lms, моменты пружин, сохранение матрицы решения.\nДатчики — sensor_example.jl: sys.measure! и графики.\nВизуализация — crankshaft_link2d.jl, hinge_with_drift.jl: визуальные компаньоны и пользовательские формы.",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>Примеры</span>"
+    ]
+  },
+  {
+    "objectID": "examples.html#что-стоит-знать-запуская-примеры",
+    "href": "examples.html#что-стоит-знать-запуская-примеры",
+    "title": "Примеры",
+    "section": "Что стоит знать, запуская примеры",
+    "text": "Что стоит знать, запуская примеры\n\nПервый запуск долгий: Makie компилируется.\nGLMakie требует дисплея; в примерах используется CairoMakie.\nЧасть сценариев печатает Assembling failed! — это исторический артефакт проверки assemble! на истинность: функция ничего не возвращает, поэтому сообщение выводится всегда. На расчёт оно не влияет.\nreal_5bar.jl пишет triv_dyn.mp4 в корень репозитория, а не в out/.\nframerate в record должен быть целым числом; некоторые примеры передают Float64, Makie округляет и предупреждает.\nДемпфирование LinearSpring пока не действует (см. главу «Силы»).",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>Примеры</span>"
+    ]
+  },
+  {
+    "objectID": "api.html",
+    "href": "api.html",
+    "title": "Справочник API",
+    "section": "",
+    "text": "Типы и конструкторы\nНиже — экспортируемые имена, сгруппированные по назначению. Полные сигнатуры с описанием аргументов — в docstring’ах исходников (src/*.jl).\nАбстрактные типы для расширения: AbstractBody2D, AbstractConnector2D, AbstractJoint2D, AbstractActuator2D, AbstractPositionActuator2D, AbstractSensor2D. Типы AbstractForce2D, AbstractPositionSensor, AbstractVelocitySensor и AbstractAccelerationSensor объявлены в модуле, но не экспортируются.",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#типы-и-конструкторы",
+    "href": "api.html#типы-и-конструкторы",
+    "title": "Справочник API",
+    "section": "",
+    "text": "Имя\nКонструктор\n\n\n\n\nMBSystem2D\nMBSystem2D()\n\n\nBody2D\nBody2D(mass, inertia; length = 1.0, visual = BarVisual(...))\n\n\nFixedJoint\nFixedJoint(body; visual = FixedVisual())\n\n\nHingeJoint\nHingeJoint(body1, body2; visual = HingeVisual())\n\n\nSliderJoint\nSliderJoint(body1, body2; vis_axis_length = 2.0, vis_slider_length = 0.5, vis_slider_width = 0.2, visual = SliderVisual(...))\n\n\nTorsionalSpring\nTorsionalSpring(hinge, stiffness, rest_angle = 0.0, damping = 0.0, vis_r = 0.3) или TorsionalSpring(hinge; stiffness, rest_angle, damping, vis_r)\n\n\nLinearSpring\nLinearSpring(joint, stiffness, x_dist = 0.0, damping = 0.0, vis_r = 0.3, vis_N = 4) или LinearSpring(joint; stiffness, x_dist, damping, vis_r, vis_N)\n\n\nBodyTimeVariableForce\nBodyTimeVariableForce(body; position, direction, force, visual)\n\n\nPositionMotor2D\nPositionMotor2D(hinge, target_angle, current_velocity)\n\n\nPositionLinearActuator2D\nPositionLinearActuator2D(slider, target_position, current_velocity)\n\n\nFramePositionSensor\nFramePositionSensor(body = ..., position = ..., axis = :x)\n\n\nFrameGlobalVelocitySensor\nFrameGlobalVelocitySensor(body = ..., position = ..., axis = :x)\n\n\nFrameLocalVelocitySensor\nFrameLocalVelocitySensor(body = ..., position = ..., rot = 0.0, axis = :x)\n\n\nFrameLocalAccelerationSensor\nFrameLocalAccelerationSensor(body = ..., position = ..., rot = 0.0, axis = :x)",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#система",
+    "href": "api.html#система",
+    "title": "Справочник API",
+    "section": "Система",
+    "text": "Система\n\n\n\n\n\n\n\nФункция\nНазначение\n\n\n\n\nadd!(sys, entity)\nдобавить тело, связь, силу, привод или датчик\n\n\nassemble!(sys)\nсобрать матрицу масс, правую часть, якобиан, слоты уставок\n\n\nbodies(sys)\nвектор тел\n\n\nconnectors(sys)\nвектор коннекторов (связи и приводы)\n\n\nnumber_of_bodies(sys)\nчисло тел\n\n\nnumber_of_dofs(sys)\nполная длина вектора состояния\n\n\nlast_body_dof(sys)\nпоследний индекс dof тел\n\n\nlast_lm_dof(sys)\nпоследний индекс блока λ\n\n\nnumber_of_generalized_coordinates(sys)\n3 × число тел\n\n\nget_mass_matrix(sys)\nматрица масс sys.mass\n\n\nget_body_position_dofs(sys, body)\nиндексы (x, y, θ)\n\n\nget_body_velocity_dofs(sys, body)\nиндексы (vx, vy, ω)\n\n\nget_body_generalized_dofs(sys, body)\nиндексы тела в упакованном векторе координат\n\n\nget_lms(sys, connector)\nиндексы λ коннектора\n\n\nget_boundary_points(sys, body, state)\nдве крайние точки контура тела\n\n\nset_initial_position!(initial, sys, body, SVector{3})\nзаписать позицию в начальное состояние\n\n\nset_initial_velocity!(initial, sys, body, SVector{3})\nзаписать скорости в начальное состояние\n\n\nset_initial_state_value!(state, sys, body, values)\nзаписать (x, y, θ) в полный вектор состояния\n\n\nset_pos_state_value!(state, sys, body, values)\nзаписать (x, y, θ) в упакованный вектор координат\n\n\nget_spring_moment(spring, θ1, θ2)\nмомент крутильной пружины\n\n\nget_spring_energy(spring, θ1, θ2)\nэнергия крутильной пружины",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#связи-приводы-и-силы",
+    "href": "api.html#связи-приводы-и-силы",
+    "title": "Справочник API",
+    "section": "Связи, приводы и силы",
+    "text": "Связи, приводы и силы\n\n\n\n\n\n\n\nФункция\nНазначение\n\n\n\n\nsetposition!(joint::FixedJoint, pos)\nабсолютная точка заделки\n\n\nsetrotation!(joint::FixedJoint, θ)\nабсолютный угол заделки\n\n\nset_position_on_first_body!(joint, SVector{2})\nточка крепления на первом теле\n\n\nset_position_on_second_body!(joint, SVector{2})\nточка крепления на втором теле\n\n\nset_direction_on_first_body!(joint, SVector{2})\nнаправление оси на первом теле\n\n\nset_direction_on_second_body!(joint, SVector{2})\nнаправление на втором теле\n\n\nsettarget!(act, value, rate)\nновая цель привода и её производная\n\n\nset_force!(force::BodyTimeVariableForce, func, dir = force.dir)\nфункция силы\n\n\nset_position!(force::BodyTimeVariableForce, pos)\nточка приложения силы",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#расчёт",
+    "href": "api.html#расчёт",
+    "title": "Справочник API",
+    "section": "Расчёт",
+    "text": "Расчёт\n\n\n\n\n\n\n\nФункция\nНазначение\n\n\n\n\nsimulate(sys, initial, time_span)\nдинамика методом CROS; возвращает матрицу решения\n\n\ncros!(sol, u0, mass, sys, h)\nодин прогон CROS с обработкой prestep, уставок и приводов\n\n\ncros!(sol, u0, mass, func, jac, h)\nнизкоуровневый CROS по готовым func и jac\n\n\nstatic_solver!(sol, u0, func, jac; ...)\nстатика; см. главу «Расчёт»\n\n\nfind_natural_freqs(sys, state)\nсобственные частоты в Гц",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#визуализация",
+    "href": "api.html#визуализация",
+    "title": "Справочник API",
+    "section": "Визуализация",
+    "text": "Визуализация\n\n\n\n\n\n\n\nФункция\nНазначение\n\n\n\n\nsystemfigure(sys, sol; limits = :auto)\nFigure с осью в DataAspect и готовым графиком\n\n\nsystemplot(sys, sol)\nрецепт всей системы, возвращает (fig, ax, plot)\n\n\nsystemplot!(ax, sys, sol; show_bodies, show_connectors, show_forces)\nдобавить систему в существующую ось\n\n\ntrajectory_limits(sys, sol; margin, stride)\nгабарит траектории (xmin, xmax, ymin, ymax)\n\n\nbodyplot(sys, sol, body)\nрецепт одного тела\n\n\nhingeplot(sys, sol, joint)\nрецепт шарнира\n\n\nfixedplot(sys, sol, joint)\nрецепт заделки\n\n\nsliderplot(sys, sol, joint)\nрецепт ползуна\n\n\nlinearspringplot(sys, sol, spring)\nрецепт линейной пружины\n\n\ntorsionalspringplot(sys, sol, spring)\nрецепт крутильной пружины\n\n\narrowplot(sys, sol, force)\nрецепт вектора силы\n\n\nvisual(entity)\nвизуальный компаньон сущности\n\n\nset_visualization!(entity, visual)\nназначить компаньон\n\n\nresolve_style(value, sys, sol, t, entity)\nразрешить константу или функцию стиля\n\n\n\nКомпаньоны: NoVisual, AbstractVisual, AbstractBodyVisual, AbstractConnectorVisual, AbstractForceVisual, Attachment, VisualStyle, BarVisual, RectVisual, CircleVisual, MeshVisual, Link2DVisual, HingeVisual, FixedVisual, SliderVisual, LinearSpringVisual, TorsionalSpringVisual, ArrowVisual.",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#внутренние-точки-расширения",
+    "href": "api.html#внутренние-точки-расширения",
+    "title": "Справочник API",
+    "section": "Внутренние точки расширения",
+    "text": "Внутренние точки расширения\nЭти имена не входят в публичный контракт, но используются при добавлении новых сущностей и форм:\n\nadd_to_rhs!(rhs, state, sys, entity) — вклад сущности в правую часть;\nnumber_of_dofs(::T) — число λ сущности;\nget_lms(sys, entity) — индексы λ;\ncompute_kinematic_residual!(residual, coordinates, sys, entity) — остаток кинематики;\npropagate_targets!(sys, actuator) — перенос уставки в sys.targets;\nupdate_jacobian!(sys, jac, actuator) — вклад привода в якобиан;\nbody_contour(sys, body, state), to_global(x, y, θ, att, p) — геометрия;\nfixed_joint_hatch_points, slider_axis_points, slider_prism_points, linear_spring_points, torsional_spring_points, force_anchor — геометрия отрисовки;\n_draw_body!(plot, visual) — отрисовка тела в рецепте.",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "api.html#обозначения-полей-системы",
+    "href": "api.html#обозначения-полей-системы",
+    "title": "Справочник API",
+    "section": "Обозначения полей системы",
+    "text": "Обозначения полей системы\nMBSystem2D — изменяемая структура. Полезные поля после assemble!:\n\n\n\nПоле\nСодержимое\n\n\n\n\nbodies, connectors, forces, sensors\nдобавленные сущности\n\n\nbodiesdofs, lmdofs\nграницы блоков dof\n\n\nmass\nматрица масс\n\n\nrhs, jacobian\nправая часть и её якобиан\n\n\nprestep\nфункция, вызываемая перед шагом\n\n\ntargets\nуставки приводов\n\n\nmeasure!\nфункция снятия измерений\n\n\nassembled\nпризнак собранной системы",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>Справочник API</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html",
+    "href": "troubleshooting.html",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "",
+    "text": "Ограничения текущей версии",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#ограничения-текущей-версии",
+    "href": "troubleshooting.html#ограничения-текущей-версии",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "",
+    "text": "Только 2D. Пространственные тела и шарниры не реализованы.\nНет контакта, трения и ограничений на ход. Ползун может уехать сколь угодно далеко; пружина не имеет предела.\nНет ограничения силы привода. Позиционный привод удерживает координату и может развить сколь угодно большой момент.\nПлотный якобиан. Считается ForwardDiff на каждом шаге; для больших систем это медленно.\nНет адаптивного шага. Шаг задаёт пользователь.\nLinearSpring.damping не действует. Поле хранится, но в уравнение не входит.\nДлина тела — только визуализация. Она не влияет ни на динамику, ни на положение точек крепления связей.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#сборка-системы",
+    "href": "troubleshooting.html#сборка-системы",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Сборка системы",
+    "text": "Сборка системы\n\nassemble! возвращает nothing. Не пишите if (!assemble!(sys)): условие всегда истинно, сообщение об ошибке будет ложным. Готовность системы — поле sys.assembled.\nСвязи добавляются после тел. add! для связи читает last_lm_dof(sys).\nСущности добавляются до assemble!. После сборки структура фиксирована; новые сущности требуют повторной сборки.\nИндексы — только после add!. У новой сущности index == -1, и get_body_position_dofs/get_lms вернут мусор.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#начальные-условия-и-первые-шаги",
+    "href": "troubleshooting.html#начальные-условия-и-первые-шаги",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Начальные условия и первые шаги",
+    "text": "Начальные условия и первые шаги\n\nНесогласованные начальные координаты дают скачок на первых шагах или расходятся. Геометрия должна удовлетворять связям.\nНулевые λ в начале — норма: реакции устанавливаются за несколько шагов, поэтому в начале решения возможен переходный процесс.\nНе путайте «нулевая скорость» и «равновесие». Под гравитацией механизм начнёт двигаться.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#статика",
+    "href": "troubleshooting.html#статика",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Статика",
+    "text": "Статика\n\nНужно минимум два столбца sol. Первый столбец — начальное приближение, результат пишется начиная со второго. При times столбцов нужно length(times) + 1.\ntimes только возрастают и начинаются не раньше u0[end].\nДробление шага (cutback &lt; 1) может сделать кадров больше, чем времён в times; следите за размером sol.\nВырожденный якобиан пробрасывается как SingularException, а не глушится.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#собственные-частоты",
+    "href": "troubleshooting.html#собственные-частоты",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Собственные частоты",
+    "text": "Собственные частоты\n\nСистема должна быть собрана, а состояние — равновесием.\nОтрицательные собственные значения (неустойчивое равновесие) приводят к ошибке извлечения корня. Считайте устойчивость отдельно.\nНулевые частоты — это движения без возвращающей силы; они не означают ошибку.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#приводы",
+    "href": "troubleshooting.html#приводы",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Приводы",
+    "text": "Приводы\n\nsettarget! требует и значение, и производную. Несогласованная производная ухудшает слежение и согласованность якобиана.\nλ позиционного линейного привода не равен физической силе. См. главу «Приводы» и examples/linear_actuator.jl.\nЦель должна быть совместна со связями. Иначе решатель будет «перетягивать» механизм.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#визуализация",
+    "href": "troubleshooting.html#визуализация",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Визуализация",
+    "text": "Визуализация\n\nНе загружен бэкенд — Figure, Axis, save и record не определены. Добавьте using CairoMakie (или GLMakie).\nБез дисплея GLMakie не работает — используйте CairoMakie.\nframerate должен быть целым; Float64 вызывает предупреждение.\nКаталог для файла должен существовать — mkpath(\"out\") перед записью.\nWGLMakie ограничен в записи видео — для файлов берите CairoMakie.\nПользовательские формы — это внутренние методы (body_contour, _draw_body!), их имена могут меняться.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#примеры-и-окружение",
+    "href": "troubleshooting.html#примеры-и-окружение",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Примеры и окружение",
+    "text": "Примеры и окружение\n\nПервый запуск долгий — Makie компилируется.\nОкружение примеров требует Julia 1.11+ из-за секции [sources].\nAssembling failed! в примерах — исторический артефакт, не ошибка.\nreal_5bar.jl пишет видео в корень репозитория, а не в out/.\nВерсии Makie и Flexia должны быть из одного окружения.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#числа-и-единицы",
+    "href": "troubleshooting.html#числа-и-единицы",
+    "title": "Приложение A — Ограничения и частые проблемы",
+    "section": "Числа и единицы",
+    "text": "Числа и единицы\n\nУглы — радианы, не градусы. Для градусов используйте deg2rad.\nМомент инерции — относительно центра масс.\nСилы в слотах тела — ньютоны, момент — ньютон-метры.\nВремя входит в состояние последним элементом, а не отдельным аргументом решателя.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>A</span>  <span class='chapter-title'>Ограничения и частые проблемы</span>"
+    ]
+  },
+  {
+    "objectID": "publishing.html",
+    "href": "publishing.html",
+    "title": "Приложение B — Сборка и публикация документации",
+    "section": "",
+    "text": "Что нужно установить\nЭто руководство — проект Quarto (тип book). Один и тот же исходный текст собирается в три формата:",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Сборка и публикация документации</span>"
+    ]
+  },
+  {
+    "objectID": "publishing.html#что-нужно-установить",
+    "href": "publishing.html#что-нужно-установить",
+    "title": "Приложение B — Сборка и публикация документации",
+    "section": "",
+    "text": "Quarto 1.4 или новее (проверено на 1.7.32);\nTeX с xelatex — MiKTeX или TeX Live (нужен только для PDF);\nшрифты с кириллицей. В _quarto.yml заданы Times New Roman (текст), Arial (заголовки) и Consolas (код) — они есть в Windows. На Linux/macOS замените их, например, на DejaVu Serif, DejaVu Sans и DejaVu Sans Mono.\n\n\n\n\n\n\n\nКириллица в PDF\n\n\n\nЕсли шрифт не содержит кириллицы, в PDF пропадут русские буквы — обычно сначала это видно на титульной странице (остаются только латинские фрагменты). Проверяйте mainfont, sansfont и monofont в _quarto.yml.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Сборка и публикация документации</span>"
+    ]
+  },
+  {
+    "objectID": "publishing.html#команды",
+    "href": "publishing.html#команды",
+    "title": "Приложение B — Сборка и публикация документации",
+    "section": "Команды",
+    "text": "Команды\nИз корня клона:\nquarto render docs                 # all three formats\nquarto render docs --to html       # HTML site only\nquarto render docs --to docx       # DOCX only\nquarto render docs --to pdf        # PDF only\nquarto preview docs                # live preview of the site\nРезультат складывается в docs/_book/:\n\n\n\nФайл\nЧто это\n\n\n\n\ndocs/_book/index.html\nточка входа HTML-сайта\n\n\ndocs/_book/Flexia-manual.pdf\nPDF\n\n\ndocs/_book/Flexia-manual.docx\nDOCX\n\n\n\nИмя PDF и DOCX задаётся полем book.output-file в _quarto.yml. Каталог _book в git не попадает.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Сборка и публикация документации</span>"
+    ]
+  },
+  {
+    "objectID": "publishing.html#устройство-проекта",
+    "href": "publishing.html#устройство-проекта",
+    "title": "Приложение B — Сборка и публикация документации",
+    "section": "Устройство проекта",
+    "text": "Устройство проекта\ndocs/\n  _quarto.yml          конфигурация книги и форматов\n  index.qmd            введение\n  installation.qmd     установка и первый запуск\n  model.qmd            уравнения и вектор состояния\n  bodies.qmd           тела\n  joints.qmd           связи\n  forces.qmd           силы\n  actuators.qmd        приводы\n  sensors.qmd          датчики\n  solving.qmd          динамика, статика, частоты\n  visualization.qmd    визуализация\n  examples.qmd         каталог примеров\n  api.qmd              справочник API\n  troubleshooting.qmd  ограничения (приложение)\n  publishing.qmd       эта глава (приложение)\n  deploy-pages.ps1     публикация в ветку pages\n  figures/             рисунки и make_figures.jl\n  _book/               результат сборки (не в git)\nexecute.enabled: false в _quarto.yml означает, что код в примерах при сборке не исполняется: документация статическая и собирается без Julia.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Сборка и публикация документации</span>"
+    ]
+  },
+  {
+    "objectID": "publishing.html#публикация-в-ветку-pages",
+    "href": "publishing.html#публикация-в-ветку-pages",
+    "title": "Приложение B — Сборка и публикация документации",
+    "section": "Публикация в ветку pages",
+    "text": "Публикация в ветку pages\nСобранный сайт публикуется в ветку pages репозитория. Скрипт:\n.\\docs\\deploy-pages.ps1\nПараметры:\n\n\n\n\n\n\n\n\nПараметр\nПо умолчанию\nНазначение\n\n\n\n\n-SkipRender\nвыкл.\nне пересобирать, опубликовать уже готовый _book\n\n\n-Remote\norigin\nимя git-remote\n\n\n-Branch\npages\nветка публикации\n\n\n-Message\nдата и время\nсообщение коммита\n\n\n-NoPush\nвыкл.\nсобрать ветку локально, но не пушить\n\n\n\nЧто делает скрипт:\n\nпроверяет наличие quarto и собирает книгу (если не указан -SkipRender);\nпроверяет, что index.html, Flexia-manual.pdf и Flexia-manual.docx на месте;\nклонирует репозиторий во временный каталог, чтобы не трогать рабочую копию;\nпереключается на ветку pages (если её нет — создаёт сиротскую ветку), очищает её и копирует туда содержимое _book;\nдобавляет .nojekyll (чтобы GitHub Pages не обрабатывал сайт Jekyll);\nкоммитит и пушит ветку в origin;\nудаляет временный каталог.\n\nВетка pages — сгенерированная: не редактируйте её руками, изменения потеряются при следующей публикации.\n\nНастройка GitHub Pages\nВ репозитории: Settings &gt; Pages &gt; Build and deployment:\n\nSource: Deploy from a branch;\nBranch: pages, folder / (root).\n\nПосле первого пуша GitHub Pages соберёт сайт за минуту-другую. Адрес для репозитория kutsjuice/Flexia:\nhttps://kutsjuice.github.io/Flexia/\n\n\nПубликация без PowerShell\nТе же шаги вручную (Linux/macOS или любой терминал):\nrepo=$(pwd)\nquarto render docs\ntmp=$(mktemp -d)\ngit clone \"$repo\" \"$tmp\"\ncd \"$tmp\"\ngit checkout --orphan pages\ngit rm -rf .\ncp -R \"$repo/docs/_book/.\" .\ntouch .nojekyll\ngit add -A\ngit commit -m \"docs: publish compiled manual\"\ngit push origin pages\nЕсли ветка pages уже существует, вместо --orphan используйте git fetch origin pages && git checkout -B pages FETCH_HEAD и не удаляйте историю: тогда пуш пройдёт без силы.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Сборка и публикация документации</span>"
+    ]
+  },
+  {
+    "objectID": "publishing.html#если-сборка-падает",
+    "href": "publishing.html#если-сборка-падает",
+    "title": "Приложение B — Сборка и публикация документации",
+    "section": "Если сборка падает",
+    "text": "Если сборка падает\n\nquarto не найден — добавьте каталог bin Quarto в PATH.\nPDF: xelatex не найден — установите MiKTeX/TeX Live и проверьте xelatex --version.\nPDF: пропала кириллица — шрифт без кириллицы; см. предупреждение выше.\nDOCX/PDF не пересобрались — проверьте, что _book не открыт в другой программе.\nПуш отклонён — проверьте доступ к remote (git ls-remote origin) и права на ветку pages; ветка master защищена, но pages — нет.",
+    "crumbs": [
+      "Приложения",
+      "<span class='chapter-number'>B</span>  <span class='chapter-title'>Сборка и публикация документации</span>"
+    ]
+  }
+]
