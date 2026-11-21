@@ -92,7 +92,7 @@ end
 # ---------------------------------------------------------------------------
 # Прогоняем горизонтальный и наклонный слайдер и сравниваем λ с аналитикой
 # ---------------------------------------------------------------------------
-time_span = 0:0.0002:6.0
+time_span = 0:0.002:6.0
 cases = [0.0, 30.0]
 
 results = Any[]
@@ -145,7 +145,8 @@ fig
 # Визуализация наклонного случая
 last = results[end]
 fig, ax, p = systemfigure(last.sys, last.sol)
-record(fig, "out/linear_actuator.mp4", 1:5:length(time_span); framerate = (30) / 5) do t
+video_path = joinpath(@__DIR__, "..", "out", "linear_actuator.mp4")
+framerate = round(Int, 1 / (5 * step(time_span)))
+record(fig, video_path, 1:5:length(time_span); framerate = framerate) do t
     p.time = t
 end
-
