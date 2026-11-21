@@ -18,6 +18,7 @@
 | `PositionMotor2D` | `PositionMotor2D(hinge, target_angle, current_velocity)` |
 | `PositionLinearActuator2D` | `PositionLinearActuator2D(slider, target_position, current_velocity)` |
 | `FramePositionSensor` | `FramePositionSensor(body = ..., position = ..., axis = :x)` |
+| `FrameRotationSensor` | `FrameRotationSensor(body)` |
 | `FrameGlobalVelocitySensor` | `FrameGlobalVelocitySensor(body = ..., position = ..., axis = :x)` |
 | `FrameLocalVelocitySensor` | `FrameLocalVelocitySensor(body = ..., position = ..., rot = 0.0, axis = :x)` |
 | `FrameLocalAccelerationSensor` | `FrameLocalAccelerationSensor(body = ..., position = ..., rot = 0.0, axis = :x)` |

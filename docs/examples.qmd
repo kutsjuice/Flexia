@@ -37,6 +37,7 @@ julia --project=examples examples/crankshaft.jl
 | `real_5bar.jl` | пятизвенный механизм с реальными массами и моментами инерции |
 | `hinge_with_drift.jl` | контур звена через `MeshVisual`, поведение шарнира |
 | `test_forward_kinematic.jl` | прямая кинематика: `kinematic_constrains!` и визуализация одного состояния |
+| `fixed_joint_attachment.jl` | геометрия штриховки заделки: `FixedVisual` со своим `Attachment` |
 
 ## Чему учиться в примерах
 
