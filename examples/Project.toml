@@ -2,6 +2,7 @@
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Flexia = "2666d27d-cdb3-457d-8dda-c8ec34a93f6f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [sources]
