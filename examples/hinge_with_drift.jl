@@ -81,12 +81,45 @@ set_initial_velocity!(initial_state, sys, moving, SA_F64[0, 0, 0.1])
 time_span = 0:0.001:10.0
 sol = simulate(sys, initial_state, time_span)
 
-fig, ax, p = systemfigure(sys, sol)
+Rot(th) = begin
+    s,c = sincos(th)
+    return SA[c -s; s c]
+end
+
+# Hinge area only: the ПКП (pole of the finite rotation from the initial pose)
+# and the МЦС (instantaneous centre of velocity) are recomputed on every frame
+# from the current state. For an ideal hinge both stay on the hinge point.
+dofs = get_body_position_dofs(sys, moving)
+vdofs = get_body_velocity_dofs(sys, moving)
+x0, y0, θ0 = sol[dofs, 1]
+
+pkp_x = Observable(0.0); pkp_y = Observable(-link_len)
+mcs_x = Observable(0.0); mcs_y = Observable(-link_len)
+
+fig, ax, p = systemfigure(sys, sol;
+    limits = (-0.025, 0.025, -link_len - 0.025, -link_len + 0.025))
+scatter!(ax, pkp_x, pkp_y, color = :transparent, strokecolor = :red, strokewidth = 3,
+         markersize = 16, label = "ПКП")
+scatter!(ax, mcs_x, mcs_y, color = :blue, markersize = 7, label = "МЦС")
+axislegend(ax; position = :lt, framevisible = false, labelsize = 12)
 
 fps = round(Int, 1 / (5 * step(time_span)))
 record(fig, "out/hinge_no_drift.mp4", 1:5:length(time_span);
-       framerate = fps) do t
-    p.time = t
+       framerate = fps) do i
+    p.time = i
+    x, y, θ = sol[dofs, i]
+    vx, vy, ω = sol[vdofs, i]
+    mcs_x[] = x - vy / ω                     # точка звена с нулевой скоростью
+    mcs_y[] = y + vx / ω
+    θr = θ - θ0
+    if abs(θr) < 1e-5                        # предел θ → 0: ПКП переходит в МЦС
+        pkp_x[] = mcs_x[]
+        pkp_y[] = mcs_y[]
+    else
+        d = inv(I(2) - Rot(θr)) * SA[x - x0, y - y0]
+        pkp_x[] = x0 + d[1]
+        pkp_y[] = y0 + d[2]
+    end
 end
 
 
@@ -99,10 +132,6 @@ end
 
 
 u = meas .- meas[:,1]
-Rot(th) = begin
-    s,c = sincos(th)
-    return SA[c -s; s c]
-end
 
 # Locate the instantaneous centre of rotation: a cubic fit of the relative
 # displacement in the relative angle, then the point that maps both frames.
@@ -126,13 +155,26 @@ end
 
 # The centre of rotation should hold still at the hinge point: the sample-wise
 # estimate and the cubic fit are drawn together so a drift of the fit shows up
-# as the distance between the two curves.
-icr(θ) = SA[(px - dpy)(θ); (py + dpy)(θ)]
+# as the distance between the two curves. For a pure rotation u + Ωu' is exactly
+# the pole, so the fitted ICR is (u_x - u_y', u_y + u_x').
+icr(θ) = SA[(px - dpy)(θ); (py + dpx)(θ)]
+
+# Both curves in the axes of the hinge point: an ideal hinge keeps them at (0, 0).
+# The sample-wise estimate is ill-conditioned at θ → 0 (it amplifies the constraint
+# error by 1/θ), hence the ±0.02 mm scatter along x.
+hinge = SA[0.0, link_len]        # hinge point relative to the sensor, initial pose
+icr_pts = reduce(hcat, icr.(θ))
 
 drift_fig = Figure()
-drift_ax = Axis(drift_fig[1, 1], aspect = DataAspect(), xlabel = "x", ylabel = "y")
-lines!(drift_ax, p[1, :], p[2, :], label = "sample-wise estimate")
-lines!(drift_ax, icr.(θ), label = "cubic fit")
+drift_ax = Axis(drift_fig[1, 1], aspect = DataAspect(),
+                xlabel = "Δx, mm", ylabel = "Δy, mm",
+                title = "ICR relative to the hinge point")
+lines!(drift_ax, 1e3 .* (p[1, :] .- hinge[1]), 1e3 .* (p[2, :] .- hinge[2]),
+       label = "sample-wise estimate")
+lines!(drift_ax, 1e3 .* (icr_pts[1, :] .- hinge[1]), 1e3 .* (icr_pts[2, :] .- hinge[2]),
+       label = "cubic fit")
+scatter!(drift_ax, [0.0], [0.0], color = :black, markersize = 8, label = "hinge point")
+limits!(drift_ax, -0.05, 0.05, -0.05, 0.05)
 axislegend(drift_ax)
 drift_path = joinpath(@__DIR__, "..", "out", "hinge_with_drift.png")
 save(drift_path, drift_fig)
