@@ -206,19 +206,23 @@ Base.@kwdef struct HingeVisual <: AbstractConnectorVisual
 end
 
 """
-    FixedVisual(; hatch_length, hatch_height_ratio, hatch_angle,
-                  hatch_step_ratio, attachment, style)
+    FixedVisual(; hatch_length, hatch_height_ratio, hatch_step_ratio,
+                  attachment, style)
 
 Заделка — заштрихованная полоса под звеном.
 
 `hatch_length == 0` — брать длину звена (историческое поведение).
-Штрихи идут под 45° — угол пока не параметризован.
+Штрихи идут под 45° — угол наклона штрихов не параметризован.
+
+`attachment` задаёт прикрепление полосы к телу так же, как у компаньонов тел:
+по умолчанию она стоит под звеном, вдоль его локальной оси; `offset` сдвигает
+полосу в системе тела, `angle` доворачивает её относительно тела.
 """
 Base.@kwdef struct FixedVisual <: AbstractConnectorVisual
     hatch_length::Float64 = 0.0
     hatch_height_ratio::Float64 = 0.25
     hatch_step_ratio::Float64 = 0.5
-    attachment::Attachment = Attachment()
+    attachment::Attachment = Attachment()   # где полоса прикреплена к телу
     # исторический FIXED_JOINT_COLOR = первый цвет палитры Wong
     style::VisualStyle = VisualStyle(color = Makie.wong_colors()[1])
 end

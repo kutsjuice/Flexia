@@ -148,6 +148,40 @@ end
             @test -l / 2 - 1e-9 <= p[1] <= l / 2 + 1e-9
             @test -1e-9 <= -p[2] <= h + 1e-9
         end
+
+        # --- Attachment полосы: смещение и доворот в системе тела -----------
+        # Отдельная система «тело + заделка», чтобы не менять общий фикстур:
+        # его заделка участвует в тесте рендера ниже.
+        function hatch_with(att; θ = 0.0, offset = SA[0.0, 0.0])
+            bd = Body2D(1.0, 1.0; length = l)
+            sys2 = MBSystem2D()
+            add!(sys2, bd)
+            fj2 = FixedJoint(bd, visual = FixedVisual(attachment = att))
+            add!(sys2, fj2)
+            setposition!(fj2, SA[offset[1], offset[2]])
+            setrotation!(fj2, θ)
+            assemble!(sys2) || error("assemble! failed")
+            st = zeros(number_of_dofs(sys2))
+            d = get_body_position_dofs(sys2, bd)
+            st[d[1]], st[d[2]], st[d[3]] = offset[1], offset[2], θ
+            return Flexia.fixed_joint_hatch_points(sys2, fj2, st)
+        end
+
+        # поворот тела переносит полосу вместе с ним: при θ = π/2 t-ось
+        # «вниз, под звеном» уходит в +x
+        rot = hatch_with(Attachment(); θ = π / 2)
+        @test all(-1e-6 <= p[1] <= h + 1e-6 for p in rot)
+        @test all(-l / 2 - 1e-6 <= p[2] <= l / 2 + 1e-6 for p in rot)
+
+        # смещение сдвигает полосу целиком
+        off = hatch_with(Attachment(offset = SA[1.0, 2.0]))
+        @test all(1.0 - l / 2 - 1e-6 <= p[1] <= 1.0 + l / 2 + 1e-6 for p in off)
+        @test all(2.0 - h - 1e-6 <= p[2] <= 2.0 + 1e-6 for p in off)
+
+        # доворот на -π/2 разворачивает полосу относительно звена
+        ang = hatch_with(Attachment(angle = -π / 2))
+        @test all(-h - 1e-6 <= p[1] <= 1e-6 for p in ang)
+        @test all(-l / 2 - 1e-6 <= p[2] <= l / 2 + 1e-6 for p in ang)
     end
 
     # -----------------------------------------------------------------------

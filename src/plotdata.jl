@@ -164,16 +164,20 @@ function body_contour(x, y, θ, v::Link2DVisual; n_arc::Int = 16)
 end
 
 # ---------------------------------------------------------------------------
-# FixedJoint: штриховка заделки (перенесено из visualize.jl без изменений)
+# FixedJoint: штриховка заделки
 # ---------------------------------------------------------------------------
 
 """
     fixed_joint_hatch_points(sys, joint, state) -> Vector{Point2f}
 
 Штриховка заделки: плоский список пар точек (начало, конец) отрезков штриховки.
-Полоса расположена под звеном (в локальной системе тела, вдоль локальной оси `-y`),
-её длина равна длине звена, высота — четверти длины звена.
+Полоса расположена под звеном (в локальной системе заделки, вдоль локальной оси
+`-y`), её длина равна длине звена, высота — четверти длины звена.
 Штрихи идут под 45° к звену и обрезаны по границам полосы.
+
+Прикрепление полосы к телу берётся из `visual(joint).attachment` — так же, как
+у компаньонов тел: `offset` сдвигает полосу в системе тела, `angle` доворачивает
+её относительно тела. Без `Attachment` полоса стоит ровно под звеном.
 """
 function fixed_joint_hatch_points(sys::MBSystem2D, joint::FixedJoint, state::AbstractVector{Float64})
     bd = joint.body
@@ -192,12 +196,12 @@ function fixed_joint_hatch_points(sys::MBSystem2D, joint::FixedJoint, state::Abs
         return points
     end
 
-    cθ = cos(_θ)
-    sθ = sin(_θ)
+    att = v.attachment
 
-    # локальные координаты (s, t): s — вдоль звена, t — вниз, под звеном
-    to_global = (s, t) -> Point2f(_x + s * cθ + t * sθ,
-                                  _y + s * sθ - t * cθ)
+    # Точка полосы в её локальной системе: s — вдоль звена, t — вниз, под звеном.
+    # Отсюда локальная точка заделки — (s, -t), а прикрепление к телу (смещение и
+    # доворот) выполняет общий `to_global`, как для любого другого компаньона.
+    attach(s, t) = to_global(_x, _y, _θ, att, Point2f(s, -t))
 
     # Штрих под 45° к звену: в локальных координатах s + t = c.
     # Полоса: s ∈ [-l/2, l/2], t ∈ [0, h] — отсюда s ∈ [c-h, c].
@@ -207,8 +211,8 @@ function fixed_joint_hatch_points(sys::MBSystem2D, joint::FixedJoint, state::Abs
         s_lo = max(-l / 2, c - h)
         s_hi = min(l / 2, c)
         if (s_hi > s_lo)
-            push!(points, to_global(s_lo, c - s_lo))
-            push!(points, to_global(s_hi, c - s_hi))
+            push!(points, attach(s_lo, c - s_lo))
+            push!(points, attach(s_hi, c - s_hi))
         end
         c += step
     end
