@@ -37,6 +37,17 @@ function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2
     x_, y_, r_ = state[dofs];
     return first(SA_F64[sin(r_) cos(r_)] * sensor.position) + y_;
 end
+
+mutable struct FrameRotationSensor <: AbstractPositionSensor
+    body::Body2D
+end
+
+function measure(state::Vector{Float64}, dstate::Vector{Float64}, sys::MBSystem2D, sensor::FrameRotationSensor)::Float64
+    body = sensor.body;
+    dofs = get_body_position_dofs(sys, body);
+    return state[dofs[3]];
+end
+
 mutable struct FrameGlobalVelocitySensor{A <: AbstractAxis} <: AbstractSensor2D
     body::Body2D
     position::SVector{2, Float64}

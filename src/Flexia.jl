@@ -49,7 +49,7 @@ export cros!, static_solver!, simulate, find_natural_freqs
 export settarget!
 
 # Sensors
-export FramePositionSensor, FrameGlobalVelocitySensor, FrameLocalVelocitySensor, FrameLocalAccelerationSensor
+export FramePositionSensor, FrameRotationSensor, FrameGlobalVelocitySensor, FrameLocalVelocitySensor, FrameLocalAccelerationSensor
 
 # system
 export add!, assemble!, get_mass_matrix
