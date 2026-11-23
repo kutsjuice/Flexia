@@ -33,7 +33,7 @@ export PositionMotor2D, PositionLinearActuator2D
 export MBSystem2D
 
 # connectors
-export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!, set_visualization!
+export set_position_on_first_body!, set_position_on_second_body!, set_direction_on_first_body!, set_direction_on_second_body!, setposition!, setrotation!, set_visualization!, set_rot_offset!
 # bodies
 export bodies, number_of_bodies, connectors
 

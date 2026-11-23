@@ -85,17 +85,78 @@ function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vec
     return nothing
 end
 
-mutable struct HingeJoint <: AbstractJoint2D
+"""
+    _eval_drift(f, θ) -> SVector{2}
+
+Смещение точки МЦС шарнира от номинальной точки крепления при относительном угле
+`θ`. `nothing` означает «дрейфа нет»: ветвление устраняется на этапе компиляции,
+поэтому обычный шарнир не платит за поддержку дрейфа ни аллокациями, ни типовой
+нестабильностью.
+
+`θ` не ограничивается типом: при сборке якобиана сюда приходит
+`ForwardDiff.Dual`. Результат — двухкомпонентный вектор смещения в ЛСК тела.
+"""
+@inline _eval_drift(::Nothing, θ) = SA[0.0, 0.0]
+@inline _eval_drift(f, θ) = f(θ)
+
+"""
+    HingeJoint(bd1, bd2; visual = HingeVisual(), rot_offset = 0.0,
+               drift1 = nothing, drift2 = nothing)
+
+Цилиндрический шарнир между телами `bd1` и `bd2`. Номинальные точки крепления
+задаются `set_position_on_first_body!` и `set_position_on_second_body!`.
+
+Если заданы `drift1`/`drift2`, точка контакта уходит от номинальной вдоль
+аналитических центроид (МЦС): функции получают относительный угол
+`θ = θj - θi - rot_offset` и возвращают смещение в ЛСК своего тела — `drift1`
+задаёт неподвижную центроиду на `bd1`, `drift2` — подвижную на `bd2`. Начало
+отсчёта угла задаёт `rot_offset`, см. `set_rot_offset!`.
+
+Без `drift1`/`drift2` шарнир ведёт себя как обычный: тип
+`HingeJoint{Nothing, Nothing}`, смещения нулевые.
+"""
+mutable struct HingeJoint{F1, F2} <: AbstractJoint2D
     body1::Body2D
     body1_hinge_point::SVector{2,Float64}
     body2::Body2D
     body2_hinge_point::SVector{2,Float64}
     index::Int64
+    rot_offset::Float64
+    drift1::F1
+    drift2::F2
     visual::AbstractVisual
 
-    function HingeJoint(bd1::Body2D, bd2::Body2D; visual::AbstractVisual = HingeVisual())
-        return new(bd1, SA[0.0, 0.0], bd2, SA[0.0, 0.0], -1, visual)
+    function HingeJoint(
+        bd1::Body2D,
+        bd2::Body2D;
+        visual::AbstractVisual = HingeVisual(),
+        rot_offset::Float64 = 0.0,
+        drift1::F1 = nothing,
+        drift2::F2 = nothing,
+    ) where {F1, F2}
+        return new{F1, F2}(
+            bd1,
+            SA[0.0, 0.0],
+            bd2,
+            SA[0.0, 0.0],
+            -1,
+            rot_offset,
+            drift1,
+            drift2,
+            visual,
+        )
     end
+end
+
+"""
+    set_rot_offset!(joint::HingeJoint, offset)
+
+Начало отсчёта относительного угла, который видят `drift1`/`drift2`:
+`θ = θj - θi - offset`.
+"""
+function set_rot_offset!(joint::HingeJoint, offset::Float64)
+    joint.rot_offset = offset
+    return nothing
 end
 
 visual(joint::HingeJoint) = joint.visual
@@ -135,43 +196,45 @@ function add_to_rhs!(rhs, state, sys::MBSystem2D, joint::HingeJoint)
     _yi = state[bd1_p_dofs[2]]
     _θi = state[bd1_p_dofs[3]]
 
-    # vxi = state[bd1_v_dofs[1]]
-    # vyi = state[bd1_v_dofs[2]]
-    # _ωi = state[bd1_v_dofs[3]]
-
     _xj = state[bd2_p_dofs[1]]
     _yj = state[bd2_p_dofs[2]]
     _θj = state[bd2_p_dofs[3]]
-
-    # vxj = state[bd2_v_dofs[1]]
-    # vyj = state[bd2_v_dofs[2]]
-    # _ωj = state[bd2_v_dofs[3]]
 
     lms = get_lms(sys, joint)
     λ1 = state[lms[1]]
     λ2 = state[lms[2]]
 
-    xci = joint.body1_hinge_point[1]
-    yci = joint.body1_hinge_point[2]
-    xcj = joint.body2_hinge_point[1]
-    ycj = joint.body2_hinge_point[2]
+    # Точка МЦС в ЛСК каждого тела: номинальная плюс смещение вдоль центроиды.
+    # Для обычного шарнира смещение нулевое и ветвление убирается при компиляции.
+    θ = _θj - _θi - joint.rot_offset
+    d1 = _eval_drift(joint.drift1, θ)
+    d2 = _eval_drift(joint.drift2, θ)
+
+    xci = joint.body1_hinge_point[1] + d1[1]
+    yci = joint.body1_hinge_point[2] + d1[2]
+    xcj = joint.body2_hinge_point[1] + d2[1]
+    ycj = joint.body2_hinge_point[2] + d2[2]
+
+    si, ci = sincos(_θi)
+    sj, cj = sincos(_θj)
+
+    rxi = xci * ci - yci * si
+    ryi = xci * si + yci * ci
+    rxj = xcj * cj - ycj * sj
+    ryj = xcj * sj + ycj * cj
 
     rhs[bd1_v_dofs[1]] += λ1
     rhs[bd1_v_dofs[2]] += λ2
-    rhs[bd1_v_dofs[3]] += (-xci * sin(_θi) - yci * cos(_θi)) * λ1 +
-                          (xci * cos(_θi) - yci * sin(_θi)) * λ2
+    rhs[bd1_v_dofs[3]] += -ryi * λ1 + rxi * λ2
 
     rhs[bd2_v_dofs[1]] += -λ1
     rhs[bd2_v_dofs[2]] += -λ2
-    rhs[bd2_v_dofs[3]] += (xcj * sin(_θj) + ycj * cos(_θj)) * λ1 +
-                          (-xcj * cos(_θj) + ycj * sin(_θj)) * λ2
+    rhs[bd2_v_dofs[3]] += ryj * λ1 - rxj * λ2
 
-    rhs[lms[1]] = (_xi + xci * cos(_θi) - yci * sin(_θi)) -
-                  (_xj + xcj * cos(_θj) - ycj * sin(_θj))
-    rhs[lms[2]] = (_yi + xci * sin(_θi) + yci * cos(_θi)) -
-                  (_yj + xcj * sin(_θj) + ycj * cos(_θj))
+    rhs[lms[1]] = (_xi + rxi) - (_xj + rxj)
+    rhs[lms[2]] = (_yi + ryi) - (_yj + ryj)
 
-
+    return nothing
 end
 
 
@@ -192,10 +255,14 @@ function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vec
     _yj = coordinates[bd2_g_dofs[2]]
     _θj = coordinates[bd2_g_dofs[3]]
 
-    xci = joint.body1_hinge_point[1]
-    yci = joint.body1_hinge_point[2]
-    xcj = joint.body2_hinge_point[1]
-    ycj = joint.body2_hinge_point[2]
+    # Точка МЦС берётся так же, как в add_to_rhs!: номинальная плюс дрейф.
+    d1 = _eval_drift(joint.drift1, _θj - _θi - joint.rot_offset)
+    d2 = _eval_drift(joint.drift2, _θj - _θi - joint.rot_offset)
+
+    xci = joint.body1_hinge_point[1] + d1[1]
+    yci = joint.body1_hinge_point[2] + d1[2]
+    xcj = joint.body2_hinge_point[1] + d2[1]
+    ycj = joint.body2_hinge_point[2] + d2[2]
 
     residual[joint_dofs[1]] = (_xi + xci * cos(_θi) - yci * sin(_θi)) - 
                          (_xj + xcj * cos(_θj) - ycj * sin(_θj))
@@ -207,14 +274,21 @@ function compute_kinematic_residual!(residual::Vector{Float64}, coordinates::Vec
 end
 
 function get_hinge_point(system::MBSystem2D, joint::HingeJoint, state::AbstractVector{Float64})
-    bd = joint.body1
-    pos_dofs = get_body_position_dofs(system, bd)
-    _xi = state[pos_dofs[1]]
-    _yi = state[pos_dofs[2]]
-    _θi = state[pos_dofs[3]]
+    bd1 = joint.body1
+    pos_dofs1 = get_body_position_dofs(system, bd1)
+    _xi = state[pos_dofs1[1]]
+    _yi = state[pos_dofs1[2]]
+    _θi = state[pos_dofs1[3]]
 
-    xci = joint.body1_hinge_point[1]
-    yci = joint.body1_hinge_point[2]
+    bd2 = joint.body2
+    pos_dofs2 = get_body_position_dofs(system, bd2)
+    _θj = state[pos_dofs2[3]]
+
+    # Маркер стоит на фактической точке МЦС, а не на номинальной.
+    d1 = _eval_drift(joint.drift1, _θj - _θi - joint.rot_offset)
+
+    xci = joint.body1_hinge_point[1] + d1[1]
+    yci = joint.body1_hinge_point[2] + d1[2]
 
     return Point2f(
         _xi + cos(_θi) * xci - sin(_θi) * yci,

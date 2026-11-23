@@ -316,11 +316,14 @@ function torsional_spring_anchor(sys::MBSystem2D, spring::Union{TorsionalSpring,
     _xi2 = state[pos_dofs2[1]]
     _yi2 = state[pos_dofs2[2]]
     _θi2 = state[pos_dofs2[3]]
+    # Дрейфующий шарнир: якорь пружины стоит на точке МЦС, а не на номинальной.
+    d1 = _eval_drift(spring.hinge.drift1, _θi2 - _θi1 - spring.hinge.rot_offset)
+    hinge_local = spring.hinge.body1_hinge_point + d1
     R = SA_F64[
         cos(_θi1) -sin(_θi1);
         sin(_θi1) cos(_θi1)
     ]
-    v = R * spring.hinge.body1_hinge_point
+    v = R * hinge_local
     _xi = _xi1 + v[1]
     _yi = _yi1 + v[2]
 

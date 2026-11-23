@@ -288,6 +288,174 @@ end
     end
 
     # -----------------------------------------------------------------------
+    # Шарнир с дрейфом: точка контакта уходит от номинальной вдоль
+    # аналитических центроид, относительный угол отсчитывается от rot_offset.
+    @testset "шарнир с дрейфом (МЦС вдоль центроид)" begin
+        a, b = 0.4, 0.15                 # точка крепления на теле 2
+        k, c = 0.02, 0.005               # наклоны центроид, м/рад
+        drift1 = θ -> SA[k * θ, 0.0]     # неподвижная центроида на теле 1
+        drift2 = θ -> SA[0.0, c * θ]     # подвижная центроида на теле 2
+
+        function hinge_pair(; d1 = nothing, d2 = nothing, offset = 0.0)
+            bd1 = Body2D(1.0, 1.0; length = 2.0)
+            bd2 = Body2D(1.0, 1.0; length = 1.0)
+            s = MBSystem2D()
+            add!(s, bd1)
+            add!(s, bd2)
+            hj = HingeJoint(bd1, bd2; drift1 = d1, drift2 = d2, rot_offset = offset)
+            set_position_on_first_body!(hj, SA[0.0, 0.0])
+            set_position_on_second_body!(hj, SA[a, b])
+            add!(s, hj)
+            assemble!(s)
+            return s, hj, bd1, bd2
+        end
+
+        function hinge_rhs(s, hj, st)
+            r = zeros(number_of_dofs(s))
+            Flexia.add_to_rhs!(r, st, s, hj)
+            return r
+        end
+
+        # Прежняя формула (только номинальные точки) — эталон для проверки
+        # обратной совместимости.
+        function legacy_hinge_rhs!(r, st, s, hj)
+            bd1 = hj.body1
+            bd2 = hj.body2
+            q1 = get_body_position_dofs(s, bd1)
+            u1 = get_body_velocity_dofs(s, bd1)
+            q2 = get_body_position_dofs(s, bd2)
+            u2 = get_body_velocity_dofs(s, bd2)
+
+            xi, yi, θi = st[q1]
+            xj, yj, θj = st[q2]
+
+            lms = get_lms(s, hj)
+            λ1 = st[lms[1]]
+            λ2 = st[lms[2]]
+
+            xci = hj.body1_hinge_point[1]
+            yci = hj.body1_hinge_point[2]
+            xcj = hj.body2_hinge_point[1]
+            ycj = hj.body2_hinge_point[2]
+
+            r[u1[1]] += λ1
+            r[u1[2]] += λ2
+            r[u1[3]] += (-xci * sin(θi) - yci * cos(θi)) * λ1 +
+                        (xci * cos(θi) - yci * sin(θi)) * λ2
+
+            r[u2[1]] += -λ1
+            r[u2[2]] += -λ2
+            r[u2[3]] += (xcj * sin(θj) + ycj * cos(θj)) * λ1 +
+                        (-xcj * cos(θj) + ycj * sin(θj)) * λ2
+
+            r[lms[1]] = (xi + xci * cos(θi) - yci * sin(θi)) -
+                        (xj + xcj * cos(θj) - ycj * sin(θj))
+            r[lms[2]] = (yi + xci * sin(θi) + yci * cos(θi)) -
+                        (yj + xcj * sin(θj) + ycj * cos(θj))
+            return nothing
+        end
+
+        # --- обратная совместимость: обычный шарнир ------------------------
+        sys0, hj0, bd10, bd20 = hinge_pair()
+        @test hj0 isa HingeJoint{Nothing, Nothing}     # параметр типа не мешает
+        @test number_of_dofs(hj0) == 2
+        @test hj0.rot_offset == 0.0
+        @test visual(hj0) isa HingeVisual
+        @test Flexia._eval_drift(hj0.drift1, 1.7) == SA[0.0, 0.0]
+        @test Flexia._eval_drift(hj0.drift2, -0.3) == SA[0.0, 0.0]
+
+        q1 = get_body_position_dofs(sys0, bd10)
+        q2 = get_body_position_dofs(sys0, bd20)
+        lms0 = get_lms(sys0, hj0)
+
+        st0 = zeros(number_of_dofs(sys0))
+        st0[q1] .= SA[0.3, -0.2, 0.4]
+        st0[q2] .= SA[1.1, 0.25, -0.15]
+        st0[lms0[1]] = 1.5
+        st0[lms0[2]] = -0.7
+        st0[end] = 1.0
+
+        new0 = zeros(number_of_dofs(sys0))
+        old0 = zeros(number_of_dofs(sys0))
+        Flexia.add_to_rhs!(new0, st0, sys0, hj0)
+        legacy_hinge_rhs!(old0, st0, sys0, hj0)
+        @test isapprox(new0, old0; rtol = 1e-15, atol = 0)
+
+        # дрейф не добавляет аллокаций обычному шарниру
+        Flexia.add_to_rhs!(new0, st0, sys0, hj0)       # прогрев
+        @test (@allocated Flexia.add_to_rhs!(new0, st0, sys0, hj0)) == 0
+
+        # --- rot_offset: drift получает θ = θj - θi - offset ---------------
+        seen = Ref(NaN)
+        spy = θ -> begin
+            seen[] = θ
+            return SA[0.0, 0.0]
+        end
+        sys_r, hj_r, bd1r, bd2r = hinge_pair(d1 = spy, offset = 0.25)
+        st_r = zeros(number_of_dofs(sys_r))
+        st_r[get_body_position_dofs(sys_r, bd1r)] .= SA[0.0, 0.0, 0.0]
+        st_r[get_body_position_dofs(sys_r, bd2r)] .= SA[1.0, 0.0, 0.25]
+        st_r[end] = 1.0
+
+        hinge_rhs(sys_r, hj_r, st_r)
+        @test seen[] === 0.0        # θj - θi == rot_offset → ровно ноль
+        @test hj_r.rot_offset == 0.25
+
+        set_rot_offset!(hj_r, 0.0)
+        @test hj_r.rot_offset == 0.0
+        hinge_rhs(sys_r, hj_r, st_r)
+        @test seen[] === 0.25
+
+        # --- аналитическая центроида: поворот вокруг текущей точки МЦС -----
+        sys_d, hj_d, bd1d, bd2d = hinge_pair(d1 = drift1, d2 = drift2)
+        @test hj_d isa HingeJoint{typeof(drift1), typeof(drift2)}
+
+        θrel = 0.25
+        xi, yi, θi = 0.3, -0.2, 0.1
+        θj = θi + θrel
+
+        rot(φ) = SA[cos(φ) -sin(φ); sin(φ) cos(φ)]
+        w = SA[xi, yi] + rot(θi) * drift1(θrel)              # точка МЦС в мире
+        p2 = w - rot(θj) * (SA[a, b] + drift2(θrel))         # поза тела 2
+
+        q1d = get_body_position_dofs(sys_d, bd1d)
+        q2d = get_body_position_dofs(sys_d, bd2d)
+        lmsd = get_lms(sys_d, hj_d)
+
+        st_d = zeros(number_of_dofs(sys_d))
+        st_d[q1d] .= SA[xi, yi, θi]
+        st_d[q2d] .= SA[p2[1], p2[2], θj]
+        st_d[lmsd[1]] = 1.5
+        st_d[lmsd[2]] = -0.7
+        st_d[end] = 1.0
+
+        rhs_d = hinge_rhs(sys_d, hj_d, st_d)
+        @test abs(rhs_d[lmsd[1]]) < 1e-15      # невязка шарнира = 0
+        @test abs(rhs_d[lmsd[2]]) < 1e-15
+
+        # проверка не «пустая»: сдвиг тела 2 ломает связь
+        perturbed = copy(st_d)
+        perturbed[q2d[2]] += 1e-3
+        @test hinge_rhs(sys_d, hj_d, perturbed)[lmsd[2]] ≈ -1e-3
+
+        # без дрейфа та же поза шарниру уже не удовлетворяет
+        sys_nd, hj_nd = hinge_pair()
+        @test abs(hinge_rhs(sys_nd, hj_nd, st_d)[lmsd[1]]) > 1e-3
+
+        # маркер шарнира стоит на текущей точке МЦС, а не на номинальной
+        @test Flexia.get_hinge_point(sys_d, hj_d, st_d) ≈ Point2f(w) atol = 1e-6
+
+        # --- якобиан: Dual доходит до drift-функций без ошибок типов -------
+        n = number_of_dofs(sys_d)
+        J = sys_d.jacobian(st_d)
+        @test size(J) == (n, n)
+        @test all(isfinite, J)
+        # дрейф виден в строке невязки: производная по углу тела 2 не нулевая
+        @test abs(J[lmsd[1], q2d[3]]) > 0
+        @test !isapprox(J[lmsd, :], sys_nd.jacobian(st_d)[lmsd, :])
+    end
+
+    # -----------------------------------------------------------------------
     @testset "рендер без дисплея (CairoMakie)" begin
         sol = repeat(state, 1, 3)
         fig, ax, p = systemfigure(sys, sol)
