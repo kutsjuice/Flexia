@@ -35,7 +35,8 @@ julia --project=examples examples/crankshaft.jl
 | `diag_bars.jl` | восьмизвенная цепь с двумя заделками и пружинами |
 | `parmech.jl` | параллельный механизм из кривошипов и стола |
 | `real_5bar.jl` | пятизвенный механизм с реальными массами и моментами инерции |
-| `hinge_with_drift.jl` | контур звена через `MeshVisual`, поведение шарнира |
+| `hinge_no_drift.jl` | контур звена через `MeshVisual`, идеальный шарнир: МЦС по степени 6 |
+| `hinge_with_drift.jl` | шарнир с дрейфом: пара аналитических центроид в `drift1`/`drift2`, анимация МЦС |
 | `test_forward_kinematic.jl` | прямая кинематика: `kinematic_constrains!` и визуализация одного состояния |
 | `fixed_joint_attachment.jl` | геометрия штриховки заделки: `FixedVisual` со своим `Attachment` |
 
@@ -50,7 +51,7 @@ julia --project=examples examples/crankshaft.jl
 - **Статика** — `stat_bar.jl`: `static_solver!`, реакции через `get_lms`,
   моменты пружин, сохранение матрицы решения.
 - **Датчики** — `sensor_example.jl`: `sys.measure!` и графики.
-- **Визуализация** — `crankshaft_link2d.jl`, `hinge_with_drift.jl`:
+- **Визуализация** — `crankshaft_link2d.jl`, `hinge_no_drift.jl`:
   визуальные компаньоны и пользовательские формы.
 
 ## Что стоит знать, запуская примеры
